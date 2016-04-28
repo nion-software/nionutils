@@ -6,7 +6,7 @@ import unittest
 # None
 
 # local libraries
-from nion.ui import Persistence
+from nion.utils import Persistence
 
 
 class Archivable(Persistence.PersistentObject):

@@ -6,8 +6,9 @@ import uuid
 # None
 
 # local libraries
-from nion.ui import Observable
-from nion.ui import Persistence
+from nion.utils import Observable
+from nion.utils import Persistence
+from nion.utils import PublishSubscribe
 
 
 class ObjectWithUUID(object):
@@ -73,15 +74,15 @@ class TestPersistentObjectContextClass(unittest.TestCase):
         object1 = None
 
     def test_subscribing_to_publisher_twice_works(self):
-        publisher = Observable.Publisher()
+        publisher = PublishSubscribe.Publisher()
         one = list()
         two = list()
         def handle_one(value):
             one.append(value)
         def handle_two(value):
             two.append(value)
-        subscription1 = publisher.subscribex(Observable.Subscriber(handle_one))
-        subscription2 = publisher.subscribex(Observable.Subscriber(handle_two))
+        subscription1 = publisher.subscribex(PublishSubscribe.Subscriber(handle_one))
+        subscription2 = publisher.subscribex(PublishSubscribe.Subscriber(handle_two))
         publisher.notify_next_value(5)
         self.assertEqual(one, [5, ])
         self.assertEqual(two, [5, ])
@@ -95,38 +96,38 @@ class TestPersistentObjectContextClass(unittest.TestCase):
         self.assertEqual(two, [5, 6])
 
     def test_subscribing_with_select_works(self):
-        publisher = Observable.Publisher()
+        publisher = PublishSubscribe.Publisher()
         one = list()
         def handle_one(value):
             one.append(value)
-        subscription1 = publisher.select(lambda x: x*2).subscribex(Observable.Subscriber(handle_one))
+        subscription1 = publisher.select(lambda x: x*2).subscribex(PublishSubscribe.Subscriber(handle_one))
         publisher.notify_next_value(5)
         self.assertEqual(one, [10, ])
 
     def test_subscribing_with_select_twice_works(self):
-        publisher = Observable.Publisher()
+        publisher = PublishSubscribe.Publisher()
         one = list()
         two = list()
         def handle_one(value):
             one.append(value)
         def handle_two(value):
             two.append(value)
-        subscription1 = publisher.select(lambda x: x*2).subscribex(Observable.Subscriber(handle_one))
-        subscription2 = publisher.select(lambda x: x*3).subscribex(Observable.Subscriber(handle_two))
+        subscription1 = publisher.select(lambda x: x*2).subscribex(PublishSubscribe.Subscriber(handle_one))
+        subscription2 = publisher.select(lambda x: x*3).subscribex(PublishSubscribe.Subscriber(handle_two))
         publisher.notify_next_value(5)
         self.assertEqual(one, [10, ])
         self.assertEqual(two, [15, ])
 
     def test_subscribing_with_cache_twice_works(self):
-        publisher = Observable.Publisher()
+        publisher = PublishSubscribe.Publisher()
         one = list()
         two = list()
         def handle_one(value):
             one.append(value)
         def handle_two(value):
             two.append(value)
-        subscription1 = publisher.select(lambda x: x*2).cache().subscribex(Observable.Subscriber(handle_one))
-        subscription2 = publisher.select(lambda x: x*3).cache().subscribex(Observable.Subscriber(handle_two))
+        subscription1 = publisher.select(lambda x: x*2).cache().subscribex(PublishSubscribe.Subscriber(handle_one))
+        subscription2 = publisher.select(lambda x: x*3).cache().subscribex(PublishSubscribe.Subscriber(handle_two))
         publisher.notify_next_value(5)
         self.assertEqual(one, [10, ])
         self.assertEqual(two, [15, ])

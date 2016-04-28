@@ -12,7 +12,7 @@ import time
 # None
 
 # local libraries
-from nion.ui import Event
+from . import Event
 
 
 class FutureValue:

@@ -6,7 +6,7 @@ import unittest
 # None
 
 # local libraries
-from nion.ui import Geometry
+from nion.utils import Geometry
 
 
 class TestGeometryClass(unittest.TestCase):

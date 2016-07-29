@@ -46,6 +46,42 @@ class FutureValue:
         future.add_done_callback(call_done)
 
 
+class MapStream:
+    """A stream that applies a function when input streams change."""
+
+    def __init__(self, stream, value_fn):
+        # outgoing messages
+        self.value_stream = Event.Event()
+        # references
+        self.__stream = stream
+        # initialize values
+        self.__value = None
+
+        # listen for display changes
+        def update_value(new_value):
+            new_value = value_fn(new_value)
+            if new_value != self.__value:
+                self.__value = new_value
+                self.value_stream.fire(self.__value)
+
+        self.__listener = stream.value_stream.listen(update_value)
+        update_value(stream.value)
+
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        self.value_stream.fire(self.value)
+        self.__listener.close()
+        self.__listener = None
+        self.__stream = None
+        self.__value = None
+
+    @property
+    def value(self):
+        return self.__value
+
+
 class CombineLatestStream:
     """A stream that produces a tuple of values when input streams change."""
 
@@ -184,3 +220,39 @@ class SampleStream:
     @property
     def value(self):
         return self.__value
+
+
+class PropertyStream:
+    """A stream that watches an Observable object for a property change."""
+
+    def __init__(self, source_object, property_name):
+        # outgoing messages
+        self.value_stream = Event.Event()
+        # references
+        self.__source_object = source_object
+        # initialize
+        self.__property_name = property_name
+        self.__value = None
+        # listen for display changes
+        self.__property_changed_listener = source_object.property_changed_event.listen(self.__property_changed)
+        self.__property_changed(property_name, getattr(source_object, property_name))
+
+    def __del__(self):
+        self.close()
+
+    def close(self):
+        self.__property_changed(self.__property_name, None)
+        self.__property_changed_listener.close()
+        self.__property_changed_listener = None
+        self.__source_object = None
+
+    @property
+    def value(self):
+        return self.__value
+
+    def __property_changed(self, key, new_valuex):
+        if key == self.__property_name:
+            new_value = getattr(self.__source_object, self.__property_name)
+            if new_value != self.__value:
+                self.__value = new_value
+                self.value_stream.fire(self.__value)

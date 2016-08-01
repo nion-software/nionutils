@@ -520,9 +520,10 @@ class PersistentObject(object):
         """ Subclasses can call this to get a property descriptor. """
         return self.__properties[name]
 
-    def _get_persistent_property_value(self, name):
+    def _get_persistent_property_value(self, name, default=None):
         """ Subclasses can call this to get a hidden property. """
-        return self.__properties[name].value
+        property = self.__properties.get(name)
+        return property.value if property else default
 
     def _set_persistent_property_value(self, name, value):
         """ Subclasses can call this to set a hidden property. """

@@ -20,6 +20,7 @@ class FutureValue:
 
     def __init__(self, evaluation_fn, *args):
         self.__evaluation_fn = functools.partial(evaluation_fn, *args)
+        self.__lock = threading.RLock()
         self.__is_evaluated = False
         self.__value = dict()
         self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
@@ -30,9 +31,10 @@ class FutureValue:
         self.__evaluation_fn = None
 
     def __evaluate(self):
-        if not self.__is_evaluated:
-            self.__value = self.__evaluation_fn()
-            self.__is_evaluated = True
+        with self.__lock:
+            if not self.__is_evaluated:
+                self.__value = self.__evaluation_fn()
+                self.__is_evaluated = True
 
     @property
     def value(self):

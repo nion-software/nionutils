@@ -143,7 +143,6 @@ from regular Python reference counting in that it provides precise control of wh
 is acquired and released. The about_to_delete method is called when reference count reaches zero.
 
 ### Stream
-The Stream classes provide a threaded stream of values that can be controlled using standard
-reactive operators such as sample, debounce, and combine. In addition, a FutureValue is provided
-to provide delayed evaluation. The stream source is an Event named value_stream and the source
-object must provide both the value_stream and a value property.
+The Stream classes provide a async-based stream of values that can be controlled using standard
+reactive operators such as sample, debounce, and combine. The stream source is an Event named
+value_stream and the source object must provide both the value_stream and a value property.

@@ -3,7 +3,7 @@ Classes related to streams of values, used for reactive style programming.
 """
 
 # standard libraries
-import concurrent.futures
+import asyncio
 import functools
 import threading
 import time
@@ -13,49 +13,30 @@ import time
 
 # local libraries
 from . import Event
+from . import ReferenceCounting
 
 
-class FutureValue:
-    """A future value that gets evaluated in a thread."""
+class AbstractStream(ReferenceCounting.ReferenceCounted):
 
-    def __init__(self, evaluation_fn, *args):
-        self.__evaluation_fn = functools.partial(evaluation_fn, *args)
-        self.__lock = threading.RLock()
-        self.__is_evaluated = False
-        self.__value = dict()
-        self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    def __init__(self):
+        super().__init__()
 
     def close(self):
-        self.__executor.shutdown()
-        self.__executor = None
-        self.__evaluation_fn = None
+        pass
 
-    def __evaluate(self):
-        with self.__lock:
-            if not self.__is_evaluated:
-                self.__value = self.__evaluation_fn()
-                self.__is_evaluated = True
-
-    @property
-    def value(self):
-        self.__evaluate()
-        return self.__value
-
-    def evaluate(self, done_fn):
-        def call_done(future):
-            done_fn(self.value)
-        future = self.__executor.submit(self.__evaluate)
-        future.add_done_callback(call_done)
+    def about_to_delete(self):
+        self.close()
 
 
-class MapStream:
+class MapStream(AbstractStream):
     """A stream that applies a function when input streams change."""
 
     def __init__(self, stream, value_fn):
+        super().__init__()
         # outgoing messages
         self.value_stream = Event.Event()
         # references
-        self.__stream = stream
+        self.__stream = stream.add_ref()
         # initialize values
         self.__value = None
 
@@ -69,29 +50,29 @@ class MapStream:
         self.__listener = stream.value_stream.listen(update_value)
         update_value(stream.value)
 
-    def __del__(self):
-        self.close()
-
     def close(self):
         self.value_stream.fire(self.value)
         self.__listener.close()
         self.__listener = None
+        self.__stream.remove_ref()
         self.__stream = None
         self.__value = None
+        super().close()
 
     @property
     def value(self):
         return self.__value
 
 
-class CombineLatestStream:
+class CombineLatestStream(AbstractStream):
     """A stream that produces a tuple of values when input streams change."""
 
     def __init__(self, stream_list, value_fn):
+        super().__init__()
         # outgoing messages
         self.value_stream = Event.Event()
         # references
-        self.__stream_list = stream_list
+        self.__stream_list = [stream.add_ref() for stream in stream_list]
         self.__value_fn = value_fn
         # initialize values
         self.__values = [None] * len(stream_list)
@@ -103,17 +84,16 @@ class CombineLatestStream:
             self.__values[index] = stream.value
         self.__values_changed()
 
-    def __del__(self):
-        self.close()
-
     def close(self):
         self.value_stream.fire(self.value)
         for index, stream in enumerate(self.__stream_list):
             self.__listeners[index].close()
             self.__values[index] = None
+            stream.remove_ref()
         self.__stream_list = None
         self.__values = None
         self.__value = None
+        super().close()
 
     def __handle_stream_value(self, index, value):
         self.__values[index] = value
@@ -128,91 +108,86 @@ class CombineLatestStream:
         return self.__value
 
 
-class DebounceStream:
+class DebounceStream(AbstractStream):
     """A stream that produces latest value after a specified interval has elapsed."""
 
-    def __init__(self, input_stream, period):
+    def __init__(self, input_stream, period: float, loop: asyncio.AbstractEventLoop):
+        super().__init__()
         self.value_stream = Event.Event()
-        self.__input_stream = input_stream
+        self.__input_stream = input_stream.add_ref()
         self.__period = period
+        self.__loop = loop
         self.__last_time = 0
         self.__value = None
-        self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.__listener = input_stream.value_stream.listen(self.__value_changed)
+        self.__debounce_task = None
         self.__value_changed(input_stream.value)
-
-    def __del__(self):
-        self.close()
 
     def close(self):
         self.__listener.close()
         self.__listener = None
+        self.__input_stream.remove_ref()
         self.__input_stream = None
-        self.__executor.shutdown()
-        self.__executor = None
+        if self.__debounce_task:
+            self.__debounce_task.cancel()
+            self.__debounce_task = None
+        self.__loop = None
+        super().close()
+
+    async def debounce_delay(self, loop: asyncio.AbstractEventLoop) -> None:
+        try:
+            await asyncio.sleep(self.__period, loop=loop)
+            self.value_stream.fire(self.__value)
+        finally:
+            self.__debounce_task = None
 
     def __value_changed(self, value):
         self.__value = value
         current_time = time.time()
-        if current_time - self.__last_time > self.__period:
-            def do_sleep():
-                time.sleep(self.__period)
-            def call_done(future):
-                self.value_stream.fire(self.__value)
-            self.__last_time = current_time
-            future = self.__executor.submit(do_sleep)
-            future.add_done_callback(call_done)
+        # if current_time - self.__last_time > self.__period:  # only trigger new task if necessary
+        if not self.__debounce_task:  # only trigger new task if necessary
+            self.__debounce_task = self.__loop.create_task(self.debounce_delay(self.__loop))
 
     @property
     def value(self):
         return self.__value
 
 
-class SampleStream:
+class SampleStream(AbstractStream):
     """A stream that produces new values at a specified interval."""
 
-    def __init__(self, input_stream, period):
+    def __init__(self, input_stream, period: float, loop: asyncio.AbstractEventLoop):
+        super().__init__()
         self.value_stream = Event.Event()
-        self.__input_stream = input_stream
+        self.__input_stream = input_stream.add_ref()
         self.__period = period
         self.__last_time = 0
         self.__pending_value = None
         self.__value = None
-        self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        self.__executor_lock = threading.RLock()
         self.__listener = input_stream.value_stream.listen(self.__value_changed)
         self.__value = input_stream.value
         self.__value_dirty = True
         self.__value_dirty_lock = threading.RLock()
-        self.__queue_executor()
-
-    def __del__(self):
-        self.close()
+        self.__sample_loop_task = loop.create_task(self.sample_loop(loop))
 
     def close(self):
         self.__listener.close()
         self.__listener = None
+        self.__input_stream.remove_ref()
         self.__input_stream = None
-        with self.__executor_lock:  # deadlock?
-            self.__executor.shutdown()
-            self.__executor = None
+        self.__sample_loop_task.cancel()
+        self.__sample_loop_task = None
+        super().close()
 
-    def __do_sleep(self):
-        time.sleep(self.__period)
-
-    def __call_done(self, future):
-        with self.__value_dirty_lock:
-            value_dirty = self.__value_dirty
-            self.__value_dirty = False
-        if value_dirty:
-            self.__value = self.__pending_value
-            self.value_stream.fire(self.__pending_value)
-        self.__queue_executor()
-
-    def __queue_executor(self):
-        with self.__executor_lock:
-            future = self.__executor.submit(self.__do_sleep)
-            future.add_done_callback(self.__call_done)
+    async def sample_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        while True:
+            await asyncio.sleep(self.__period, loop=loop)
+            with self.__value_dirty_lock:
+                value_dirty = self.__value_dirty
+                self.__value_dirty = False
+            if value_dirty:
+                self.__value = self.__pending_value
+                self.value_stream.fire(self.__pending_value)
 
     def __value_changed(self, value):
         with self.__value_dirty_lock:
@@ -224,10 +199,11 @@ class SampleStream:
         return self.__value
 
 
-class PropertyStream:
+class PropertyStream(AbstractStream):
     """A stream that watches an Observable object for a property change."""
 
     def __init__(self, source_object, property_name):
+        super().__init__()
         # outgoing messages
         self.value_stream = Event.Event()
         # references
@@ -239,14 +215,11 @@ class PropertyStream:
         self.__property_changed_listener = source_object.property_changed_event.listen(self.__property_changed)
         self.__property_changed(property_name, getattr(source_object, property_name))
 
-    def __del__(self):
-        self.close()
-
     def close(self):
-        self.__property_changed(self.__property_name, None)
         self.__property_changed_listener.close()
         self.__property_changed_listener = None
         self.__source_object = None
+        super().close()
 
     @property
     def value(self):

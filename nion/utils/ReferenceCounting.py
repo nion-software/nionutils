@@ -1,7 +1,7 @@
 import threading
 
 
-class ReferenceCounted(object):
+class ReferenceCounted:
 
     def __init__(self):
         super(ReferenceCounted, self).__init__()
@@ -31,6 +31,7 @@ class ReferenceCounted(object):
     def add_ref(self):
         with self.__ref_count_mutex:
             self.__ref_count += 1
+        return self
 
     # Anytime you give up a reference to this item, call remove_ref.
     def remove_ref(self, check=True):

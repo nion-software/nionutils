@@ -2,20 +2,10 @@
 Utility classes for implementing task queues and sets.
 """
 
-# futures
-from __future__ import absolute_import
-
 # standard libraries
 import copy
-import logging
+import queue
 import threading
-
-# conditional imports
-import sys
-if sys.version < '3':
-    import Queue as queue
-else:
-    import queue
 
 # third party libraries
 # None

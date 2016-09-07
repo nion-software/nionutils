@@ -2,9 +2,6 @@
 An event object to which to attach listeners.
 """
 
-# futures
-from __future__ import absolute_import
-
 # standard libraries
 import logging
 import threading

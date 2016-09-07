@@ -2,22 +2,12 @@
 Useful classes for handling threads.
 """
 
-# futures
-from __future__ import absolute_import
-from __future__ import division
-
 # standard libraries
 import copy
 import logging
+import queue
 import threading
 import time
-
-# conditional imports
-import sys
-if sys.version < '3':
-    import Queue as queue
-else:
-    import queue
 
 # third party libraries
 # None

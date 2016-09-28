@@ -17,6 +17,7 @@ from . import ReferenceCounting
 
 
 class AbstractStream(ReferenceCounting.ReferenceCounted):
+    """A stream provides a value property and a value_stream event that fires when the value changes."""
 
     def __init__(self):
         super().__init__()

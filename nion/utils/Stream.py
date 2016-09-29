@@ -29,6 +29,26 @@ class AbstractStream(ReferenceCounting.ReferenceCounted):
         self.close()
 
 
+class ValueStream(AbstractStream):
+    """A stream that sends out value when value is set."""
+    def __init__(self, value=None):
+        super().__init__()
+        # internal values
+        self.__value = value
+        # outgoing messages
+        self.value_stream = Event.Event()
+
+    @property
+    def value(self):
+        return self.__value
+
+    @value.setter
+    def value(self, value):
+        if self.__value != value:
+            self.__value = value
+            self.value_stream.fire(self.value)
+
+
 class MapStream(AbstractStream):
     """A stream that applies a function when input streams change."""
 

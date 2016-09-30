@@ -26,14 +26,15 @@ class PersistentProperty(object):
         converter converts from value to json value
     """
 
-    def __init__(self, name, value=None, make=None, read_only=False, hidden=False, validate=None, converter=None, changed=None, key=None, reader=None, writer=None):
+    def __init__(self, name, value=None, make=None, read_only=False, hidden=False, recordable=True, validate=None, converter=None, changed=None, key=None, reader=None, writer=None):
         super(PersistentProperty, self).__init__()
         self.name = name
         self.key = key if key else name
         self.value = value
         self.make = make
         self.read_only = read_only
-        self.hidden= hidden
+        self.hidden = hidden
+        self.recordable = recordable
         self.validate = validate
         self.converter = converter
         self.reader = reader
@@ -90,8 +91,8 @@ class PersistentProperty(object):
 
 class PersistentPropertySpecial(PersistentProperty):
 
-    def __init__(self, name, value=None, make=None, read_only=False, hidden=False, validate=None, converter=None, changed=None, key=None, reader=None, writer=None):
-        super().__init__(name, value, make, read_only, hidden, validate, converter, changed, key, reader, writer)
+    def __init__(self, name, value=None, make=None, read_only=False, hidden=False, recordable=True, validate=None, converter=None, changed=None, key=None, reader=None, writer=None):
+        super().__init__(name, value, make, read_only, hidden, recordable, validate, converter, changed, key, reader, writer)
         self.__value = value
 
     @property
@@ -355,12 +356,12 @@ class PersistentObject(object):
     def define_type(self, type):
         self.__type = type
 
-    def define_property(self, name: str, value=None, make=None, read_only: bool=False, hidden: bool=False, copy_on_read: bool=False, validate=None, converter=None, changed=None, key=None, reader=None, writer=None):
+    def define_property(self, name: str, value=None, make=None, read_only: bool=False, hidden: bool=False, recordable: bool=True, copy_on_read: bool=False, validate=None, converter=None, changed=None, key=None, reader=None, writer=None):
         """ key is what is stored on disk; name is what is used when accessing the property from code. """
         if copy_on_read:
-            self.__properties[name] = PersistentPropertySpecial(name, value, make, read_only, hidden, validate, converter, changed, key, reader, writer)
+            self.__properties[name] = PersistentPropertySpecial(name, value, make, read_only, hidden, recordable, validate, converter, changed, key, reader, writer)
         else:
-            self.__properties[name] = PersistentProperty(name, value, make, read_only, hidden, validate, converter, changed, key, reader, writer)
+            self.__properties[name] = PersistentProperty(name, value, make, read_only, hidden, recordable, validate, converter, changed, key, reader, writer)
 
     def define_item(self, name, factory, item_changed=None):
         self.__items[name] = PersistentItem(name, factory, item_changed)
@@ -534,6 +535,10 @@ class PersistentObject(object):
         self.__update_modified(datetime.datetime.utcnow())
         if self.persistent_object_context:
             self.persistent_object_context.property_changed(self, name, value)
+
+    def _is_persistent_property_recordable(self, name) -> bool:
+        property = self.__properties.get(name)
+        return (property.recordable and not property.hidden and not property.read_only) if (property is not None) else False
 
     def __getattr__(self, name):
         # Handle property objects that are not hidden.

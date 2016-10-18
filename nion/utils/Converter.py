@@ -14,7 +14,7 @@ import uuid
 # none
 
 
-class IntegerToStringConverter(object):
+class IntegerToStringConverter:
     """ Convert between int value and formatted string. """
 
     def __init__(self, format=None):
@@ -30,7 +30,7 @@ class IntegerToStringConverter(object):
         return int(formatted_value)
 
 
-class FloatToStringConverter(object):
+class FloatToStringConverter:
     """ Convert between float value and formatted string. """
 
     def __init__(self, format=None, pass_none=False, fuzzy=True):
@@ -66,7 +66,7 @@ class FloatToStringConverter(object):
             return locale.atof(formatted_value)
 
 
-class FloatToScaledIntegerConverter(object):
+class FloatToScaledIntegerConverter:
     """ Convert between float value and int (float * 100). """
     def __init__(self, n: int, value_min: float=0, value_max: float=1):
         self.n = n
@@ -79,10 +79,10 @@ class FloatToScaledIntegerConverter(object):
 
     def convert_back(self, value_int):
         """ Convert int percentage value to float """
-        return value_int * (self.value_max - self.value_min) / self.n - self.value_min
+        return value_int * (self.value_max - self.value_min) / self.n + self.value_min
 
 
-class FloatToPercentStringConverter(object):
+class FloatToPercentStringConverter:
     """ Convert between float value and percentage string. """
 
     def convert(self, value):
@@ -94,7 +94,7 @@ class FloatToPercentStringConverter(object):
         return float(formatted_value.strip('%'))/100.0
 
 
-class CheckedToCheckStateConverter(object):
+class CheckedToCheckStateConverter:
     """ Convert between bool and checked/unchecked strings. """
 
     def convert(self, value):
@@ -106,7 +106,7 @@ class CheckedToCheckStateConverter(object):
         return value == "checked"
 
 
-class UuidToStringConverter(object):
+class UuidToStringConverter:
     def convert(self, value):
         return str(value) if value else None
     def convert_back(self, value):

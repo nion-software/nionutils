@@ -538,7 +538,7 @@ class PersistentObject(object):
 
     def _is_persistent_property_recordable(self, name) -> bool:
         property = self.__properties.get(name)
-        return (property.recordable and not property.hidden and not property.read_only) if (property is not None) else False
+        return (property.recordable and not property.read_only) if (property is not None) else False
 
     def __getattr__(self, name):
         # Handle property objects that are not hidden.

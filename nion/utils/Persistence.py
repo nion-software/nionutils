@@ -401,7 +401,8 @@ class PersistentObject(object):
     def _set_modified(self, modified):
         # for testing
         self.__update_modified(modified)
-        self.persistent_object_context.property_changed(self, "uuid", str(self.uuid))  # dummy write
+        if self.persistent_object_context:
+            self.persistent_object_context.property_changed(self, "uuid", str(self.uuid))  # dummy write
 
     @property
     def item_names(self):

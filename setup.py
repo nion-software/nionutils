@@ -5,7 +5,7 @@ import os
 
 setuptools.setup(
     name="nion.utils",
-    version="0.0.1",
+    version="0.1.0",
     packages=setuptools.find_packages(exclude=['contrib', 'docs', 'tests*']),
     install_requires=['numpy'],
     classifiers=[

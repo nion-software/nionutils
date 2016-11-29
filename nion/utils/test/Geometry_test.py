@@ -38,6 +38,12 @@ class TestGeometryClass(unittest.TestCase):
         p2 = Geometry.IntPoint(x=0, y=2)
         self.assertNotEqual(p1, p2)
 
+    def test_rect_intersects(self):
+        r1 = Geometry.IntRect.from_tlbr(10,10,20,30)
+        r2 = Geometry.IntRect.from_tlbr(0, 15, 30, 25)
+        self.assertTrue(r1.intersects_rect(r2))
+
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

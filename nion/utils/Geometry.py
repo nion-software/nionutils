@@ -440,11 +440,13 @@ class IntRect(object):
 
     def intersects_rect(self, rect):
         """ Return whether the rectangle intersects this rectangle. """
-        if self.contains_point(rect.top_left) or self.contains_point(rect.top_right) or self.contains_point(rect.bottom_left) or self.contains_point(rect.bottom_right):
-            return True
-        if rect.contains_point(self.top_left) or rect.contains_point(self.top_right) or rect.contains_point(self.bottom_left) or rect.contains_point(self.bottom_right):
-            return True
-        return False
+        # if one rectangle is on left side of the other
+        if self.left > rect.right or rect.left > self.right:
+            return False
+        # if one rectangle is above the other
+        if self.bottom < rect.top or rect.bottom < self.top:
+            return False
+        return True
 
     def translated(self, point):
         """ Return the rectangle translated by the point or size. """

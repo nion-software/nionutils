@@ -204,7 +204,7 @@ class PropertyBinding(Binding):
     property name, calls the functions assigned to target_setter field.
 
     Source must support property_changed_event with the signature:
-        property_changed(property_name: str, value: Any) -> None
+        property_changed(property_name: str) -> None
 
     Source must also support get/set attribute for the given property_name.
 
@@ -219,8 +219,9 @@ class PropertyBinding(Binding):
         self.__property_name = property_name
 
         # thread safe
-        def property_changed(property_name_: str, value: Any) -> None:
+        def property_changed(property_name_: str) -> None:
             if property_name_ == self.__property_name:
+                value = getattr(source, property_name)
                 if value is not None:
                     self.update_target(value)
                 else:
@@ -243,7 +244,7 @@ class TuplePropertyBinding(Binding):
     property name, calls the functions assigned to target_setter field.
 
     Source must support property_changed_event with the signature:
-        property_changed(property_name: str, value: Any) -> None
+        property_changed(property_name: str) -> None
 
     Source must also support get/set attribute for the given property_name and it
     must return/take a tuple.
@@ -260,9 +261,10 @@ class TuplePropertyBinding(Binding):
         self.__tuple_index = tuple_index
 
         # thread safe
-        def property_changed(property_name_: str, value):
+        def property_changed(property_name_: str):
             if property_name_ == self.__property_name:
                 # perform on the main thread
+                value = getattr(source, property_name)
                 if value is not None:
                     self.update_target(value[self.__tuple_index])
                 else:

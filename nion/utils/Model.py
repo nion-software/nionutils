@@ -42,6 +42,6 @@ class PropertyModel(Observable.Observable):
             not_equal = value != self.__value
         if not_equal:
             self.__value = value
-            self.notify_set_property("value", value)
+            self.notify_property_changed("value")
             if self.on_value_changed:
                 self.on_value_changed(value)

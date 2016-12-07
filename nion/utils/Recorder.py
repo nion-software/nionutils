@@ -67,10 +67,10 @@ class Recorder:
     def _accessor_fn(self, value: AccessorType) -> None:
         self._accessor_fn = value
 
-    def __property_changed(self, key, value):
+    def __property_changed(self, key):
         if self.__object._is_persistent_property_recordable(key):
             def property_setter(x):
-                setattr(self.__accessor_fn(x), key, value)
+                setattr(self.__accessor_fn(x), key, getattr(self.__object, key))
             # print("set property {} {}".format(key, value))
             self.__logger.append(property_setter)
 

@@ -234,7 +234,7 @@ class PropertyStream(AbstractStream):
         self.__value = None
         # listen for display changes
         self.__property_changed_listener = source_object.property_changed_event.listen(self.__property_changed)
-        self.__property_changed(property_name, getattr(source_object, property_name))
+        self.__property_changed(property_name)
 
     def close(self):
         self.__property_changed_listener.close()
@@ -246,7 +246,7 @@ class PropertyStream(AbstractStream):
     def value(self):
         return self.__value
 
-    def __property_changed(self, key, new_valuex):
+    def __property_changed(self, key):
         if key == self.__property_name:
             new_value = getattr(self.__source_object, self.__property_name)
             if new_value != self.__value:

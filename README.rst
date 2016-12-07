@@ -99,13 +99,13 @@ observable is used along with events to implement bindings.
       @weight.setter
       def weight(self, new_weight):
         self.__weight = new_weight
-        self.notify_set_property("weight", new_weight)
+        self.notify_property_changed("weight")
 
     myc = MyClass()
 
-    def property_changed(key, value):
+    def property_changed(key):
       if key == "weight":
-        print("The weight changed " + str(value))
+        print("The weight changed " + str(myc.weight))
 
     listener = myc.property_changed_event.listen(property_changed)
 

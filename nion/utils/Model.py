@@ -3,7 +3,7 @@
 """
 
 # standard libraries
-# none
+import operator
 
 # third party libraries
 # none
@@ -20,9 +20,10 @@ class PropertyModel(Observable.Observable):
         An optional on_value_changed method gets called when the value changes.
     """
 
-    def __init__(self, value=None):
+    def __init__(self, value=None, cmp=None):
         super(PropertyModel, self).__init__()
         self.__value = value
+        self.__cmp = cmp if cmp else operator.eq
         self.on_value_changed = None
 
     def close(self):
@@ -39,7 +40,7 @@ class PropertyModel(Observable.Observable):
         elif value is None:
             not_equal = self.__value is not None
         else:
-            not_equal = value != self.__value
+            not_equal = not self.__cmp(value, self.__value)
         if not_equal:
             self.__value = value
             self.notify_property_changed("value")

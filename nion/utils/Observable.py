@@ -7,7 +7,7 @@
 from . import Event
 
 
-class Observable(object):
+class Observable:
 
     """
         Provide basic observable object. Sub classes should implement properties,
@@ -15,7 +15,7 @@ class Observable(object):
     """
 
     def __init__(self):
-        super(Observable, self).__init__()
+        super().__init__()
         self.property_changed_event = Event.Event()
         self.item_set_event = Event.Event()
         self.item_cleared_event = Event.Event()

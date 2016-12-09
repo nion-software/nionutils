@@ -21,12 +21,17 @@ class AbstractStream(ReferenceCounting.ReferenceCounted):
 
     def __init__(self):
         super().__init__()
+        self.value_stream = None
 
     def close(self):
         pass
 
     def about_to_delete(self):
         self.close()
+
+    @property
+    def value(self):
+        return None
 
 
 class ValueStream(AbstractStream):

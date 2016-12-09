@@ -9,7 +9,6 @@
 # standard libraries
 import collections
 import math
-import numpy
 
 # third party libraries
 # None
@@ -115,7 +114,11 @@ def make_pretty_range(value_low, value_high, tight=False, ticks=5):
 
     # make the tick marks
     tick_values = []
-    for x in numpy.arange(graph_minimum, graph_maximum + 0.5 * division, division):
+
+    def arange(start, stop, step):
+        return [start + x * step for x in range(math.ceil((stop - start) / step))]
+
+    for x in arange(graph_minimum, graph_maximum + 0.5 * division, division):
         tick_values.append(x)
 
     return graph_minimum, graph_maximum, tick_values, division, precision

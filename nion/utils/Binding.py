@@ -265,7 +265,7 @@ class TuplePropertyBinding(Binding):
             if property_name_ == self.__property_name:
                 # perform on the main thread
                 value = getattr(source, property_name)
-                if value is not None:
+                if value is not None and self.__tuple_index < len(value):
                     self.update_target(value[self.__tuple_index])
                 else:
                     self.update_target_direct(self.fallback)
@@ -273,13 +273,16 @@ class TuplePropertyBinding(Binding):
         self.__property_changed_listener = source.property_changed_event.listen(property_changed)
 
         def source_setter(value):  # pylint: disable=missing-docstring
-            tuple_as_list = list(getattr(self.source, self.__property_name))
+            source_tuple = getattr(self.source, self.__property_name)
+            tuple_as_list = list(source_tuple) if source_tuple is not None else list()
+            while len(tuple_as_list) <= self.__tuple_index:
+                tuple_as_list.append(None)
             tuple_as_list[self.__tuple_index] = value
             setattr(self.source, self.__property_name, tuple(tuple_as_list))
 
         def source_getter():  # pylint: disable=missing-docstring
             tuple_value = getattr(self.source, self.__property_name)
-            return tuple_value[self.__tuple_index] if tuple_value else None
+            return tuple_value[self.__tuple_index] if tuple_value is not None and self.__tuple_index < len(tuple_value) else None
 
         self.source_setter = source_setter
         self.source_getter = source_getter

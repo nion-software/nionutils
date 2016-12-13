@@ -5,11 +5,13 @@
 # standard libraries
 import asyncio
 import operator
+import threading
 
 # third party libraries
 # none
 
 # local libraries
+from . import Event
 from . import Observable
 from . import Stream
 
@@ -110,3 +112,53 @@ class StreamValueModel(PropertyModel):
         self.__value_stream.remove_ref()
         self.__value_stream = None
         super().close()
+
+
+class AsyncPropertyModel(Observable.Observable):
+    def __init__(self, calculate_fn):
+        super().__init__()
+        self.__dirty = True
+        self.__value = None
+        self.__value_lock = threading.RLock()
+        self.__task = None
+        self.__calculate_fn = calculate_fn
+        self.__calculate_lock = threading.RLock()
+        self.marked_dirty_event = Event.Event()
+
+    @property
+    def value(self):
+        return self.__value
+
+    def set_value(self, value):
+        self.__value = value
+        self.__dirty = False
+        self.property_changed_event.fire("value")
+
+    def mark_dirty(self) -> None:
+        self.__dirty = True
+        self.marked_dirty_event.fire()
+
+    def evaluate(self, event_loop) -> None:
+        with self.__value_lock:
+            if not self.__task:
+
+                async def evaluate_async(event_loop):
+                    await event_loop.run_in_executor(None, self.__calculate)
+                    self.__task = None
+
+                self.__task = event_loop.create_task(evaluate_async(event_loop))
+
+    def get_value_immediate(self):
+        self.__calculate()
+        return self.__value
+
+    def __calculate(self) -> None:
+        with self.__calculate_lock:
+            if self.__dirty:
+                if callable(self.__calculate_fn):
+                    value = self.__calculate_fn()
+                else:
+                    value = None
+                self.__value = value
+                self.__dirty = False
+                self.property_changed_event.fire("value")

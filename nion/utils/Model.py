@@ -124,6 +124,7 @@ class AsyncPropertyModel(Observable.Observable):
         self.__calculate_fn = calculate_fn
         self.__calculate_lock = threading.RLock()
         self.marked_dirty_event = Event.Event()
+        self.state_changed_event = Event.Event()
 
     @property
     def value(self):
@@ -144,21 +145,27 @@ class AsyncPropertyModel(Observable.Observable):
 
                 async def evaluate_async(event_loop):
                     await event_loop.run_in_executor(None, self.__calculate)
-                    self.__task = None
+
+                self.state_changed_event.fire("begin")
 
                 self.__task = event_loop.create_task(evaluate_async(event_loop))
 
     def get_value_immediate(self):
+        self.state_changed_event.fire("begin")
         self.__calculate()
         return self.__value
 
     def __calculate(self) -> None:
-        with self.__calculate_lock:
-            if self.__dirty:
-                if callable(self.__calculate_fn):
-                    value = self.__calculate_fn()
-                else:
-                    value = None
-                self.__value = value
-                self.__dirty = False
-                self.property_changed_event.fire("value")
+        try:
+            with self.__calculate_lock:
+                if self.__dirty:
+                    if callable(self.__calculate_fn):
+                        value = self.__calculate_fn()
+                    else:
+                        value = None
+                    self.__value = value
+                    self.__dirty = False
+                    self.property_changed_event.fire("value")
+        finally:
+            self.__task = None
+            self.state_changed_event.fire("end")

@@ -4,6 +4,7 @@
 
 # standard libraries
 import asyncio
+import concurrent.futures
 import operator
 import threading
 
@@ -63,12 +64,14 @@ class FuncStreamValueModel(PropertyModel):
 
         def handle_value_func(value_func):
             async def evaluate_value_func():
+                self.__task = None
                 self.value = await event_loop.run_in_executor(None, value_func)
                 self.notify_property_changed("value")
             if self.__task:
                 self.__task.cancel()
                 self.__task = None
-            self.__task = event_loop.create_task(evaluate_value_func())
+            if not self.__task:
+                self.__task = event_loop.create_task(evaluate_value_func())
 
         self.__stream_listener = value_func_stream.value_stream.listen(handle_value_func)
         handle_value_func(self.__value_func_stream.value)
@@ -86,7 +89,10 @@ class FuncStreamValueModel(PropertyModel):
 
     def _run_until_complete(self):
         if self.__task:
-            self.__event_loop.run_until_complete(self.__task)
+            try:
+                self.__event_loop.run_until_complete(self.__task)
+            except concurrent.futures.CancelledError:
+                pass
 
     def _evaluate_immediate(self):
         return self.__value_func_stream.value()
@@ -121,10 +127,20 @@ class AsyncPropertyModel(Observable.Observable):
         self.__value = None
         self.__value_lock = threading.RLock()
         self.__task = None
+        self.__task_to_close = None
         self.__calculate_fn = calculate_fn
         self.__calculate_lock = threading.RLock()
         self.marked_dirty_event = Event.Event()
         self.state_changed_event = Event.Event()
+
+    def close(self):
+        # task is optimized to be cleared at the end of calculate, which occurs in a thread.
+        # because of this, the task may technically still be running when close is called and
+        # if we checked task directly, it would still run. so task_to_close is a backup that
+        # is only changed on the event_loop thread, so can always be canceled.
+        if self.__task_to_close:
+            self.__task_to_close.cancel()
+            self.__task_to_close = None
 
     @property
     def value(self):
@@ -149,6 +165,7 @@ class AsyncPropertyModel(Observable.Observable):
                 self.state_changed_event.fire("begin")
 
                 self.__task = event_loop.create_task(evaluate_async(event_loop))
+                self.__task_to_close = self.__task
 
     def get_value_immediate(self):
         self.state_changed_event.fire("begin")

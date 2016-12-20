@@ -4,6 +4,7 @@ Classes related to streams of values, used for reactive style programming.
 
 # standard libraries
 import asyncio
+import concurrent.futures
 import functools
 import threading
 import time
@@ -194,26 +195,33 @@ class SampleStream(AbstractStream):
         self.__value = input_stream.value
         self.__value_dirty = True
         self.__value_dirty_lock = threading.RLock()
-        self.__sample_loop_task = loop.create_task(self.sample_loop(loop))
+        self.__done = False
+
+        def next_sample(f):
+            if not self.__done:
+                self.__sample_loop_task = loop.create_task(self.sample_loop(loop))
+                self.__sample_loop_task.add_done_callback(next_sample)
+
+        next_sample(None)
 
     def close(self):
         self.__listener.close()
         self.__listener = None
         self.__input_stream.remove_ref()
         self.__input_stream = None
+        self.__done = True
         self.__sample_loop_task.cancel()
         self.__sample_loop_task = None
         super().close()
 
     async def sample_loop(self, loop: asyncio.AbstractEventLoop) -> None:
-        while True:
-            await asyncio.sleep(self.__period, loop=loop)
-            with self.__value_dirty_lock:
-                value_dirty = self.__value_dirty
-                self.__value_dirty = False
-            if value_dirty:
-                self.__value = self.__pending_value
-                self.value_stream.fire(self.__pending_value)
+        await asyncio.sleep(self.__period, loop=loop)
+        with self.__value_dirty_lock:
+            value_dirty = self.__value_dirty
+            self.__value_dirty = False
+        if value_dirty:
+            self.__value = self.__pending_value
+            self.value_stream.fire(self.__pending_value)
 
     def __value_changed(self, value):
         with self.__value_dirty_lock:

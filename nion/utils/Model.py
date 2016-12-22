@@ -60,6 +60,7 @@ class FuncStreamValueModel(PropertyModel):
         super().__init__(value=value, cmp=cmp)
         self.__value_func_stream = value_func_stream.add_ref()
         self.__task = None
+        self.__task_to_complete = None
         self.__event_loop = event_loop
 
         def handle_value_func(value_func):
@@ -72,6 +73,7 @@ class FuncStreamValueModel(PropertyModel):
                 self.__task = None
             if not self.__task:
                 self.__task = event_loop.create_task(evaluate_value_func())
+                self.__task_to_complete = self.__task
 
         self.__stream_listener = value_func_stream.value_stream.listen(handle_value_func)
         handle_value_func(self.__value_func_stream.value)
@@ -88,9 +90,9 @@ class FuncStreamValueModel(PropertyModel):
         super().close()
 
     def _run_until_complete(self):
-        if self.__task:
+        if self.__task_to_complete:
             try:
-                self.__event_loop.run_until_complete(self.__task)
+                self.__event_loop.run_until_complete(self.__task_to_complete)
             except concurrent.futures.CancelledError:
                 pass
 

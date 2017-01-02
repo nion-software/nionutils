@@ -45,6 +45,10 @@ class Event(object):
         self.__weak_listeners = []
         self.__weak_listeners_mutex = threading.RLock()
 
+    @property
+    def listener_count(self):
+        return len(self.__weak_listeners)
+
     def listen(self, listener_fn):
         """Add a listener function and return listener token. Token can be closed or deleted to unlisten."""
         listener = EventListener(listener_fn)

@@ -61,11 +61,16 @@ class FuncStreamValueModel(PropertyModel):
         self.__value_func_stream = value_func_stream.add_ref()
         self.__task = None
         self.__task_to_complete = None
+        self.__task_lock = threading.RLock()  # ensure that close waits for outstanding threads
         self.__event_loop = event_loop
 
         def handle_value_func(value_func):
+            assert threading.current_thread() == threading.main_thread()
             async def evaluate_value_func():
                 self.__task = None
+                def call_value_func():
+                    with self.__task_lock:
+                        value_func()
                 self.value = await event_loop.run_in_executor(None, value_func)
                 self.notify_property_changed("value")
             if self.__task:
@@ -75,7 +80,10 @@ class FuncStreamValueModel(PropertyModel):
                 self.__task = event_loop.create_task(evaluate_value_func())
                 self.__task_to_complete = self.__task
 
-        self.__stream_listener = value_func_stream.value_stream.listen(handle_value_func)
+        def handle_value_func_soon(v):
+            event_loop.call_soon_threadsafe(handle_value_func, v)
+
+        self.__stream_listener = value_func_stream.value_stream.listen(handle_value_func_soon)
         handle_value_func(self.__value_func_stream.value)
 
     def close(self):
@@ -86,10 +94,14 @@ class FuncStreamValueModel(PropertyModel):
         if self.__task:
             self.__task.cancel()
             self.__task = None
+        with self.__task_lock:
+            pass
         self.__event_loop = None
         super().close()
 
     def _run_until_complete(self):
+        self.__event_loop.stop()
+        self.__event_loop.run_forever()
         if self.__task_to_complete:
             try:
                 self.__event_loop.run_until_complete(self.__task_to_complete)

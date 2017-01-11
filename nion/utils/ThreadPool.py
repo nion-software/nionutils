@@ -26,7 +26,6 @@ class ThreadDispatcher(object):
     def __init__(self, fn, minimum_interval=0.001):
         self.__fn = fn
         self.__thread_break = False
-        self.__thread_ended_event = threading.Event()
         self.__thread_event = threading.Event()
         self.__triggered_event = threading.Event()
         self.__thread_lock = threading.Lock()
@@ -42,7 +41,6 @@ class ThreadDispatcher(object):
         with self.__thread_lock:
             self.__thread_break = True
             self.__thread_event.set()
-        self.__thread_ended_event.wait()
         self.__thread.join()
         self.__thread = None
         self.__fn = None
@@ -85,7 +83,6 @@ class ThreadDispatcher(object):
                 traceback.print_exc()
                 traceback.print_stack()
             self.__last_time = time.time()
-        self.__thread_ended_event.set()
 
 
 class ThreadPoolTask(object):

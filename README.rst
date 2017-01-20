@@ -21,7 +21,7 @@ may be useful in general usage too.
 
 This project is funded by Nion Co. as part of the `Nion
 Swift <http://nion.com/swift/>`__ imaging and analysis platform. The
-code is available under the MIT License.
+code is available under the Apache License, Version 2.0.
 
 Requirements
 ------------

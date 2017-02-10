@@ -18,7 +18,7 @@ import weakref
 # None
 
 
-class PersistentProperty(object):
+class PersistentProperty:
 
     """
         Represents a persistent property.
@@ -104,7 +104,7 @@ class PersistentPropertySpecial(PersistentProperty):
         self.__value = value
 
 
-class PersistentItem(object):
+class PersistentItem:
 
     def __init__(self, name, factory, item_changed=None):
         super(PersistentItem, self).__init__()
@@ -114,7 +114,7 @@ class PersistentItem(object):
         self.value = None
 
 
-class PersistentRelationship(object):
+class PersistentRelationship:
 
     def __init__(self, name, factory, insert=None, remove=None):
         super(PersistentRelationship, self).__init__()
@@ -125,7 +125,7 @@ class PersistentRelationship(object):
         self.values = list()
 
 
-class PersistentObjectContext(object):
+class PersistentObjectContext:
     """ Manages a collection of persistent objects.
 
         Each top level persistent object must be associated with persistent storage handler. Objects that are added to
@@ -141,9 +141,11 @@ class PersistentObjectContext(object):
 
         Subclasses of this class may have additional requirements for persistent storage.
 
-        All objects participating in the document model should register themselves with this context. Other objects can
-        then subscribe and unsubscribe to know when a particular object (identified by uuid) becomes available or
-        unavailable. This facilitates lazy connections between objects. """
+        All objects participating in the document model should register and unregister themselves with this context.
+        This occurs automatically for PersistentObjects when setting the persistent_object_context property.
+
+        Other objects can then subscribe and unsubscribe to know when a particular object (identified by uuid) becomes
+        available or unavailable. This facilitates lazy connections between objects. """
 
     def __init__(self):
         self.__subscriptions = dict()
@@ -155,25 +157,27 @@ class PersistentObjectContext(object):
             Register an object with the persistent object context.
 
             :param object: an object with a uuid property
-
-            Objects will be automatically unregistered when they are garbage
-            collected.
         """
         object_uuid = object.uuid
-
-        def remove_object(weak_object):
-            object = self.__objects[object_uuid]
-            for registered, unregistered in self.__subscriptions.get(object_uuid, list()):
-                if unregistered:
-                    unregistered(object)
-            del self.__objects[object_uuid]
-            self.__subscriptions.pop(object_uuid, None)  # delete if it exists
-
-        weak_object = weakref.ref(object, remove_object)
+        weak_object = weakref.ref(object)
         self.__objects[object_uuid] = weak_object
         for registered, unregistered in self.__subscriptions.get(object_uuid, list()):
             if registered:
                 registered(object)
+
+    def unregister(self, object):
+        """
+            Unregister an object with the persistent object context.
+
+            :param object: an object with a uuid property
+        """
+        object_uuid = object.uuid
+        object = self.__objects[object_uuid]
+        for registered, unregistered in self.__subscriptions.get(object_uuid, list()):
+            if unregistered:
+                unregistered(object)
+        del self.__objects[object_uuid]
+        self.__subscriptions.pop(object_uuid, None)  # delete if it exists
 
     def subscribe(self, uuid_, registered, unregistered):
         """
@@ -193,10 +197,14 @@ class PersistentObjectContext(object):
 
     def _set_persistent_storage_for_object(self, object, persistent_storage):
         """ Set the persistent storage object associated with the object. """
-        def remove_object(weak_object):
+        if persistent_storage:
+            def remove_object(weak_object):
+                del self.__persistent_storages[weak_object]
+            weak_object = weakref.ref(object, remove_object)
+            self.__persistent_storages[weak_object] = persistent_storage
+        else:
+            weak_object = weakref.ref(object)
             del self.__persistent_storages[weak_object]
-        weak_object = weakref.ref(object, remove_object)
-        self.__persistent_storages[weak_object] = persistent_storage
 
     def _get_persistent_storage_for_object(self, object):
         """ Return the persistent storage object associated with the object. """
@@ -236,7 +244,7 @@ class PersistentObjectContext(object):
         persistent_storage.set_property(object, name, value)
 
 
-class PersistentObjectParent(object):
+class PersistentObjectParent:
     """ Track the parent of a persistent object. """
 
     def __init__(self, parent, relationship_name=None, item_name=None):
@@ -249,7 +257,7 @@ class PersistentObjectParent(object):
         return self.__weak_parent()
 
 
-class PersistentObject(object):
+class PersistentObject:
     """
         Base class for objects being stored in a PersistentObjectContext.
 
@@ -331,6 +339,7 @@ class PersistentObject(object):
     def persistent_object_context(self, persistent_object_context):
         """ Set the persistent object context and propagate it to contained objects. """
         assert self.__persistent_object_context is None or persistent_object_context is None  # make sure persistent object context is handled cleanly
+        old_persistent_object_context = self.__persistent_object_context
         self.__persistent_object_context = persistent_object_context
         for item_name in self.__items.keys():
             item_value = self.__items[item_name].value
@@ -339,6 +348,8 @@ class PersistentObject(object):
         for relationship_name in self.__relationships.keys():
             for item in self.__relationships[relationship_name].values:
                 item.persistent_object_context = persistent_object_context
+        if old_persistent_object_context:
+            old_persistent_object_context.unregister(self)
         if persistent_object_context:
             persistent_object_context.register(self)
         self.persistent_object_context_changed()

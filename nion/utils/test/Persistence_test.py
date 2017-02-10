@@ -61,7 +61,7 @@ class TestPersistentObjectContextClass(unittest.TestCase):
         persistent_object_context.subscribe(object1.uuid, registered, unregistered)
         persistent_object_context.register(object1)
         self.assertTrue(was_registered)
-        object1 = None
+        persistent_object_context.unregister(object1)
         self.assertFalse(was_registered)
 
     def test_persistent_object_context_unregister_without_subscription_works(self):

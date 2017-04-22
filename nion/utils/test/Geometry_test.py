@@ -1,5 +1,6 @@
 # standard libraries
 import logging
+import math
 import unittest
 
 # third party libraries
@@ -43,6 +44,28 @@ class TestGeometryClass(unittest.TestCase):
         r2 = Geometry.IntRect.from_tlbr(0, 15, 30, 25)
         self.assertTrue(r1.intersects_rect(r2))
 
+    def test_ticker_produces_unique_labels(self):
+        pairs = ((1, 4), (.1, .4), (1E12, 1.000062E12), (1E-18, 1.000062E-18), (-4, -1), (-10000.001, -10000.02),
+                 (1E8 - 0.002, 1E8 + 0.002), (0, 1E8 + 0.002))
+        for l, h in pairs:
+            ticker = Geometry.Ticker(l, h)
+            self.assertEqual(len(set(ticker.labels)), len(ticker.labels))
+            # print(ticker.labels)
+
+    def test_ticker_handles_edge_cases(self):
+        self.assertEqual(Geometry.Ticker(0, 0).labels, ['0'])
+        self.assertEqual(Geometry.Ticker(1, 1).labels, ['1'])
+        self.assertEqual(Geometry.Ticker(-1, -1).labels, ['-1'])
+        self.assertEqual(Geometry.Ticker(-math.inf, math.inf).labels, ['0'])
+        self.assertEqual(Geometry.Ticker(-math.nan, math.nan).labels, ['0'])
+        self.assertEqual(Geometry.Ticker(math.nan, 1).labels, ['0'])
+        self.assertEqual(Geometry.Ticker(-math.inf, 1).labels, ['0'])
+        self.assertEqual(Geometry.Ticker(0, math.inf).labels, ['0'])
+
+    def test_ticker_value_label(self):
+        mn, mx = 18000000, 21000000
+        ticker = Geometry.Ticker(mn, mx)
+        self.assertIsNotNone(ticker.value_label(900000))
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

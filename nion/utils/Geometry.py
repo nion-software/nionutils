@@ -14,40 +14,15 @@ import math
 # None
 
 
-def make_pretty(val, round_up=False):
-    """ Make a pretty number from the value. """
-    positive = val > 0.0
-    if not positive and not val < 0.0:
-        return 0.0  # make sense of values that are neither greater or less than 0.0
-    factor10 = math.pow(10, int(math.log10(abs(val))))
-    val_norm = abs(val)/factor10
-    if val_norm < 1.0:
-        val_norm = val_norm * 10
-        factor10 = factor10 // 10
-    if round_up:
-        #print "val_norm " + str(val_norm)
-        if val_norm < 1.5:
-            val_norm = math.ceil(val_norm * 5) // 5  # move up to next 0.2
-        elif val_norm < 3.0:
-            val_norm = math.ceil(val_norm * 2) // 2  # move up to next 0.5
-        else:
-            val_norm = math.ceil(val_norm)  # movie up to next 1.0
-        #print "val_norm+ " + str(val_norm)
-        return math.copysign(val_norm * factor10, val)
-    else:
-        # val_norm is now between 1 and 10
-        if val_norm < 5.0:
-            return math.copysign(0.5 * round(val_norm/0.5) * factor10, val)
-        else:
-            return math.copysign(round(val_norm) * factor10, val)
-
-
-def make_pretty2(val, rounding):
+def make_pretty(val, rounding):
     """ Make a pretty number, using algorithm from Paul Heckbert, extended to handle negative numbers. """
     val = float(val)
     if not val > 0.0 and not val < 0.0:
-        return 0.0  # make sense of values that are neither greater or less than 0.0
-    factor10 = math.pow(10.0, math.floor(math.log10(abs(val))))
+        return 0.0, 0  # make sense of values that are neither greater or less than 0.0
+    if math.isfinite(val):
+        factor10 = math.pow(10.0, math.floor(math.log10(abs(val))))
+    else:
+        return 0.0, 0
     val_norm = abs(val) / factor10  # between 1 and 10
     if val_norm < 1.0:
         val_norm = val_norm * 10
@@ -70,12 +45,17 @@ def make_pretty2(val, rounding):
             val_norm = 5.0
         else:
             val_norm = 10.0
-    return math.copysign(val_norm * factor10, val)
+    return math.copysign(val_norm * factor10, val), factor10
 
 
-def make_pretty_range(value_low, value_high, tight=False, ticks=5):
+def make_pretty2(val, rounding):
+    """ Make a pretty number, using algorithm from Paul Heckbert, extended to handle negative numbers. """
+    return make_pretty(val, rounding)[0]
+
+
+def make_pretty_range2(value_low, value_high, ticks=5):
     """
-        Returns minimum, maximum, list of tick values, and precision.
+        Returns minimum, maximum, list of tick values, division, and precision.
 
         Value high and value low specify the data range.
 
@@ -97,15 +77,18 @@ def make_pretty_range(value_low, value_high, tight=False, ticks=5):
 
     # check for small range
     if value_high == value_low:
-        return value_low, value_low, [value_low], 0, 0
+        return value_low, value_low, [value_low], 0, 0, 0
 
     # make the value range a pretty range
     value_range = make_pretty2(value_high - value_low, False)
 
     # make the tick range a pretty range
-    division = make_pretty2(value_range/(ticks-1), True)
+    division, factor10 = make_pretty(value_range/(ticks-1), True)
 
     # calculate the graph minimum and maximum
+    if division == 0:
+        return 0, 0, [0], 0, 0, 0
+
     graph_minimum = math.floor(value_low / division) * division
     graph_maximum = math.ceil(value_high / division) * division
 
@@ -121,7 +104,59 @@ def make_pretty_range(value_low, value_high, tight=False, ticks=5):
     for x in arange(graph_minimum, graph_maximum + 0.5 * division, division):
         tick_values.append(x)
 
-    return graph_minimum, graph_maximum, tick_values, division, precision
+    return graph_minimum, graph_maximum, tick_values, division, precision, factor10
+
+
+def make_pretty_range(value_low, value_high, tight=False, ticks=5):
+    return make_pretty_range2(value_low, value_high, ticks)[:-1]
+
+
+class Ticker:
+
+    def __init__(self, value_low: float, value_high: float, *, ticks: int=5, logarithmic: bool=False):
+        self.__value_low = value_low
+        self.__value_high = value_high
+        self.__ticks = ticks
+        self.__logarithmic = logarithmic
+        self.__minimum, self.__maximum, self.__tick_values, self.__division, self.__precision, self.__factor10 = make_pretty_range2(value_low, value_high)
+        displayed_tick_values = (math.pow(10.0, tick_value) if logarithmic else tick_value for tick_value in self.__tick_values)
+        self.__tick_labels = list(self.value_label(tick_value) for tick_value in displayed_tick_values)
+
+    def __nice_label(self, value: float, precision: int, factor10: int) -> str:
+        f10 = int(math.log10(factor10)) if factor10 > 0 else 0
+        if abs(f10) > 5:
+            f10x = int(math.log10(value)) if value > 0 else f10
+            precision = max(0, f10x - f10)
+            return (u"{0:0." + u"{0:d}".format(precision) + "e}").format(value)
+        else:
+            return (u"{0:0." + u"{0:d}".format(precision) + "f}").format(value)
+
+    def value_label(self, value: float) -> str:
+        return self.__nice_label(value, self.__precision, self.__factor10)
+
+    @property
+    def values(self):
+        return self.__tick_values
+
+    @property
+    def labels(self):
+        return self.__tick_labels
+
+    @property
+    def minimum(self):
+        return self.__minimum
+
+    @property
+    def maximum(self):
+        return self.__maximum
+
+    @property
+    def division(self):
+        return self.__division
+
+    @property
+    def precision(self):
+        return self.__precision
 
 
 def fit_to_aspect_ratio(rect, aspect_ratio):

@@ -557,6 +557,18 @@ class FloatPoint(object):
         else:
             raise NotImplementedError()
 
+    def __mul__(self, multiplicand) -> "FloatPoint":
+        multiplicand = float(multiplicand)
+        return FloatPoint(self.__x * multiplicand, self.__y * multiplicand)
+
+    def __rmul__(self, multiplicand) -> "FloatPoint":
+        multiplicand = float(multiplicand)
+        return FloatPoint(self.__x * multiplicand, self.__y * multiplicand)
+
+    def __truediv__(self, dividend) -> "FloatPoint":
+        dividend = float(dividend)
+        return FloatPoint(self.__x / dividend, self.__y / dividend)
+
     def __getitem__(self, index):
         return (self.__y, self.__x)[index]
 
@@ -629,6 +641,10 @@ class FloatSize(object):
     def __rmul__(self, multiplicand):
         multiplicand = float(multiplicand)
         return FloatSize(self.__height * multiplicand, self.__width * multiplicand)
+
+    def __truediv__(self, dividend) -> "FloatSize":
+        dividend = float(dividend)
+        return FloatSize(self.__height / dividend, self.__width / dividend)
 
     def __getitem__(self, index):
         return (self.__height, self.__width)[index]
@@ -773,6 +789,16 @@ class FloatRect(object):
         """
         point = FloatPoint.make(point)
         return point.x >= self.left and point.x < self.right and point.y >= self.top and point.y < self.bottom
+
+    def intersects_rect(self, rect):
+        """ Return whether the rectangle intersects this rectangle. """
+        # if one rectangle is on left side of the other
+        if self.left > rect.right or rect.left > self.right:
+            return False
+        # if one rectangle is above the other
+        if self.bottom < rect.top or rect.bottom < self.top:
+            return False
+        return True
 
     def translated(self, point):
         """ Return the rectangle translated by the point or size. """

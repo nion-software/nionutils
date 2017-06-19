@@ -497,6 +497,18 @@ class IntRect(object):
         size = IntSize(height=self.height - dy * 2, width=self.width - dx * 2)
         return IntRect(origin, size)
 
+    def __add__(self, other) -> "IntRect":
+        if isinstance(other, IntPoint):
+            return IntRect.from_center_and_size(self.center + other, self.size)
+        else:
+            raise NotImplementedError()
+
+    def __sub__(self, other) -> "IntRect":
+        if isinstance(other, IntPoint):
+            return IntRect.from_center_and_size(self.center - other, self.size)
+        else:
+            raise NotImplementedError()
+
 
 class FloatPoint(object):
 
@@ -810,3 +822,15 @@ class FloatRect(object):
         origin = FloatPoint(y=self.top + dy, x=self.left + dx)
         size = FloatSize(height=self.height - dy * 2, width=self.width - dx * 2)
         return FloatRect(origin, size)
+
+    def __add__(self, other) -> "FloatRect":
+        if isinstance(other, FloatPoint):
+            return FloatRect.from_center_and_size(self.center + other, self.size)
+        else:
+            raise NotImplementedError()
+
+    def __sub__(self, other) -> "FloatRect":
+        if isinstance(other, FloatPoint):
+            return FloatRect.from_center_and_size(self.center - other, self.size)
+        else:
+            raise NotImplementedError()

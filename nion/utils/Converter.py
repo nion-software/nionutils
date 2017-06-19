@@ -94,6 +94,27 @@ class FloatToPercentStringConverter:
         return float(formatted_value.strip('%'))/100.0
 
 
+class PhysicalValueToStringConverter:
+    """ Convert between physical value represented by a float and a formatted string. """
+
+    def __init__(self, units: str, multiplier: float=1.0, format=None, pass_none=False, fuzzy=True):
+        self.__units = units
+        self.__multiplier = multiplier
+        self.__format = format + " {:s}" if format else "{:g} {:s}"
+        self.__pass_none = pass_none
+        self.__fuzzy = fuzzy
+
+    def convert(self, value):
+        """ Convert value to string using format string """
+        if self.__pass_none and value is None:
+            return None
+        return self.__format.format(value * self.__multiplier, self.__units)
+
+    def convert_back(self, formatted_value):
+        """ Convert string to value using standard float conversion """
+        return FloatToStringConverter().convert_back(formatted_value) / self.__multiplier
+
+
 class CheckedToCheckStateConverter:
     """ Convert between bool and checked/unchecked strings. """
 

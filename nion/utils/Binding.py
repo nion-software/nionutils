@@ -237,6 +237,62 @@ class PropertyBinding(Binding):
         super().close()
 
 
+class PropertyAttributeBinding(Binding):
+    """Two way binding from an attribute within a source property object to a target.
+
+    Observes property changed event on a source and if the event matches the
+    property name, calls the functions assigned to target_setter field.
+
+    Source must support property_changed_event with the signature:
+        property_changed(property_name: str) -> None
+
+    Source must also support get/set attribute for the given property_name and it
+    must return/take an object with an attribute matching attribute_name.
+
+    Client should set the target_setter function to a callable with the signature:
+        target_setter(value: Any) -> None
+
+    The owner should call close on this object.
+    """
+
+    def __init__(self, source, property_name: str, attribute_name: str, converter=None, fallback=None, update_attribute_fn=None):
+        super().__init__(source, converter=converter, fallback=fallback)
+        self.__property_name = property_name
+        self.__attribute_name = attribute_name
+
+        # thread safe
+        def property_changed(property_name_: str):
+            if property_name_ == self.__property_name:
+                # perform on the main thread
+                value = getattr(source, property_name)
+                if value is not None and hasattr(value, self.__attribute_name):
+                    self.update_target(getattr(value, self.__attribute_name))
+                else:
+                    self.update_target_direct(self.fallback)
+
+        self.__property_changed_listener = source.property_changed_event.listen(property_changed)
+
+        def source_setter(value):  # pylint: disable=missing-docstring
+            source_value = getattr(self.source, self.__property_name)
+            if callable(update_attribute_fn):
+                source_value = update_attribute_fn(source_value, self.__attribute_name, value)
+            else:
+                setattr(source_value, self.__attribute_name, value)
+            setattr(self.source, self.__property_name, source_value)
+
+        def source_getter():  # pylint: disable=missing-docstring
+            source_value = getattr(self.source, self.__property_name)
+            return getattr(source_value, self.__attribute_name) if source_value is not None and hasattr(source_value, self.__attribute_name) else None
+
+        self.source_setter = source_setter
+        self.source_getter = source_getter
+
+    def close(self):
+        self.__property_changed_listener.close()
+        self.__property_changed_listener = None
+        super().close()
+
+
 class TuplePropertyBinding(Binding):
     """Two way binding from an element within a source property tuple to a target.
 

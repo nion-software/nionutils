@@ -593,6 +593,11 @@ class PersistentObject:
         if item.item_changed:
             item.item_changed(name, old_value, value)
 
+    def get_item(self, name):
+        """ Get item from persistent storage. """
+        item = self.__items[name]
+        return item.value
+
     def set_item(self, name, value):
         """ Set item into persistent storage and then into item storage and notify. """
         item = self.__items[name]

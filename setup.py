@@ -11,7 +11,6 @@ setuptools.setup(
     description="Nion utility classes.",
     long_description=open("README.rst").read(),
     url="https://github.com/nion-software/nionutils",
-    namespace_packages=['nion'],
     packages=["nion.utils"],
     install_requires=['numpy'],
     license='Apache 2.0',

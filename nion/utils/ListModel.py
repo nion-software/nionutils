@@ -2,6 +2,7 @@
 
 # standard libraries
 import copy
+import functools
 import operator
 import re
 import threading
@@ -30,6 +31,9 @@ class ListModel(Observable.Observable):
         value = self.__items[index]
         del self.__items[index]
         self.notify_remove_item(self.__key, value, index)
+
+    def append_item(self, value) -> None:
+        self.insert_item(len(self.__items), value)
 
     @property
     def items(self):
@@ -226,10 +230,10 @@ class FilteredListModel(Observable.Observable):
     calling begin_change and end_change around the changes, or by using a context manager
     available via the changes method.
     """
-    def __init__(self, *, items_key=None, container=None, selection=None):
+    def __init__(self, *, container=None, items_key=None, selection=None):
         super().__init__()
-        self.__items_key = items_key
         self.__container = None
+        self.__items_key = items_key
         self.__master_items = list()  # a list of source items (to be filtered)
         self.__items = list()  # a list of filtered items
         self._update_mutex = threading.RLock()
@@ -237,7 +241,7 @@ class FilteredListModel(Observable.Observable):
         self.__sort_key = None
         self.__sort_reverse = False
         self.__change_level = 0
-        self.__library_item_changed_event_listeners = dict()
+        self.__item_changed_event_listeners = dict()
         self.__item_inserted_event_listener = None
         self.__item_removed_event_listener = None
         self.__selections = list()
@@ -247,7 +251,7 @@ class FilteredListModel(Observable.Observable):
 
     def close(self):
         self.container = None
-        self.__library_item_changed_event_listeners = None
+        self.__item_changed_event_listeners = None
 
     def begin_change(self):
         """ Begin a set of changes. Balance with end_changes. """
@@ -538,7 +542,7 @@ class FilteredListModel(Observable.Observable):
                         assert item in self.__master_items
                         self.__updated_master_item(item)
 
-                self.__library_item_changed_event_listeners[id(item)] = item.item_changed_event.listen(item_content_changed)
+                self.__item_changed_event_listeners[id(item)] = item.item_changed_event.listen(item_content_changed)
                 self.__inserted_master_item(before_index, item)
                 for selection in self.__selections:
                     selection.insert_index(before_index)
@@ -549,8 +553,221 @@ class FilteredListModel(Observable.Observable):
         if key == self.__items_key:
             with self._update_mutex:
                 del self.__master_items[index]
-                self.__library_item_changed_event_listeners[id(item)].close()
-                del self.__library_item_changed_event_listeners[id(item)]
+                self.__item_changed_event_listeners[id(item)].close()
+                del self.__item_changed_event_listeners[id(item)]
                 self.__removed_master_item(index, item)
                 for selection in self.__selections:
                     selection.remove_index(index)
+
+
+class MappedListModel(Observable.Observable):
+
+    def __init__(self, *, container=None, master_items_key: str=None, items_key: str=None, map_fn: typing.Callable=None, unmap_fn: typing.Callable=None, selection: Selection.IndexedSelection=None):
+        super().__init__()
+        self.__container = None
+        self.__master_items_key = master_items_key
+        self.__items_key = items_key
+        self.__map_fn = map_fn
+        self.__unmap_fn = unmap_fn
+        self.__items = list()  # a list of transformed items
+        self._update_mutex = threading.RLock()
+        self.__item_inserted_event_listener = None
+        self.__item_removed_event_listener = None
+        self.__selections = list()
+        if selection:
+            self.__selections.append(selection)
+        self.container = container
+
+    def close(self):
+        self.container = None
+
+    @property
+    def items(self) -> typing.Sequence:
+        """ Return the items. """
+        with self._update_mutex:
+            return copy.copy(self.__items)
+
+    def __getattr__(self, item):
+        if item == self.__items_key:
+            return self.items
+        raise AttributeError()
+
+    # thread safe.
+    @property
+    def container(self):
+        return self.__container
+
+    # thread safe.
+    @container.setter
+    def container(self, container):
+        # remove old master items
+        if self.__container:
+            self.__item_inserted_event_listener.close()
+            self.__item_inserted_event_listener = None
+            self.__item_removed_event_listener.close()
+            self.__item_removed_event_listener = None
+            for item in reversed(copy.copy(getattr(self.__container, self.__master_items_key))):
+                self.__master_item_removed(self.__master_items_key, item, len(self.__items) - 1)
+        # add new master items
+        self.__container = container
+        if self.__container:
+            self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(self.__master_item_inserted)
+            self.__item_removed_event_listener = self.__container.item_removed_event.listen(self.__master_item_removed)
+            for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
+                self.__master_item_inserted(self.__master_items_key, item, index)
+
+    def make_selection(self):
+        selection = Selection.IndexedSelection()
+        self.__selections.append(selection)
+        return selection
+
+    def release_selection(self, selection):
+        self.__selections.remove(selection)
+
+    # thread safe.
+    def __master_item_inserted(self, key, item, before_index):
+        """ Insert the item. Called from the container. """
+        if key == self.__master_items_key:
+            with self._update_mutex:
+                mapped_item = self.__map_fn(item)
+                self.__items.insert(before_index, mapped_item)
+                self.notify_insert_item(self.__items_key, mapped_item, before_index)
+                for selection in self.__selections:
+                    selection.insert_index(before_index)
+
+    # thread safe.
+    def __master_item_removed(self, key, item, index):
+        """ Remove the item. Called from the container. """
+        if key == self.__master_items_key:
+            with self._update_mutex:
+                mapped_item = self.__items[index]
+                if callable(self.__unmap_fn):
+                    self.__unmap_fn(mapped_item)
+                del self.__items[index]
+                self.notify_remove_item(self.__items_key, mapped_item, index)
+                for selection in self.__selections:
+                    selection.remove_index(index)
+
+
+class FlattenedListModel(Observable.Observable):
+
+    def __init__(self, *, container=None, master_items_key: str=None, child_items_key: str=None, items_key: str=None, selection: Selection.IndexedSelection=None):
+        super().__init__()
+        self.__container = None
+        self.__master_items_key = master_items_key
+        self.__child_items_key = child_items_key
+        self.__items_key = items_key if items_key else child_items_key
+        self.__master_items = list()  # a list of master items (to be transformed)
+        self.__items = list()  # a list of flattened items
+        self.__children = dict()  # map master item to children
+        self._update_mutex = threading.RLock()
+        self.__item_inserted_event_listener = None
+        self.__item_removed_event_listener = None
+        self.__child_item_inserted_event_listener = dict()
+        self.__child_item_removed_event_listener = dict()
+        self.__selections = list()
+        if selection:
+            self.__selections.append(selection)
+        self.container = container
+
+    def close(self):
+        self.container = None
+
+    @property
+    def items(self) -> typing.Sequence:
+        """ Return the items. """
+        with self._update_mutex:
+            return copy.copy(self.__items)
+
+    def __getattr__(self, item):
+        if item == self.__items_key:
+            return self.items
+        raise AttributeError()
+
+    # thread safe.
+    @property
+    def container(self):
+        return self.__container
+
+    # thread safe.
+    @container.setter
+    def container(self, container):
+        # remove old master items
+        if self.__container:
+            self.__item_inserted_event_listener.close()
+            self.__item_inserted_event_listener = None
+            self.__item_removed_event_listener.close()
+            self.__item_removed_event_listener = None
+            for item in reversed(copy.copy(getattr(self.__container, self.__master_items_key))):
+                self.__master_item_removed(self.__master_items_key, item, len(self.__items) - 1)
+        # add new master items
+        self.__container = container
+        if self.__container:
+            self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(self.__master_item_inserted)
+            self.__item_removed_event_listener = self.__container.item_removed_event.listen(self.__master_item_removed)
+            for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
+                self.__master_item_inserted(self.__master_items_key, item, index)
+
+    def make_selection(self):
+        selection = Selection.IndexedSelection()
+        self.__selections.append(selection)
+        return selection
+
+    def release_selection(self, selection):
+        self.__selections.remove(selection)
+
+    # almost thread safe. assumes child items will not change duing this call.
+    def __master_item_inserted(self, key, item, before_index):
+        # insert a master item.
+        # set up listeners for child item changes.
+        # add any existing child item.
+        if key == self.__master_items_key:
+            with self._update_mutex:
+                assert not item in self.__master_items, f"NOT IN {self.__master_items_key} {self.__items_key} {self.__child_items_key}"
+                self.__master_items.insert(before_index, item)
+                self.__child_item_inserted_event_listener[item] = item.item_inserted_event.listen(functools.partial(self.__child_item_inserted, item))
+                self.__child_item_removed_event_listener[item] = item.item_removed_event.listen(functools.partial(self.__child_item_removed, item))
+                for index, child_item in enumerate(getattr(item, self.__child_items_key)):
+                    self.__child_item_inserted(item, self.__child_items_key, child_item, index)
+
+    # thread safe.
+    def __master_item_removed(self, key, item, index):
+        # remove a master item.
+        # remove any existing child items.
+        # remove listeners for child items.
+        if key == self.__master_items_key:
+            with self._update_mutex:
+                for index_, child_item in reversed(list(enumerate(getattr(item, self.__child_items_key)))):
+                    self.__child_item_removed(item, self.__child_items_key, child_item, index_)
+                del self.__master_items[index]
+                del self.__child_item_inserted_event_listener[item]
+                del self.__child_item_removed_event_listener[item]
+                assert not item in self.__master_items, f"NOW NOT IN {self.__master_items_key} {self.__items_key} {self.__child_items_key}"
+
+    def __child_item_inserted(self, master_item, key, item, before_index):
+        if key == self.__child_items_key:
+            master_index = 0
+            for master_item_ in self.__master_items:
+                if master_item_ == master_item:
+                    break
+                master_index += len(self.__children.get(master_item_, list()))
+            master_index += before_index
+            self.__children.setdefault(master_item, list()).insert(before_index, item)
+            self.__items.insert(master_index, item)
+            self.notify_insert_item(self.__items_key, item, master_index)
+            for selection in self.__selections:
+                selection.insert_index(before_index)
+
+    def __child_item_removed(self, master_item, key, item, index):
+        if key == self.__child_items_key:
+            master_index = 0
+            for master_item_ in self.__master_items:
+                if master_item_ == master_item:
+                    break
+                master_index += len(self.__children.get(master_item_, list()))
+            master_index += index
+            del self.__children[master_item][index]
+            del self.__items[master_index]
+            self.notify_remove_item(self.__items_key, item, master_index)
+            for selection in self.__selections:
+                selection.remove_index(master_index)

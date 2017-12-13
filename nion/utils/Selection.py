@@ -52,6 +52,10 @@ class IndexedSelection(object):
     def anchor_index(self):
         return self.__anchor_index
 
+    @anchor_index.setter
+    def anchor_index(self, value):
+        self.__anchor_index = value
+
     @property
     def has_selection(self):
         return len(self.__indexes) > 0
@@ -62,6 +66,14 @@ class IndexedSelection(object):
     @property
     def indexes(self):
         return self.__indexes
+
+    @property
+    def ordered_indexes(self):
+        indexes = sorted(self.__indexes)
+        if len(self.__indexes) > 0 and self.__anchor_index in self.__indexes:
+            indexes.remove(self.__anchor_index)
+            indexes.insert(0, self.__anchor_index)
+        return indexes
 
     def clear(self):
         old_index = self.__indexes.copy()

@@ -86,7 +86,11 @@ class PersistentProperty:
                 else:
                     properties.pop(self.key, None)  # remove key
             else:
-                properties[self.key] = self.json_value
+                value = self.json_value
+                if value is not None:
+                    properties[self.key] = value
+                else:
+                    properties.pop(self.key, None)  # remove key
 
 
 class PersistentPropertySpecial(PersistentProperty):

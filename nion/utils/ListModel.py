@@ -699,7 +699,7 @@ class FlattenedListModel(Observable.Observable):
             self.__item_removed_event_listener.close()
             self.__item_removed_event_listener = None
             for item in reversed(copy.copy(getattr(self.__container, self.__master_items_key))):
-                self.__master_item_removed(self.__master_items_key, item, len(self.__items) - 1)
+                self.__master_item_removed(self.__master_items_key, item, len(self.__master_items) - 1)
         # add new master items
         self.__container = container
         if self.__container:
@@ -723,7 +723,8 @@ class FlattenedListModel(Observable.Observable):
         # add any existing child item.
         if key == self.__master_items_key:
             with self._update_mutex:
-                assert not item in self.__master_items, f"NOT IN {self.__master_items_key} {self.__items_key} {self.__child_items_key}"
+                assert not item in self.__master_items, f"master item already in {self.__master_items_key} ({self.__items_key} / {self.__child_items_key})"
+                # print(f"{self} inserted {item} {before_index} ({len(getattr(item, self.__child_items_key))})")
                 self.__master_items.insert(before_index, item)
                 self.__child_item_inserted_event_listener[item] = item.item_inserted_event.listen(functools.partial(self.__child_item_inserted, item))
                 self.__child_item_removed_event_listener[item] = item.item_removed_event.listen(functools.partial(self.__child_item_removed, item))
@@ -739,10 +740,11 @@ class FlattenedListModel(Observable.Observable):
             with self._update_mutex:
                 for index_, child_item in reversed(list(enumerate(getattr(item, self.__child_items_key)))):
                     self.__child_item_removed(item, self.__child_items_key, child_item, index_)
+                # print(f"{self} removed {item} {index} ({len(getattr(item, self.__child_items_key))})")
                 del self.__master_items[index]
                 del self.__child_item_inserted_event_listener[item]
                 del self.__child_item_removed_event_listener[item]
-                assert not item in self.__master_items, f"NOW NOT IN {self.__master_items_key} {self.__items_key} {self.__child_items_key}"
+                assert not item in self.__master_items, f"master item still in {self.__master_items_key} ({self.__items_key} / {self.__child_items_key})"
 
     def __child_item_inserted(self, master_item, key, item, before_index):
         if key == self.__child_items_key:

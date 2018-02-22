@@ -1,4 +1,5 @@
 # standard libraries
+import contextlib
 import logging
 import unittest
 
@@ -167,6 +168,20 @@ class TestListModelClass(unittest.TestCase):
         f = ListModel.FlattenedListModel(container=l, master_items_key="as", child_items_key="bs", items_key="cs")
         bs1.remove_item(1)
         self.assertEqual(["11", "31", "32", "33"], f.cs)
+
+    def test_flattened_model_with_empty_master_item_closes_properly(self):
+        l = ListModel.ListModel("as")
+        bs1 = ListModel.ListModel("bs")
+        bs1.append_item("11")
+        bs2 = ListModel.ListModel("bs")
+        bs3 = ListModel.ListModel("bs")
+        bs3.append_item("31")
+        l.append_item(bs1)
+        l.append_item(bs2)
+        l.append_item(bs3)
+        f = ListModel.FlattenedListModel(container=l, master_items_key="as", child_items_key="bs", items_key="cs")
+        with contextlib.closing(f):
+            pass
 
 
 if __name__ == '__main__':

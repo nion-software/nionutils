@@ -50,6 +50,7 @@ class Binding:
         self.source_setter = None
         self.target_setter = None
         self.__source = source
+        self._closed = False
 
     # not thread safe
     def close(self):
@@ -59,6 +60,7 @@ class Binding:
         related actions. Not thread safe.
         """
         self.__source = None
+        self._closed = True
 
     @property
     def source(self):
@@ -220,6 +222,7 @@ class PropertyBinding(Binding):
 
         # thread safe
         def property_changed(property_name_: str) -> None:
+            assert not self._closed
             if property_name_ == self.__property_name:
                 value = getattr(source, property_name)
                 if value is not None:

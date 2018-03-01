@@ -15,7 +15,7 @@ import weakref
 # None
 
 # local libraries
-# None
+from nion.utils import Event
 
 
 class PersistentProperty:
@@ -155,6 +155,7 @@ class PersistentObjectContext:
         self.__subscriptions = dict()
         self.__objects = dict()
         self.__persistent_storages = dict()
+        self.registration_event = Event.Event()
 
     def register(self, object):
         """
@@ -168,6 +169,7 @@ class PersistentObjectContext:
         for registered, unregistered in self.__subscriptions.get(object_uuid, list()):
             if registered:
                 registered(object)
+        self.registration_event.fire(object, None)
 
     def unregister(self, object):
         """
@@ -180,21 +182,26 @@ class PersistentObjectContext:
         for registered, unregistered in self.__subscriptions.get(object_uuid, list()):
             if unregistered:
                 unregistered(object)
+        self.registration_event.fire(None, object)
         del self.__objects[object_uuid]
         self.__subscriptions.pop(object_uuid, None)  # delete if it exists
 
-    def subscribe(self, uuid_, registered, unregistered):
+    def get_registered_object(self, object_uuid):
+        weak_object = self.__objects.get(object_uuid)
+        return weak_object and weak_object()
+
+    def subscribe(self, object_uuid, registered, unregistered):
         """
             Subscribe to a particular object being registered or unregistered.
 
-            :param uuid_: the uuid of the object to subscribe to
+            :param object_uuid: the uuid of the object to subscribe to
             :param registered: a function taking one parameter (the object) to be called when the object gets registered
             :param unregistered: a function taking one parameter (the object) to be called when the object gets unregistered
 
             If the object is already registered, registered will be invoked immediately.
         """
-        self.__subscriptions.setdefault(uuid_, list()).append((registered, unregistered))
-        weak_object = self.__objects.get(uuid_)
+        self.__subscriptions.setdefault(object_uuid, list()).append((registered, unregistered))
+        weak_object = self.__objects.get(object_uuid)
         object = weak_object and weak_object()
         if object is not None:
             registered(object)

@@ -254,6 +254,11 @@ class PersistentObjectContext:
         persistent_storage = self._get_persistent_storage_for_object(object)
         persistent_storage.set_property(object, name, value)
 
+    def clear_property(self, object, name):
+        """ Call this to notify this context that a property with name has been removed on object. """
+        persistent_storage = self._get_persistent_storage_for_object(object)
+        persistent_storage.clear_property(object, name)
+
 
 class PersistentObjectParent:
     """ Track the parent of a persistent object. """
@@ -527,8 +532,11 @@ class PersistentObject:
         if self.persistent_object_context:
             properties = dict()
             property.write_to_dict(properties)
-            for property_key in properties:
-                self.persistent_object_context.property_changed(self, property_key, properties[property_key])
+            if properties:
+                for property_key in properties:
+                    self.persistent_object_context.property_changed(self, property_key, properties[property_key])
+            else:
+                self.persistent_object_context.clear_property(self, name)
 
     def __update_modified(self, modified):
         self.__modified_count += 1

@@ -130,26 +130,38 @@ class PersistentRelationship:
 
 
 class PersistentObjectContext:
-    """ Manages a collection of persistent objects.
+    """Manages a collection of persistent objects.
 
-        Each top level persistent object must be associated with persistent storage handler. Objects that are added to
-        the context as an item or as part of a relationship will inherit the persistent storage handler of their parent.
+    When a subclass makes a change which it wants to make persistent, it calls one of the following methods to
+    facilitate the persistence:
 
-        The persistent storage handler must implement the persistent storage interface:
+        item_inserted(self, parent, name, before_index, item)
+        item_removed(self, parent, name, item_index, item)
+        item_set(self, parent, name, item)
+        property_changed(self, object, name, value)
+        clear_property(self, object, name)
 
-            properties
-            insert_item(parent, name, before_index, item)
-            remove_item(parent, name, item_index, item)
-            set_item(parent, name, item)
-            set_value(object, name, value)
+    Each top level persistent object must be associated with persistent storage handler. Objects that are added to
+    the context as an item or as part of a relationship will inherit the persistent storage handler of their parent.
 
-        Subclasses of this class may have additional requirements for persistent storage.
+    The persistent storage handler must implement the persistent storage interface:
 
-        All objects participating in the document model should register and unregister themselves with this context.
-        This occurs automatically for PersistentObjects when setting the persistent_object_context property.
+        properties
+        set_property(object, name value)
+        clear_property(object, name)
+        insert_item(parent, name, before_index, item)
+        remove_item(parent, name, item_index, item)
+        set_item(parent, name, item)
+        set_value(object, name, value)
 
-        Other objects can then subscribe and unsubscribe to know when a particular object (identified by uuid) becomes
-        available or unavailable. This facilitates lazy connections between objects. """
+    Subclasses of this class may have additional requirements for persistent storage.
+
+    All objects participating in the document model should register and unregister themselves with this context.
+    This occurs automatically for PersistentObjects when setting the persistent_object_context property.
+
+    Other objects can then subscribe and unsubscribe to know when a particular object (identified by uuid) becomes
+    available or unavailable. This facilitates lazy connections between objects.
+    """
 
     def __init__(self):
         self.__subscriptions = dict()
@@ -322,6 +334,7 @@ class PersistentObject:
         # uuid as a property is too slow, so make it direct
         self.uuid = uuid.uuid4()
         self.__modified_count = 0
+        self.modified_state = 0
         self.__modified = datetime.datetime.utcnow()
         self.persistent_object_parent = None
 
@@ -540,6 +553,7 @@ class PersistentObject:
 
     def __update_modified(self, modified):
         self.__modified_count += 1
+        self.modified_state += 1
         self.__modified = modified
         parent = self.persistent_object_parent.parent if self.persistent_object_parent else None
         if parent:

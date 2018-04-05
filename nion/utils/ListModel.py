@@ -18,19 +18,19 @@ from nion.utils import Selection
 
 class ListModel(Observable.Observable):
 
-    def __init__(self, key: str, items=None):
+    def __init__(self, key: str=None, items=None):
         super().__init__()
         self.__key = key
         self.__items = list(items) if items else list()
 
     def insert_item(self, index: int, value) -> None:
         self.__items.insert(index, value)
-        self.notify_insert_item(self.__key, value, index)
+        self.notify_insert_item(self.__key if self.__key else "items", value, index)
 
     def remove_item(self, index:int) -> None:
         value = self.__items[index]
         del self.__items[index]
-        self.notify_remove_item(self.__key, value, index)
+        self.notify_remove_item(self.__key if self.__key else "items", value, index)
 
     def append_item(self, value) -> None:
         self.insert_item(len(self.__items), value)
@@ -40,7 +40,7 @@ class ListModel(Observable.Observable):
         return self.__items
 
     def __getattr__(self, item):
-        if item == self.__key:
+        if self.__key and item == self.__key:
             return self.items
         raise AttributeError()
 

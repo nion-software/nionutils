@@ -2,6 +2,7 @@
 
 # standard libraries
 import collections.abc
+import copy
 import functools
 import typing
 
@@ -22,62 +23,70 @@ MDescription = typing.Dict  # when napolean works: typing.NewType("MDescription"
 MFields = typing.List  # when napolean works: typing.NewType("MFields", typing.List)
 
 
-def create_string() -> MDescription:
+STRING = "string"
+BOOLEAN = "boolean"
+INT = "int"
+FLOAT = "double"
+
+
+def define_string() -> MDescription:
     return "string"
 
 
-def create_boolean() -> MDescription:
+def define_boolean() -> MDescription:
     return "boolean"
 
 
-def create_int() -> MDescription:
+def define_int() -> MDescription:
     return "int"
 
 
-def create_float() -> MDescription:
+def define_float() -> MDescription:
     return "double"
 
 
-def create_field(name: str=None, type: str=None, *, default=None) -> MDescription:
+def define_field(name: str=None, type: str=None, *, default=None) -> MDescription:
     d = {"name": name, "type": type}
     if default is not None:
         d["default"] = default
     return d
 
 
-def create_record(name: str, fields: MFields) -> MDescription:
+def define_record(name: str, fields: MFields) -> MDescription:
     return {"type": "record", "name": name, "fields": fields}
 
 
-def create_array(items: MDescription) -> MDescription:
+def define_array(items: MDescription) -> MDescription:
     return {"type": "array", "items": items}
 
 
-def construct_model(schema: MDescription, *, field_default=None):
+def build_model(schema: MDescription, *, default_value=None, value=None):
     if schema in ("string", "boolean", "int", "float"):
-        return FieldModel(field_default)
+        return FieldPropertyModel(default_value if default_value is not None else value)
     type = schema.get("type")
     if type in ("string", "boolean", "int", "float"):
-        return FieldModel(field_default)
+        return FieldPropertyModel(default_value if default_value is not None else value)
     elif type == "record":
-        return RecordModel(schema, field_default)
+        record_values = copy.copy(default_value or dict())
+        record_values.update(value or dict())
+        return RecordModel(schema, values=record_values)
     elif type == "array":
-        return ArrayModel(schema, field_default)
+        return ArrayModel(schema, value if value is not None else default_value)
 
 
-def instantiate_model(schema: MDescription, *, value=None):
+def build_value(schema: MDescription, *, value=None):
     if schema in ("string", "boolean", "int", "float"):
         return value
     type = schema.get("type")
     if type in ("string", "boolean", "int", "float"):
         return value
     elif type == "record":
-        return RecordModel(schema, value)
+        return RecordModel(schema, values=value)
     elif type == "array":
         return ArrayModel(schema, value)
 
 
-class FieldModel(Model.PropertyModel):
+class FieldPropertyModel(Model.PropertyModel):
 
     def __init__(self, value):
         super().__init__(value=value)
@@ -98,7 +107,7 @@ class RecordModel(Observable.Observable):
 
     __initialized = False
 
-    def __init__(self, schema: MDescription, values=None):
+    def __init__(self, schema: MDescription, *, values=None):
         super().__init__()
         self.__field_models = dict()
         self.__field_model_property_changed_listeners = dict()
@@ -109,9 +118,7 @@ class RecordModel(Observable.Observable):
             field_name = field_schema["name"]
             field_type = field_schema["type"]
             field_default = field_schema.get("default")
-            field_model = construct_model(field_type, field_default=field_default)
-            if field_name in (values or dict()):
-                field_model.value = values[field_name]
+            field_model = build_model(field_type, default_value=field_default, value=(values or dict()).get(field_name))
             self.__field_models[field_name] = field_model
 
             def handle_property_changed(field_name, name):
@@ -148,7 +155,7 @@ class RecordModel(Observable.Observable):
         raise AttributeError()
 
     def __setattr__(self, name, value):
-        if self.__initialized and name in self.__field_models and isinstance(self.__field_models[name], FieldModel):
+        if self.__initialized and name in self.__field_models and isinstance(self.__field_models[name], FieldPropertyModel):
             self.__field_models[name].value = value
         else:
             super().__setattr__(name, value)
@@ -190,7 +197,7 @@ class ArrayModel(ListModelModule.ListModel):
             items = list()
             item_schema = schema["items"]
             for value in values:
-                items.append(instantiate_model(item_schema, value=value))
+                items.append(build_value(item_schema, value=value))
         else:
             items = None
         super().__init__(items=items)

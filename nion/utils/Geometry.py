@@ -200,7 +200,7 @@ Margins = collections.namedtuple("Margins", ["top", "left", "bottom", "right"])
 """
 
 
-class IntPoint(object):
+class IntPoint:
 
     """ A class representing an integer point (x, y). """
 
@@ -211,7 +211,7 @@ class IntPoint(object):
     @classmethod
     def make(cls, value):
         """ Make an IntPoint from a y, x tuple. """
-        return IntPoint(value[0], value[1])
+        return IntPoint(y=value[0], x=value[1])
 
     def __str__(self):
         return "({}, {})".format(self.__x, self.__y)
@@ -238,24 +238,24 @@ class IntPoint(object):
         return self.__x != other.x or self.__y != other.y
 
     def __neg__(self):
-        return IntPoint(-self.__y, -self.__x)
+        return IntPoint(y=-self.__y, x=-self.__x)
 
     def __abs__(self):
         return math.sqrt(pow(self.__x, 2) + pow(self.__y, 2))
 
     def __add__(self, other):
         if isinstance(other, IntPoint):
-            return IntPoint(self.__y + other.y, self.__x + other.x)
+            return IntPoint(y=self.__y + other.y, x=self.__x + other.x)
         elif isinstance(other, IntSize):
-            return IntPoint(self.__y + other.height, self.__x + other.width)
+            return IntPoint(y=self.__y + other.height, x=self.__x + other.width)
         else:
             raise NotImplementedError()
 
     def __sub__(self, other):
         if isinstance(other, IntPoint):
-            return IntPoint(self.__y - other.y, self.__x - other.x)
+            return IntPoint(y=self.__y - other.y, x=self.__x - other.x)
         elif isinstance(other, IntSize):
-            return IntPoint(self.__y - other.height, self.__x - other.width)
+            return IntPoint(y=self.__y - other.height, x=self.__x - other.width)
         else:
             raise NotImplementedError()
 
@@ -263,7 +263,7 @@ class IntPoint(object):
         return (self.__y, self.__x)[index]
 
 
-class IntSize(object):
+class IntSize:
 
     """ A class representing an integer size (width, height). """
 
@@ -341,7 +341,7 @@ class IntSize(object):
     aspect_ratio = property(__get_aspect_ratio)
 
 
-class IntRect(object):
+class IntRect:
 
     """
         A class representing an integer rect (origin, size).
@@ -510,7 +510,7 @@ class IntRect(object):
             raise NotImplementedError()
 
 
-class FloatPoint(object):
+class FloatPoint:
 
     """ A class representing an float point (x, y). """
 
@@ -521,7 +521,7 @@ class FloatPoint(object):
     @classmethod
     def make(cls, value):
         """ Make an FloatPoint from a y, x tuple. """
-        return FloatPoint(value[0], value[1])
+        return FloatPoint(y=value[0], x=value[1])
 
     def __str__(self):
         return "({}, {})".format(self.__x, self.__y)
@@ -548,44 +548,44 @@ class FloatPoint(object):
         return self.__x != other.x or self.__y != other.y
 
     def __neg__(self):
-        return FloatPoint(-self.__y, -self.__x)
+        return FloatPoint(y=-self.__y, x=-self.__x)
 
     def __abs__(self):
         return math.sqrt(pow(self.__x, 2) + pow(self.__y, 2))
 
     def __add__(self, other):
         if isinstance(other, FloatPoint):
-            return FloatPoint(self.__y + other.y, self.__x + other.x)
+            return FloatPoint(y=self.__y + other.y, x=self.__x + other.x)
         elif isinstance(other, FloatSize):
-            return FloatPoint(self.__y + other.height, self.__x + other.width)
+            return FloatPoint(y=self.__y + other.height, x=self.__x + other.width)
         else:
             raise NotImplementedError()
 
     def __sub__(self, other):
         if isinstance(other, FloatPoint):
-            return FloatPoint(self.__y - other.y, self.__x - other.x)
+            return FloatPoint(y=self.__y - other.y, x=self.__x - other.x)
         elif isinstance(other, FloatSize):
-            return FloatPoint(self.__y - other.height, self.__x - other.width)
+            return FloatPoint(y=self.__y - other.height, x=self.__x - other.width)
         else:
             raise NotImplementedError()
 
     def __mul__(self, multiplicand) -> "FloatPoint":
         multiplicand = float(multiplicand)
-        return FloatPoint(self.__x * multiplicand, self.__y * multiplicand)
+        return FloatPoint(y=self.__y * multiplicand, x=self.__x * multiplicand)
 
     def __rmul__(self, multiplicand) -> "FloatPoint":
         multiplicand = float(multiplicand)
-        return FloatPoint(self.__x * multiplicand, self.__y * multiplicand)
+        return FloatPoint(y=self.__y * multiplicand, x=self.__x * multiplicand)
 
     def __truediv__(self, dividend) -> "FloatPoint":
         dividend = float(dividend)
-        return FloatPoint(self.__x / dividend, self.__y / dividend)
+        return FloatPoint(y=self.__y / dividend, x=self.__x / dividend)
 
     def __getitem__(self, index):
         return (self.__y, self.__x)[index]
 
 
-class FloatSize(object):
+class FloatSize:
 
     """ A class representing an float size (width, height). """
 
@@ -667,7 +667,7 @@ class FloatSize(object):
     aspect_ratio = property(__get_aspect_ratio)
 
 
-class FloatRect(object):
+class FloatRect:
 
     """
         A class representing an float rect (origin, size).

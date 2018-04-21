@@ -5,14 +5,13 @@ import os
 
 setuptools.setup(
     name="nionutils",
-    version="0.0.1",
+    version="0.3.10",
     author="Nion Software",
     author_email="swift@nion.com",
     description="Nion utility classes.",
     long_description=open("README.rst").read(),
     url="https://github.com/nion-software/nionutils",
-    packages=["nion.utils"],
-    install_requires=['numpy'],
+    packages=["nion.utils", "nion.utils.test"],
     license='Apache 2.0',
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",

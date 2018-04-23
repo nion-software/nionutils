@@ -2,9 +2,6 @@
 import logging
 import unittest
 
-# third party libraries
-import numpy
-
 # local libraries
 from nion.utils import Converter
 

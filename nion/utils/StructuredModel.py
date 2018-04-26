@@ -1,7 +1,7 @@
 """List and filtered list model."""
 
 # standard libraries
-import collections.abc
+import collections
 import copy
 import functools
 import typing
@@ -19,7 +19,7 @@ from nion.utils import ListModel as ListModelModule
 # TODO: logical types: datetime, timestamp, uuid, etc.
 
 
-MDescription = typing.Dict  # when napolean works: typing.NewType("MDescription", typing.Dict)
+MDescription = typing.Union[str, typing.Dict]  # when napolean works: typing.NewType("MDescription", typing.Dict)
 MFields = typing.List  # when napolean works: typing.NewType("MFields", typing.List)
 
 

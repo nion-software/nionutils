@@ -19,7 +19,7 @@ from nion.utils import ListModel as ListModelModule
 # TODO: logical types: datetime, timestamp, uuid, etc.
 
 
-MDescription = typing.Union[str, typing.Dict]  # when napolean works: typing.NewType("MDescription", typing.Dict)
+MDescription = typing.Union[str, dict]  # when napolean works: typing.NewType("MDescription", typing.Dict)
 MFields = typing.List  # when napolean works: typing.NewType("MFields", typing.List)
 
 
@@ -94,6 +94,14 @@ class FieldPropertyModel(Model.PropertyModel):
         self.array_item_inserted_event = Event.Event()
         self.array_item_removed_event = Event.Event()
 
+    def from_dict_value(self, value) -> None:
+        self.value = value
+
+    def to_dict_value(self) -> typing.Optional[typing.Any]:
+        if self.value is not None:
+            return self.value
+        return None
+
     @property
     def field_value(self):
         return self.value
@@ -146,6 +154,27 @@ class RecordModel(Observable.Observable):
             del self.__field_model_property_changed_listeners[field_name]
             del self.__array_item_inserted_listeners[field_name]
             del self.__array_item_removed_listeners[field_name]
+
+    def __deepcopy__(self, memo):
+        values = self.to_dict_value()
+        return RecordModel(copy.deepcopy(self.schema), values=values)
+
+    def copy_from(self, record: "RecordModel") -> None:
+        self.from_dict_value(record.to_dict_value())
+
+    def from_dict_value(self, values):
+        for k, v in self.__field_models.items():
+            if k in values:
+                self.__field_models[k].from_dict_value(values[k])
+
+    def to_dict_value(self) -> typing.Optional[typing.Any]:
+        d = dict()
+        for field_schema in self.schema["fields"]:
+            field_name = field_schema["name"]
+            field_value = self.__field_models[field_name].to_dict_value()
+            if field_value is not None:
+                d[field_name] = field_value
+        return d
 
     def __getattr__(self, name):
         if name in self.__field_models:
@@ -205,6 +234,28 @@ class ArrayModel(ListModelModule.ListModel):
         self.field_value_changed_event = Event.Event()
         self.array_item_inserted_event = Event.Event()
         self.array_item_removed_event = Event.Event()
+
+    def __deepcopy__(self, memo):
+        values = self.to_dict_value()
+        return ArrayModel(copy.deepcopy(self.schema), values=values)
+
+    def copy_from(self, array: "ArrayModel") -> None:
+        self.from_dict_value(array.to_dict_value())
+
+    def from_dict_value(self, values):
+        while len(values) > len(self.items):
+            item_schema = self.schema["items"]
+            self.items.append(build_value(item_schema))
+        while len(values) < len(self.items):
+            del self.items[-1]
+        for value, item in zip(values, self.items):
+            item.from_dict_value(value)
+
+    def to_dict_value(self) -> typing.Optional[typing.Any]:
+        l = list()
+        for item in self.items:
+            l.append(item.to_dict_value())
+        return l
 
     @property
     def field_value(self):

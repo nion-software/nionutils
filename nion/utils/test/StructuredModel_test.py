@@ -1,6 +1,7 @@
 # standard libraries
 import collections
 import contextlib
+import copy
 import unittest
 
 # third party libraries
@@ -19,14 +20,14 @@ class TestStructuredModelClass(unittest.TestCase):
 
     def test_get_record_property(self):
         # test that a record gives access to a field value directly through a property on the record
-        str_field = StructuredModel.define_field("s", StructuredModel.define_string(), default="ss")
+        str_field = StructuredModel.define_field("s", StructuredModel.STRING, default="ss")
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         self.assertEqual("ss", model.s)
 
     def test_set_record_property(self):
         # test that a record gives can set a field value directly through a property on the record
-        str_field = StructuredModel.define_field("s", StructuredModel.define_string(), default="ss")
+        str_field = StructuredModel.define_field("s", StructuredModel.STRING, default="ss")
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         self.assertEqual("ss", model.s)
@@ -34,7 +35,7 @@ class TestStructuredModelClass(unittest.TestCase):
         self.assertEqual("tt", model.s)
 
     def test_set_record_property_fires_property_changed_event(self):
-        str_field = StructuredModel.define_field("s", StructuredModel.define_string(), default="ss")
+        str_field = StructuredModel.define_field("s", StructuredModel.STRING, default="ss")
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         was_property_changed_ref = [False]
@@ -50,7 +51,7 @@ class TestStructuredModelClass(unittest.TestCase):
 
     def test_get_record_array_property(self):
         # test that a record gives access to a array value directly through a property on the record
-        array_field = StructuredModel.define_array(StructuredModel.define_string())
+        array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field)
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
@@ -58,7 +59,7 @@ class TestStructuredModelClass(unittest.TestCase):
 
     def test_str_array_defaults(self):
         # test that an array of simple fields (str) can be initialized with default values
-        array_field = StructuredModel.define_array(StructuredModel.define_string())
+        array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
@@ -66,8 +67,8 @@ class TestStructuredModelClass(unittest.TestCase):
 
     def test_array_of_records_defaults(self):
         # test that an array of record fields can be initialized with default values
-        x_field = StructuredModel.define_field("x", StructuredModel.define_int())
-        y_field = StructuredModel.define_field("y", StructuredModel.define_int())
+        x_field = StructuredModel.define_field("x", StructuredModel.INT)
+        y_field = StructuredModel.define_field("y", StructuredModel.INT)
         record = StructuredModel.define_record("A", [x_field, y_field])
         array_field = StructuredModel.define_array(record)
         str_field = StructuredModel.define_field("a", array_field, default=[{"x": 1, "y": 2}, {"x": 3, "y": 4}])
@@ -79,7 +80,7 @@ class TestStructuredModelClass(unittest.TestCase):
 
     def test_record_with_array_defaults(self):
         # test that a record with an array field can be initialized with default values
-        array_field = StructuredModel.define_field("a", StructuredModel.define_array(StructuredModel.define_int()))
+        array_field = StructuredModel.define_field("a", StructuredModel.define_array(StructuredModel.INT))
         record = StructuredModel.define_record("R", [array_field])
         record_field = StructuredModel.define_field("r", record, default={"a": [3, 4, 5]})
         schema = StructuredModel.define_record("Z", [record_field])
@@ -90,8 +91,8 @@ class TestStructuredModelClass(unittest.TestCase):
 
     def test_array_of_records_defaults_for_new_records(self):
         # test that building a model with defaults properly populates the defaults
-        x_field = StructuredModel.define_field("x", StructuredModel.define_int(), default=1)
-        y_field = StructuredModel.define_field("y", StructuredModel.define_int(), default=2)
+        x_field = StructuredModel.define_field("x", StructuredModel.INT, default=1)
+        y_field = StructuredModel.define_field("y", StructuredModel.INT, default=2)
         record = StructuredModel.define_record("A", [x_field, y_field])
         model = StructuredModel.build_model(record)
         self.assertEqual(1, model.x)
@@ -99,14 +100,14 @@ class TestStructuredModelClass(unittest.TestCase):
 
     def test_get_record_array_model(self):
         # test that a record gives access to a array model through a property on the record with _model suffix
-        array_field = StructuredModel.define_array(StructuredModel.define_string())
+        array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         self.assertIsInstance(model.a_model, StructuredModel.ArrayModel)
 
     def test_inserting_item_in_array_field_of_record_fires_item_inserted_event(self):
-        array_field = StructuredModel.define_array(StructuredModel.define_string())
+        array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
@@ -124,7 +125,7 @@ class TestStructuredModelClass(unittest.TestCase):
             self.assertTrue(was_item_inserted_ref[0])
 
     def test_inserting_item_in_array_field_of_record_using_insert_fires_item_inserted_event(self):
-        array_field = StructuredModel.define_array(StructuredModel.define_string())
+        array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
@@ -142,7 +143,7 @@ class TestStructuredModelClass(unittest.TestCase):
             self.assertTrue(was_item_inserted_ref[0])
 
     def test_removing_item_in_array_field_of_record_fires_item_removed_event(self):
-        array_field = StructuredModel.define_array(StructuredModel.define_string())
+        array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
@@ -160,7 +161,7 @@ class TestStructuredModelClass(unittest.TestCase):
             self.assertTrue(was_item_removed_ref[0])
 
     def test_removing_item_in_array_field_of_record_using_del_fires_item_removed_event(self):
-        array_field = StructuredModel.define_array(StructuredModel.define_string())
+        array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
@@ -178,9 +179,42 @@ class TestStructuredModelClass(unittest.TestCase):
             self.assertTrue(was_item_removed_ref[0])
 
     def test_setting_value_in_array_raises_exception(self):
-        array_field = StructuredModel.define_array(StructuredModel.define_string())
+        array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         with self.assertRaises(IndexError):
             model.a[0] = "A"
+
+    def test_copy_record_produces_copy(self):
+        x_field = StructuredModel.define_field("x", StructuredModel.INT)
+        y_field = StructuredModel.define_field("y", StructuredModel.INT)
+        schema = StructuredModel.define_record("A", [x_field, y_field])
+        model = StructuredModel.build_model(schema, value={"x": 1, "y": 2})
+        model_copy = copy.deepcopy(model)
+        self.assertEqual(model.x, model_copy.x)
+        self.assertEqual(model.y, model_copy.y)
+        model.x = 4
+        self.assertNotEqual(model.x, model_copy.x)
+        self.assertEqual(model.y, model_copy.y)
+        model.copy_from(model_copy)
+        self.assertEqual(model.x, model_copy.x)
+        self.assertEqual(model.y, model_copy.y)
+
+    def test_copy_array_produces_copy(self):
+        x_field = StructuredModel.define_field("x", StructuredModel.INT)
+        y_field = StructuredModel.define_field("y", StructuredModel.INT)
+        record = StructuredModel.define_record("A", [x_field, y_field])
+        schema = StructuredModel.define_array(record)
+        model = StructuredModel.build_model(schema, value=[{"x": 1, "y": 2}, {"x": 3, "y": 4}])
+        model_copy = copy.deepcopy(model)
+        self.assertEqual(len(model.items), len(model_copy.items))
+        self.assertEqual(model.items[1].x, model_copy.items[1].x)
+        self.assertEqual(model.items[1].y, model_copy.items[1].y)
+        model.items[1].x = 5
+        self.assertNotEqual(model.items[1].x, model_copy.items[1].x)
+        self.assertEqual(model.items[1].y, model_copy.items[1].y)
+        model.copy_from(model_copy)
+        self.assertEqual(len(model.items), len(model_copy.items))
+        self.assertEqual(model.items[1].x, model_copy.items[1].x)
+        self.assertEqual(model.items[1].y, model_copy.items[1].y)

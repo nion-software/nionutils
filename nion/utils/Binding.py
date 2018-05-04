@@ -25,7 +25,8 @@ class Binding:
 
     Bindings can be one way (from source to target) or two way (from source to target
     and back). The converter object, if used, must always supply a convert method. If
-    this binding is two way, then it must also supply a convert_back method.
+    this binding is two way, then it must also supply a convert_back method. The validator,
+    if used, must supply a validate method (on the converted value and return a value).
 
     This class is not intended to be used directly. Instead, subclasses will implement
     specific source bindings by configuring the source_setter and source_getter methods
@@ -41,10 +42,11 @@ class Binding:
     cases.
     """
 
-    def __init__(self, source, converter=None, fallback=None):
+    def __init__(self, source, *, converter=None, validator=None, fallback=None):
         super().__init__()
         self.__source = None
         self.__converter = converter
+        self.__validator = validator
         self.fallback = fallback
         self.source_getter = None
         self.source_setter = None
@@ -72,6 +74,11 @@ class Binding:
         """Return the converter (from source to target). Thread safe."""
         return self.__converter
 
+    @property
+    def validator(self):
+        """Return the validator (of converted value). Thread safe."""
+        return self.__validator
+
     # thread safe
     def __back_converted_value(self, target_value):
         """Return the back converted value (from target to source). Thread safe."""
@@ -81,6 +88,11 @@ class Binding:
     def __converted_value(self, source_value):
         """Return the converted value (from source to target). Thread safe."""
         return self.__converter.convert(source_value) if self.__converter else source_value
+
+    # thread safe
+    def __validated_value(self, source_value):
+        """Return the converted value (from source to target). Thread safe."""
+        return self.__validator.validate(source_value) if self.__validator else source_value
 
     # public methods. subclasses must make sure these methods work as expected.
 
@@ -96,7 +108,7 @@ class Binding:
         Thread safe.
         """
         if self.source_setter:
-            converted_value = self.__back_converted_value(target_value)
+            converted_value = self.__validated_value(self.__back_converted_value(target_value))
             self.source_setter(converted_value)
 
     # not thread safe
@@ -216,8 +228,8 @@ class PropertyBinding(Binding):
     The owner should call close on this object.
     """
 
-    def __init__(self, source, property_name: str, converter=None, fallback=None):
-        super().__init__(source, converter=converter, fallback=fallback)
+    def __init__(self, source, property_name: str, *, converter=None, validator=None, fallback=None):
+        super().__init__(source, converter=converter, validator=validator, fallback=fallback)
         self.__property_name = property_name
 
         # thread safe

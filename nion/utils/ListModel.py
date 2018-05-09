@@ -723,7 +723,7 @@ class FlattenedListModel(Observable.Observable):
         # add any existing child item.
         if key == self.__master_items_key:
             with self._update_mutex:
-                assert not item in self.__master_items, f"master item already in {self.__master_items_key} ({self.__items_key} / {self.__child_items_key})"
+                assert not item in self.__master_items, "master item already in " + str(self.__master_items_key) + " (" + str(self.__items_key) + " / " + str(self.__child_items_key) + ")"
                 # print(f"{self} inserted {item} {before_index} ({len(getattr(item, self.__child_items_key))})")
                 self.__master_items.insert(before_index, item)
                 self.__child_item_inserted_event_listener[item] = item.item_inserted_event.listen(functools.partial(self.__child_item_inserted, item))
@@ -744,7 +744,7 @@ class FlattenedListModel(Observable.Observable):
                 del self.__master_items[index]
                 del self.__child_item_inserted_event_listener[item]
                 del self.__child_item_removed_event_listener[item]
-                assert not item in self.__master_items, f"master item still in {self.__master_items_key} ({self.__items_key} / {self.__child_items_key})"
+                assert not item in self.__master_items, "master item still in " + str(self.__master_items_key) + " (" + str(self.__items_key) + " / " + str(self.__child_items_key) + ")"
 
     def __child_item_inserted(self, master_item, key, item, before_index):
         if key == self.__child_items_key:

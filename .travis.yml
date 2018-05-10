@@ -21,4 +21,5 @@ deploy:
   on:
     tags: true
     python: '3.6'
+    branch: master
   distributions: "sdist bdist_wheel" # Your distributions here

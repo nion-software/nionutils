@@ -1,6 +1,36 @@
 Nion Utilities
 ==============
 
+The Nion Data library (used in Nion Swift)
+------------------------------------------
+Nion utility classes.
+
+.. start-badges
+
+.. list-table::
+    :stub-columns: 1
+
+    * - tests
+      - | |linux|
+    * - package
+      - |version|
+
+
+.. |linux| image:: https://img.shields.io/travis/nion-software/nionutils/master.svg?label=Linux%20build
+   :target: https://travis-ci.org/nion-software/nionutils
+   :alt: Travis CI build status (Linux)
+
+.. |version| image:: https://img.shields.io/pypi/v/niondata.svg
+   :target: https://pypi.org/project/niondata/
+   :alt: Latest PyPI version
+
+.. end-badges
+
+More Information
+----------------
+
+- `Changelog <https://github.com/nion-software/nionutils/blob/master/CHANGES.rst>`_
+
 Introduction
 ------------
 
@@ -15,6 +45,7 @@ A utility library of useful Python objects.
 -  Publish and Subscribe
 -  Reference Counting
 -  Stream
+-  Structured Model
 
 These objects are primarily used within the Nion Python libraries, but
 may be useful in general usage too.
@@ -187,3 +218,10 @@ The Stream classes provide a async-based stream of values that can be
 controlled using standard reactive operators such as sample, debounce,
 and combine. The stream source is an Event named value\_stream and the
 source object must provide both the value\_stream and a value property.
+
+Structured Model
+~~~~~~~~~~~~~~~~
+
+The Structured Model classes provide a way to describe a data structure
+which can produce a modifiable and observable object to be used as a
+model for other utility classes such as binding and events.

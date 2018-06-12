@@ -60,9 +60,15 @@ class FloatToStringConverter:
             """, re.VERBOSE | re.IGNORECASE).match
             m = _parser(formatted_value.strip())
             if m is not None:
+                decimal_point = locale.localeconv().get("decimal_point", ".")
+                if decimal_point != '.':
+                    return locale.atof(m.group(0).replace(".", decimal_point))
                 return locale.atof(m.group(0))
             return 0.0
         else:
+            decimal_point = locale.localeconv().get("decimal_point", ".")
+            if decimal_point != '.':
+                return locale.atof(formatted_value.replace(".", decimal_point))
             return locale.atof(formatted_value)
 
 

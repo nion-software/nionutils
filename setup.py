@@ -5,7 +5,7 @@ import os
 
 setuptools.setup(
     name="nionutils",
-    version="0.3.10",
+    version="0.3.11",
     author="Nion Software",
     author_email="swift@nion.com",
     description="Nion utility classes.",

@@ -1,8 +1,8 @@
 Changelog (niondata)
 ====================
 
-UNRELEASED
-----------
+0.3.11 (2018-06-25)
+-------------------
 
 - Improve str conversion in Geometry classes (include x/y).
 

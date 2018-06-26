@@ -55,6 +55,27 @@ def get_components_by_type(component_type: str) -> typing.Set[typing.Any]:
     return ComponentManager().get_components_by_type(component_type)
 
 
+def get_component(component_type: str) -> typing.Optional[typing.Any]:
+    """Returns a single component matching component type.
+
+    If there are multiple components matching, sorts by priority (if available) and then arbitrary.
+
+    Priority range is 0 (low) to 100 (high). Default priority is 50.
+    """
+    components = get_components_by_type(component_type)
+
+    def attrgetter(attrname, default=None):
+        def inside(obj):
+            return getattr(obj, attrname, default)
+        return inside
+
+    sorted_components = sorted(components, key=attrgetter("priority", 50), reverse=True)
+
+    if len(sorted_components) > 0:
+        return tuple(components)[0]
+
+    return None
+
 def register_component(component, component_types: typing.Set[str]) -> None:
     """Register a component and associated it with the set of types. This will trigger a component_registered_event."""
     ComponentManager().register(component, component_types)

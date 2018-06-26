@@ -214,7 +214,7 @@ class IntPoint:
         return IntPoint(y=value[0], x=value[1])
 
     def __str__(self):
-        return "({}, {})".format(self.__x, self.__y)
+        return "(x={}, y={})".format(self.__x, self.__y)
 
     def __repr__(self):
         return "{2} (x={0}, y={1})".format(self.__x, self.__y, super(IntPoint, self).__repr__())
@@ -287,7 +287,7 @@ class IntSize:
         return IntSize(value[0], value[1])
 
     def __str__(self):
-        return "({}, {})".format(self.__width, self.__height)
+        return "(w={}, h={})".format(self.__width, self.__height)
 
     def __repr__(self):
         return "{2} (w={0}, h={1})".format(self.__width, self.__height, super(IntSize, self).__repr__())
@@ -381,7 +381,7 @@ class IntRect:
         return IntRect(origin, size)
 
     def __str__(self):
-        return "({}, {})".format(self.__origin, self.__size)
+        return "(o={}, s={})".format(self.__origin, self.__size)
 
     def __repr__(self):
         return "{2} (o={0}, s={1})".format(self.__origin, self.__size, super(IntRect, self).__repr__())
@@ -524,7 +524,7 @@ class FloatPoint:
         return FloatPoint(y=value[0], x=value[1])
 
     def __str__(self):
-        return "({}, {})".format(self.__x, self.__y)
+        return "(x={}, y={})".format(self.__x, self.__y)
 
     def __repr__(self):
         return "{2} (x={0}, y={1})".format(self.__x, self.__y, super(FloatPoint, self).__repr__())
@@ -609,7 +609,7 @@ class FloatSize:
         return FloatSize(value[0], value[1])
 
     def __str__(self):
-        return "({}, {})".format(self.__width, self.__height)
+        return "(w={}, h={})".format(self.__width, self.__height)
 
     def __repr__(self):
         return "{2} (w={0}, h={1})".format(self.__width, self.__height, super(FloatSize, self).__repr__())
@@ -707,7 +707,7 @@ class FloatRect:
         return FloatRect(origin, size)
 
     def __str__(self):
-        return "({}, {})".format(self.__origin, self.__size)
+        return "(o={}, s={})".format(self.__origin, self.__size)
 
     def __repr__(self):
         return "{2} (o={0}, s={1})".format(self.__origin, self.__size, super(FloatRect, self).__repr__())

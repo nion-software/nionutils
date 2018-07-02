@@ -1,10 +1,12 @@
 # commands to specify testing environments
 language: python
-dist: xenial
-python:
-  - 3.5
-  - 3.6
-  - 3.7
+matrix:
+  include:
+    - python: 3.5
+    - python: 3.6
+    - python: 3.7
+      dist: xenial
+      sudo: true
 
 # command to install dependencies
 install:

@@ -93,6 +93,7 @@ class FieldPropertyModel(Model.PropertyModel):
         self.field_value_changed_event = Event.Event()
         self.array_item_inserted_event = Event.Event()
         self.array_item_removed_event = Event.Event()
+        self.model_changed_event = Event.Event()
 
     def from_dict_value(self, value) -> None:
         self.value = value
@@ -109,6 +110,7 @@ class FieldPropertyModel(Model.PropertyModel):
     def notify_property_changed(self, key: str) -> None:
         super().notify_property_changed(key)
         self.field_value_changed_event.fire(key)
+        self.model_changed_event.fire()
 
 
 class RecordModel(Observable.Observable):
@@ -117,8 +119,13 @@ class RecordModel(Observable.Observable):
 
     def __init__(self, schema: MDescription, *, values=None):
         super().__init__()
+        self.field_value_changed_event = Event.Event()
+        self.array_item_inserted_event = Event.Event()
+        self.array_item_removed_event = Event.Event()
+        self.model_changed_event = Event.Event()
         self.__field_models = dict()
         self.__field_model_property_changed_listeners = dict()
+        self.__field_model_changed_listeners = dict()
         self.__array_item_inserted_listeners = dict()
         self.__array_item_removed_listeners = dict()
         self.schema = schema
@@ -142,18 +149,21 @@ class RecordModel(Observable.Observable):
                     self.item_removed_event.fire(field_name, value, index)
 
             self.__field_model_property_changed_listeners[field_name] = field_model.field_value_changed_event.listen(functools.partial(handle_property_changed, field_name))
+            self.__field_model_changed_listeners[field_name] = field_model.model_changed_event.listen(self.model_changed_event.fire)
             self.__array_item_inserted_listeners[field_name] = field_model.array_item_inserted_event.listen(functools.partial(handle_array_item_inserted, field_name))
             self.__array_item_removed_listeners[field_name] = field_model.array_item_removed_event.listen(functools.partial(handle_array_item_removed, field_name))
-        self.field_value_changed_event = Event.Event()
-        self.array_item_inserted_event = Event.Event()
-        self.array_item_removed_event = Event.Event()
         self.__initialized = True
 
     def close(self):
         for field_name in self.__field_models.keys():
+            self.__field_model_property_changed_listeners[field_name].close()
             del self.__field_model_property_changed_listeners[field_name]
+            self.__array_item_inserted_listeners[field_name].close()
             del self.__array_item_inserted_listeners[field_name]
+            self.__array_item_removed_listeners[field_name].close()
             del self.__array_item_removed_listeners[field_name]
+            self.__field_model_changed_listeners[field_name].close()
+            del self.__field_model_changed_listeners[field_name]
 
     def __deepcopy__(self, memo):
         values = self.to_dict_value()
@@ -234,6 +244,20 @@ class ArrayModel(ListModelModule.ListModel):
         self.field_value_changed_event = Event.Event()
         self.array_item_inserted_event = Event.Event()
         self.array_item_removed_event = Event.Event()
+        self.model_changed_event = Event.Event()
+        self.__model_changed_listeners = list()
+        for item in self.items:
+            trampoline = None
+            if isinstance(item, (RecordModel, ArrayModel)):
+                trampoline = item.model_changed_event.listen(self.model_changed_event.fire)
+            self.__model_changed_listeners.append(trampoline)
+
+    def close(self):
+        for index, item in enumerate(self.items()):
+            trampoline = self.__model_changed_listeners[index]
+            if trampoline:
+                trampoline.close()
+        self.__model_changed_listeners = list()
 
     def __deepcopy__(self, memo):
         values = self.to_dict_value()
@@ -264,7 +288,16 @@ class ArrayModel(ListModelModule.ListModel):
     def notify_insert_item(self, key, value, before_index):
         super().notify_insert_item(key, value, before_index)
         self.array_item_inserted_event.fire(key, value, before_index)
+        trampoline = None
+        if isinstance(value, (RecordModel, ArrayModel)):
+            trampoline = value.model_changed_event.listen(self.model_changed_event.fire)
+        self.__model_changed_listeners.append(trampoline)
+        self.model_changed_event.fire()
 
     def notify_remove_item(self, key, value, index):
         super().notify_remove_item(key, value, index)
+        trampoline = self.__model_changed_listeners.pop(index)
+        if trampoline:
+            trampoline.close()
         self.array_item_removed_event.fire(key, value, index)
+        self.model_changed_event.fire()

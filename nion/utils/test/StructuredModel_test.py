@@ -218,3 +218,53 @@ class TestStructuredModelClass(unittest.TestCase):
         self.assertEqual(len(model.items), len(model_copy.items))
         self.assertEqual(model.items[1].x, model_copy.items[1].x)
         self.assertEqual(model.items[1].y, model_copy.items[1].y)
+
+    def test_change_array_basic_value_generates_model_changed(self):
+        schema = StructuredModel.define_array(StructuredModel.STRING)
+        model = StructuredModel.build_model(schema, value=["a", "b", "c"])
+        changed_ref = [0]
+
+        def property_changed():
+            changed_ref[0] += 1
+
+        with contextlib.closing(model.model_changed_event.listen(property_changed)):
+            self.assertEqual(0, changed_ref[0])
+            model.insert_item(1, "aa")
+            self.assertEqual(1, changed_ref[0])
+            model.remove_item(1)
+            self.assertEqual(2, changed_ref[0])
+
+    def test_change_array_records_value_generates_model_changed(self):
+        x_field = StructuredModel.define_field("x", StructuredModel.INT)
+        y_field = StructuredModel.define_field("y", StructuredModel.INT)
+        record = StructuredModel.define_record("A", [x_field, y_field])
+        schema = StructuredModel.define_array(record)
+        model = StructuredModel.build_model(schema, value=[{"x": 1, "y": 2}, {"x": 3, "y": 4}])
+        changed_ref = [0]
+
+        def property_changed():
+            changed_ref[0] += 1
+
+        with contextlib.closing(model.model_changed_event.listen(property_changed)):
+            self.assertEqual(0, changed_ref[0])
+            model.insert_item(1, StructuredModel.build_model(record, value={"x": 5, "y": 6}))
+            self.assertEqual(1, changed_ref[0])
+            model.items[1].x = 55
+            self.assertEqual(2, changed_ref[0])
+
+    def test_change_record_record_value_generates_model_changed(self):
+        x_field = StructuredModel.define_field("x", StructuredModel.INT)
+        y_field = StructuredModel.define_field("y", StructuredModel.INT)
+        sub_record = StructuredModel.define_record("A", [x_field, y_field])
+        sub_field = StructuredModel.define_field("a", sub_record)
+        schema = StructuredModel.define_record("B", [sub_field])
+        model = StructuredModel.build_model(schema, value={"a": {"x": 1, "y": 2}})
+        changed_ref = [0]
+
+        def property_changed():
+            changed_ref[0] += 1
+
+        with contextlib.closing(model.model_changed_event.listen(property_changed)):
+            self.assertEqual(0, changed_ref[0])
+            model.a.x = 11
+            self.assertEqual(1, changed_ref[0])

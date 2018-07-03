@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+UNRELEASED
+----------
+
+- Add model changed event to structured model to monitor deep changes.
+
 0.3.11 (2018-06-25)
 -------------------
 

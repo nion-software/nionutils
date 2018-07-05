@@ -4,6 +4,8 @@ Changelog (niondata)
 UNRELEASED
 ----------
 
+- Fix bug where unregistered objects were not reported correctly.
+
 - Add model changed event to structured model to monitor deep changes.
 
 0.3.11 (2018-06-25)

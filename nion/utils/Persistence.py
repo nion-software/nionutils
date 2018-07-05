@@ -190,7 +190,8 @@ class PersistentObjectContext:
             :param object: an object with a uuid property
         """
         object_uuid = object.uuid
-        object = self.__objects[object_uuid]
+        weak_object = self.__objects.get(object_uuid)
+        object = weak_object() if weak_object else None
         for registered, unregistered in self.__subscriptions.get(object_uuid, list()):
             if unregistered:
                 unregistered(object)

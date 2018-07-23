@@ -1,8 +1,8 @@
 Changelog (niondata)
 ====================
 
-UNRELEASED
-----------
+0.3.12 (2018-07-23)
+-------------------
 
 - Fix bug where unregistered objects were not reported correctly.
 

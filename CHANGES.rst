@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+UNRELEASED
+----------
+
+- Allow FilteredListModel to have separate master/item property names.
+
 0.3.12 (2018-07-23)
 -------------------
 

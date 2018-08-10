@@ -230,9 +230,10 @@ class FilteredListModel(Observable.Observable):
     calling begin_change and end_change around the changes, or by using a context manager
     available via the changes method.
     """
-    def __init__(self, *, container=None, items_key=None, selection=None):
+    def __init__(self, *, container=None, master_items_key=None, items_key=None, selection=None):
         super().__init__()
         self.__container = None
+        self.__master_items_key = master_items_key or items_key
         self.__items_key = items_key
         self.__master_items = list()  # a list of source items (to be filtered)
         self.__items = list()  # a list of filtered items
@@ -511,14 +512,14 @@ class FilteredListModel(Observable.Observable):
             self.__item_inserted_event_listener = None
             self.__item_removed_event_listener.close()
             self.__item_removed_event_listener = None
-            for item in reversed(copy.copy(getattr(self.__container, self.__items_key))):
-                self.__item_removed(self.__items_key, item, len(self._get_master_items()) - 1)
+            for item in reversed(copy.copy(getattr(self.__container, self.__master_items_key))):
+                self.__item_removed(self.__master_items_key, item, len(self._get_master_items()) - 1)
         self.__container = container
         if self.__container:
             self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(self.__item_inserted)
             self.__item_removed_event_listener = self.__container.item_removed_event.listen(self.__item_removed)
-            for index, item in enumerate(getattr(self.__container, self.__items_key)):
-                self.__item_inserted(self.__items_key, item, index)
+            for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
+                self.__item_inserted(self.__master_items_key, item, index)
 
     def make_selection(self):
         selection = Selection.IndexedSelection()
@@ -531,7 +532,7 @@ class FilteredListModel(Observable.Observable):
     # thread safe.
     def __item_inserted(self, key, item, before_index):
         """ Insert the item. Called from the container. """
-        if key == self.__items_key:
+        if key == self.__master_items_key:
             with self._update_mutex:
                 assert not item in self.__master_items
                 self.__master_items.insert(before_index, item)
@@ -550,7 +551,7 @@ class FilteredListModel(Observable.Observable):
     # thread safe.
     def __item_removed(self, key, item, index):
         """ Remove the item. Called from the container. """
-        if key == self.__items_key:
+        if key == self.__master_items_key:
             with self._update_mutex:
                 del self.__master_items[index]
                 self.__item_changed_event_listeners[id(item)].close()

@@ -110,11 +110,12 @@ class PersistentPropertySpecial(PersistentProperty):
 
 class PersistentItem:
 
-    def __init__(self, name, factory, item_changed=None):
+    def __init__(self, name, factory, item_changed=None, hidden=False):
         super(PersistentItem, self).__init__()
         self.name = name
         self.factory = factory
         self.item_changed = item_changed
+        self.hidden = hidden
         self.value = None
 
 
@@ -404,8 +405,8 @@ class PersistentObject:
         else:
             self.__properties[name] = PersistentProperty(name, value, make, read_only, hidden, recordable, validate, converter, changed, key, reader, writer)
 
-    def define_item(self, name, factory, item_changed=None):
-        self.__items[name] = PersistentItem(name, factory, item_changed)
+    def define_item(self, name, factory, item_changed=None, hidden=False):
+        self.__items[name] = PersistentItem(name, factory, item_changed, hidden)
 
     def define_relationship(self, name, factory, insert=None, remove=None):
         self.__relationships[name] = PersistentRelationship(name, factory, insert, remove)
@@ -591,7 +592,7 @@ class PersistentObject:
         property = self.__properties.get(name)
         if property and not property.hidden:
             return property.value
-        if name in self.__items:
+        if name in self.__items and not self.__items[name].hidden:
             return self.__items[name].value
         if name in self.__relationships:
             return copy.copy(self.__relationships[name].values)

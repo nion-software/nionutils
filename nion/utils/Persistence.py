@@ -244,7 +244,8 @@ class PersistentObjectContext:
     def get_properties(self, object):
         """ Return a copy of the properties for the object as a dict. """
         persistent_storage = self._get_persistent_storage_for_object(object)
-        return copy.deepcopy(persistent_storage.properties)
+        # TODO: future versions will only support get_properties
+        return copy.deepcopy(persistent_storage.get_properties(object) if hasattr(persistent_storage, "get_properties") else persistent_storage.properties)
 
     def item_inserted(self, parent, name, before_index, item):
         """ Call this to notify this context that the item before before_index has just been inserted into the parent in

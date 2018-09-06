@@ -6,6 +6,8 @@ UNRELEASED
 
 - Allow persistent items to be hidden (like properties).
 
+- Allow persistent interface to use get_properties instead of properties attribute when saving.
+
 - Allow FilteredListModel to have separate master/item property names.
 
 0.3.12 (2018-07-23)

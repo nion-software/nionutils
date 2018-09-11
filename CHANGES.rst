@@ -1,8 +1,8 @@
 Changelog (niondata)
 ====================
 
-UNRELEASED
-----------
+0.3.13 (2018-09-11)
+-------------------
 
 - Allow persistent items to be hidden (like properties).
 

@@ -479,9 +479,9 @@ class PersistentObject:
                 # type or id to construct it. so we need to look it up by key/index/name.
                 # to minimize the interface to the factory methods, just pass a closure
                 # which looks up by name.
-                def lookup_id(name):
-                    return item_dict[name]
-                item = factory(lookup_id)  # the uuid is random at this point
+                def lookup_id(name, default=None):
+                    return item_dict.get(name, default)
+                item = factory(lookup_id)
                 if item is None:
                     logging.debug("Unable to read %s", key)
                 assert item is not None
@@ -496,9 +496,9 @@ class PersistentObject:
                 # type or id to construct it. so we need to look it up by key/index/name.
                 # to minimize the interface to the factory methods, just pass a closure
                 # which looks up by name.
-                def lookup_id(name):
-                    return item_dict[name]
-                item = factory(lookup_id)  # the uuid is random at this point
+                def lookup_id(name, default=None):
+                    return item_dict.get(name, default)
+                item = factory(lookup_id)
                 if item is None:
                     logging.debug("Unable to read %s", key)
                 assert item is not None

@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+0.3.14 (2018-09-13)
+-------------------
+
+- Allow default values in persistent factory callback.
+
 0.3.13 (2018-09-11)
 -------------------
 

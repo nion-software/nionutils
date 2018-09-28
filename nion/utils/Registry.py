@@ -31,22 +31,35 @@ class ComponentManager(metaclass=Singleton):
         self.component_registered_event = Event.Event()
         self.component_unregistered_event = Event.Event()
 
+    @property
+    def _component_types(self):
+        return self.__component_types
+
+    @property
+    def _components_by_type(self):
+        return self.__components_by_type
+
     def get_components_by_type(self, component_type:str) -> typing.Set[typing.Any]:
         return self.__components_by_type.get(component_type, list())
 
     def register(self, component, component_types: typing.Set[str]) -> None:
-        assert component not in self.__component_types
+        for component_type in component_types:
+            assert component not in self.__components_by_type.get(component_type, set())
         for component_type in component_types:
             component_set = self.__components_by_type.setdefault(component_type, set())
             component_set.add(component)
-        self.__component_types[component] = component_types
+        self.__component_types.setdefault(component, set()).update(component_types)
         self.component_registered_event.fire(component, component_types)
 
-    def unregister(self, component) -> None:
-        assert component in self.__component_types
-        for component_type in self.__component_types[component]:
+    def unregister(self, component, component_types: typing.Set[str] = None) -> None:
+        component_types = component_types if component_types is not None else self.__component_types[component]
+        for component_type in component_types:
+            assert component in self.__components_by_type.get(component_type, set())
+        for component_type in component_types:
             self.__components_by_type.get(component_type).remove(component)
-        component_types = self.__component_types.pop(component)
+        self.__component_types[component].difference_update(component_types)
+        if len(self.__component_types[component]) == 0:
+            self.__component_types.pop(component)
         self.component_unregistered_event.fire(component, component_types)
 
 
@@ -81,9 +94,9 @@ def register_component(component, component_types: typing.Set[str]) -> None:
     ComponentManager().register(component, component_types)
 
 
-def unregister_component(component) -> None:
+def unregister_component(component, component_types: typing.Set[str] = None) -> None:
     """Unregister a component. This will trigger a component_unregistered_event. The component must have been previously registered."""
-    ComponentManager().unregister(component)
+    ComponentManager().unregister(component, component_types)
 
 
 def listen_component_registered_event(listener_fn) -> Event.EventListener:

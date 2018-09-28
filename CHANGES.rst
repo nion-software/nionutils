@@ -1,6 +1,11 @@
 Changelog (niondata)
 ====================
 
+UNRELEASED
+----------
+
+- Extend Registry to allow registering same component with additional component types.
+
 0.3.14 (2018-09-13)
 -------------------
 

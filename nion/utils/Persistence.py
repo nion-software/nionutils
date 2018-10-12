@@ -121,13 +121,18 @@ class PersistentItem:
 
 class PersistentRelationship:
 
-    def __init__(self, name, factory, insert=None, remove=None):
-        super(PersistentRelationship, self).__init__()
+    def __init__(self, name, factory, insert=None, remove=None, key=None):
+        super().__init__()
         self.name = name
         self.factory = factory
         self.insert = insert
         self.remove = remove
+        self.key = key
         self.values = list()
+
+    @property
+    def storage_key(self):
+        return self.key if self.key else self.name
 
 
 class PersistentObjectContext:
@@ -409,8 +414,8 @@ class PersistentObject:
     def define_item(self, name, factory, item_changed=None, hidden=False):
         self.__items[name] = PersistentItem(name, factory, item_changed, hidden)
 
-    def define_relationship(self, name, factory, insert=None, remove=None):
-        self.__relationships[name] = PersistentRelationship(name, factory, insert, remove)
+    def define_relationship(self, name, factory, insert=None, remove=None, key=None):
+        self.__relationships[name] = PersistentRelationship(name, factory, insert, remove, key)
 
     def undefine_properties(self):
         self.__properties.clear()
@@ -490,7 +495,8 @@ class PersistentObject:
                 item.read_from_dict(item_dict)
                 self.__set_item(key, item)
         for key in self.__relationships.keys():
-            for item_dict in properties.get(key, list()):
+            storage_key = self.__relationships[key].storage_key
+            for item_dict in properties.get(storage_key, list()):
                 factory = self.__relationships[key].factory
                 # the object has not been constructed yet, but we needs its
                 # type or id to construct it. so we need to look it up by key/index/name.
@@ -532,7 +538,8 @@ class PersistentObject:
             if item:
                 properties[key] = item.write_to_dict()
         for key in self.__relationships.keys():
-            items_list = properties.setdefault(key, list())
+            storage_key = self.__relationships[key].storage_key
+            items_list = properties.setdefault(storage_key, list())
             for item in self.__relationships[key].values:
                 items_list.append(item.write_to_dict())
         return properties

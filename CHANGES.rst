@@ -4,6 +4,8 @@ Changelog (niondata)
 UNRELEASED
 ----------
 
+- Allow persistent objects to delay writes and handle external data.
+
 - Allow persistent relationships to define storage key.
 
 - Extend Registry to allow registering same component with additional component types.

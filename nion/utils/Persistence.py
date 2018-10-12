@@ -279,6 +279,41 @@ class PersistentObjectContext:
         persistent_storage = self._get_persistent_storage_for_object(object)
         persistent_storage.clear_property(object, name)
 
+    def read_external_data(self, item, name):
+        """ Call this to notify read external data with name from an item in persistent storage. """
+        persistent_storage = self._get_persistent_storage_for_object(item)
+        return persistent_storage.read_external_data(item, name)
+
+    def write_external_data(self, item, name, value) -> None:
+        """ Call this to notify write external data value with name to an item in persistent storage. """
+        persistent_storage = self._get_persistent_storage_for_object(item)
+        persistent_storage.write_external_data(item, name, value)
+
+    def enter_write_delay(self, object) -> None:
+        """ Call this to notify this context that the object should be write delayed. """
+        persistent_storage = self._get_persistent_storage_for_object(object)
+        persistent_storage.enter_write_delay(object)
+
+    def exit_write_delay(self, object) -> None:
+        """ Call this to notify this context that the object should no longer be write delayed. """
+        persistent_storage = self._get_persistent_storage_for_object(object)
+        persistent_storage.exit_write_delay(object)
+
+    def is_write_delayed(self, object) -> bool:
+        """ Call this to notify determine if the object is currently write delayed. """
+        persistent_storage = self._get_persistent_storage_for_object(object)
+        return persistent_storage.is_write_delayed(object)
+
+    def rewrite_item(self, item) -> None:
+        """ Call this to write an item that was write delayed. """
+        persistent_storage = self._get_persistent_storage_for_object(item)
+        persistent_storage.rewrite_item(item)
+
+    def get_storage_property(self, item, name):
+        """ Call this to get a storage property with name of the item. """
+        persistent_storage = self._get_persistent_storage_for_object(item)
+        return persistent_storage.get_storage_property(item, name)
+
 
 class PersistentObjectParent:
     """ Track the parent of a persistent object. """

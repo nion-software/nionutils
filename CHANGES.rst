@@ -1,8 +1,10 @@
-Changelog (niondata)
-====================
+Changelog (nionutils)
+=====================
 
 UNRELEASED
 ----------
+
+- Add close method to ListModel for consistency.
 
 - Allow persistent objects to delay writes and handle external data.
 

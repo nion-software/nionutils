@@ -23,6 +23,9 @@ class ListModel(Observable.Observable):
         self.__key = key
         self.__items = list(items) if items else list()
 
+    def close(self):
+        pass
+
     def insert_item(self, index: int, value) -> None:
         self.__items.insert(index, value)
         self.notify_insert_item(self.__key if self.__key else "items", value, index)

@@ -53,7 +53,6 @@ class Recorder:
             for relationship_recorder in self.__relationship_recorders[key]:
                 relationship_recorder.close()
         self.__relationship_recorders = None
-        assert False
 
     def apply(self, object):
         for logger_item in self.__logger:

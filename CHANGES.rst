@@ -4,6 +4,8 @@ Changelog (nionutils)
 UNRELEASED
 ----------
 
+- Allow recorder object to be closed.
+
 - Improve release of objects when closing MappedListModel.
 
 - Add close method to ListModel for consistency.

@@ -584,12 +584,18 @@ class MappedListModel(Observable.Observable):
 
     def close(self):
         self.container = None
+        self.__map_fn = None
+        self.__unmap_fn = None
 
     @property
     def items(self) -> typing.Sequence:
         """ Return the items. """
         with self._update_mutex:
             return copy.copy(self.__items)
+
+    @property
+    def items_key(self):
+        return self.__items_key
 
     def __getattr__(self, item):
         if item == self.__items_key:

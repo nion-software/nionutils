@@ -4,6 +4,8 @@ Changelog (nionutils)
 UNRELEASED
 ----------
 
+- Improve release of objects when closing MappedListModel.
+
 - Add close method to ListModel for consistency.
 
 - Allow persistent objects to delay writes and handle external data.

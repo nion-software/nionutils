@@ -1,8 +1,8 @@
 Nion Utilities
 ==============
 
-The Nion Data library (used in Nion Swift)
-------------------------------------------
+The Nion Utils library (used in Nion Swift)
+-------------------------------------------
 Nion utility classes.
 
 .. start-badges
@@ -20,8 +20,8 @@ Nion utility classes.
    :target: https://travis-ci.org/nion-software/nionutils
    :alt: Travis CI build status (Linux)
 
-.. |version| image:: https://img.shields.io/pypi/v/niondata.svg
-   :target: https://pypi.org/project/niondata/
+.. |version| image:: https://img.shields.io/pypi/v/nionutils.svg
+   :target: https://pypi.org/project/nionutils/
    :alt: Latest PyPI version
 
 .. end-badges

@@ -1,8 +1,8 @@
 Changelog (nionutils)
 =====================
 
-UNRELEASED
-----------
+0.3.15 (2018-11-13)
+-------------------
 
 - Allow recorder object to be closed.
 

@@ -165,6 +165,7 @@ class TextFilter(Filter):
         super().__init__()
         self.__key = key
         self.__text = text
+        self.__lower_text = text.lower()
 
     def __deepcopy__(self, memo):
         result = super().__deepcopy__(memo)
@@ -173,8 +174,8 @@ class TextFilter(Filter):
         return result
 
     def matches(self, d) -> bool:
-        d_value = getattr(d, self.__key)
-        return re.search(self.__text, d_value, re.IGNORECASE) is not None
+        d_value = str(getattr(d, self.__key)).lower()
+        return d_value.find(self.__lower_text) >= 0
 
 
 class PartialDateFilter(Filter):

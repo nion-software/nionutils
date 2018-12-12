@@ -1,7 +1,7 @@
 Changelog (nionutils)
 =====================
 
-0.3.16 (UNRELEASED)
+0.3.16 (2018-12-11)
 -------------------
 
 - Change list model text filter to use straight text rather than regular expressions.

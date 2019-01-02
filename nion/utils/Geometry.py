@@ -332,6 +332,9 @@ class IntSize:
         multiplicand = float(multiplicand)
         return IntSize(self.__height * multiplicand, self.__width * multiplicand)
 
+    def __floordiv__(self, other):
+        return IntSize(self.__height / other, self.__width / other)
+
     def __getitem__(self, index):
         return (self.__height, self.__width)[index]
 

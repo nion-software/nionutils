@@ -1,6 +1,11 @@
 Changelog (nionutils)
 =====================
 
+0.3.17 (UNRELEASED)
+-------------------
+
+- Add floordiv operator to IntSize.
+
 0.3.16 (2018-12-11)
 -------------------
 

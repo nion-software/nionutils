@@ -4,6 +4,8 @@ Changelog (nionutils)
 0.3.17 (UNRELEASED)
 -------------------
 
+- Add standardized [notify] item_content_changed event to Observable.
+
 - Make item_changed_event optional for items within FilteredListModel.
 
 - Add floordiv operator to IntSize.

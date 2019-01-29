@@ -21,6 +21,7 @@ class Observable:
         self.item_cleared_event = Event.Event()
         self.item_inserted_event = Event.Event()
         self.item_removed_event = Event.Event()
+        self.item_content_changed_event = Event.Event()
 
     def notify_property_changed(self, key):
         self.property_changed_event.fire(key)
@@ -36,3 +37,6 @@ class Observable:
 
     def notify_remove_item(self, key, value, index):
         self.item_removed_event.fire(key, value, index)
+
+    def notify_item_content_changed(self, key, value, index):
+        self.item_content_changed_event.fire(key, value, index)

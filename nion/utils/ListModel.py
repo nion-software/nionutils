@@ -547,7 +547,7 @@ class FilteredListModel(Observable.Observable):
                         assert item in self.__master_items
                         self.__updated_master_item(item)
 
-                self.__item_changed_event_listeners[id(item)] = item.item_changed_event.listen(item_content_changed)
+                self.__item_changed_event_listeners[id(item)] = item.item_changed_event.listen(item_content_changed) if hasattr(item, "item_changed_event") else None
                 self.__inserted_master_item(before_index, item)
                 for selection in self.__selections:
                     selection.insert_index(before_index)
@@ -558,7 +558,8 @@ class FilteredListModel(Observable.Observable):
         if key == self.__master_items_key:
             with self._update_mutex:
                 del self.__master_items[index]
-                self.__item_changed_event_listeners[id(item)].close()
+                if self.__item_changed_event_listeners[id(item)]:
+                    self.__item_changed_event_listeners[id(item)].close()
                 del self.__item_changed_event_listeners[id(item)]
                 self.__removed_master_item(index, item)
                 for selection in self.__selections:

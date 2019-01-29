@@ -4,6 +4,8 @@ Changelog (nionutils)
 0.3.17 (UNRELEASED)
 -------------------
 
+- Make item_changed_event optional for items within FilteredListModel.
+
 - Add floordiv operator to IntSize.
 
 0.3.16 (2018-12-11)

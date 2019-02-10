@@ -4,8 +4,8 @@ Classes related to streams of values, used for reactive style programming.
 
 # standard libraries
 import asyncio
-import concurrent.futures
 import functools
+import operator
 import threading
 import time
 
@@ -233,10 +233,12 @@ class SampleStream(AbstractStream):
         return self.__value
 
 
-class PropertyStream(AbstractStream):
-    """A stream that watches an Observable object for a property change."""
+class PropertyChangedEventStream(AbstractStream):
+    """A stream generated from observing a property changed event of an Observable object."""
 
-    def __init__(self, source_object, property_name):
+    # see https://rehansaeed.com/reactive-extensions-part2-wrapping-events/
+
+    def __init__(self, source_object, property_name: str, cmp=None):
         super().__init__()
         # outgoing messages
         self.value_stream = Event.Event()
@@ -245,6 +247,7 @@ class PropertyStream(AbstractStream):
         # initialize
         self.__property_name = property_name
         self.__value = None
+        self.__cmp = cmp if cmp else operator.eq
         # listen for display changes
         self.__property_changed_listener = source_object.property_changed_event.listen(self.__property_changed)
         self.__property_changed(property_name)
@@ -262,6 +265,55 @@ class PropertyStream(AbstractStream):
     def __property_changed(self, key):
         if key == self.__property_name:
             new_value = getattr(self.__source_object, self.__property_name)
-            if new_value != self.__value:
+            if not self.__cmp(new_value, self.__value):
                 self.__value = new_value
                 self.value_stream.fire(self.__value)
+
+
+class ConcatStream(AbstractStream):
+    """Make a new stream for each new value of input stream and concatenate new stream output."""
+
+    def __init__(self, stream: AbstractStream, concat_fn):
+        super().__init__()
+        # outgoing messages
+        self.value_stream = Event.Event()
+        # references
+        self.__stream = stream.add_ref()
+        # initialize
+        self.__concat_fn = concat_fn
+        self.__value = None
+        self.__out_stream = None
+        self.__out_stream_listener = None
+        # listen for stream changes
+        self.__stream_listener = stream.value_stream.listen(self.__stream_changed)
+        self.__stream_changed(stream.value)
+
+    def close(self):
+        self.__stream_changed(None)
+        self.__stream_listener.close()
+        self.__stream_listener = None
+        self.__stream.remove_ref()
+        self.__stream = None
+        super().close()
+
+    @property
+    def value(self):
+        return self.__value
+
+    def __stream_changed(self, item):
+        if self.__out_stream:
+            self.__out_stream_listener.close()
+            self.__out_stream_listener = None
+            self.__out_stream.remove_ref()
+            self.__out_stream = None
+        if item:
+            def out_stream_changed(new_value):
+                self.__value = new_value
+                self.value_stream.fire(new_value)
+            self.__out_stream = self.__concat_fn(item)
+            self.__out_stream.add_ref()
+            self.__out_stream_listener = self.__out_stream.value_stream.listen(out_stream_changed)
+            out_stream_changed(self.__out_stream.value)
+        else:
+            self.__value = None
+            self.value_stream.fire(None)

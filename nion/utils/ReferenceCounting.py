@@ -36,7 +36,7 @@ class ReferenceCounted:
     # Anytime you give up a reference to this item, call remove_ref.
     def remove_ref(self, check=True):
         with self.__ref_count_mutex:
-            assert self.__ref_count > 0, 'DataItem has no references'
+            assert self.__ref_count > 0, 'Reference counted object has no references'
             self.__ref_count -= 1
             if self.__active and self.__ref_count == 0 and check:
                 self.__active = False

@@ -5,7 +5,7 @@ import os
 
 setuptools.setup(
     name="nionutils",
-    version="0.3.16",
+    version="0.3.17",
     author="Nion Software",
     author_email="swift@nion.com",
     description="Nion utility classes.",
@@ -16,7 +16,7 @@ setuptools.setup(
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
     ],
     include_package_data=True,
     test_suite="nion.utils.test",

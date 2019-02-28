@@ -1,7 +1,7 @@
 Changelog (nionutils)
 =====================
 
-0.3.17 (UNRELEASED)
+0.3.17 (2019-02-27)
 -------------------
 
 - Add ConcatStream and PropertyChangedEventStream.

@@ -1,9 +1,9 @@
 package:
   name: 'nionutils'
-  version: '0.3.16'
+  version: '0.3.17'
 
 source:
-  git_rev: 0.3.16
+  git_rev: 0.3.17
   git_url: https://github.com/nion-software/nionutils.git
 
 build:
@@ -17,7 +17,7 @@ requirements:
     - python
     - setuptools
   run:
-    - python >=3.5
+    - python >=3.6
 
 test:
   imports:

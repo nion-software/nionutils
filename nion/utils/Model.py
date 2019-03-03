@@ -60,13 +60,20 @@ class FuncStreamValueModel(PropertyModel):
         super().__init__(value=value, cmp=cmp)
         self.__value_func_stream = value_func_stream.add_ref()
         self.__event_loop = event_loop
+        self.__count = 0
 
         def handle_value_func(value_func):
-            value = value_func()
-            def update_value():
+            async def update_value():
+                value_ref = [None]
+                def eval(value_ref):
+                    value_ref[0] = value_func()
+                await event_loop.run_in_executor(None, eval, value_ref)
+                value = value_ref[0]
                 self.value = value
                 self.notify_property_changed("value")
-            event_loop.call_soon_threadsafe(update_value)
+                self.__count -= 1
+            self.__count += 1
+            event_loop.create_task(update_value())
 
         self.__stream_listener = value_func_stream.value_stream.listen(handle_value_func)
         handle_value_func(self.__value_func_stream.value)
@@ -80,8 +87,9 @@ class FuncStreamValueModel(PropertyModel):
         super().close()
 
     def _run_until_complete(self):
-        self.__event_loop.stop()
-        self.__event_loop.run_forever()
+        while self.__count > 0:
+            self.__event_loop.stop()
+            self.__event_loop.run_forever()
 
     def _evaluate_immediate(self):
         return self.__value_func_stream.value()

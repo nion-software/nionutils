@@ -1,6 +1,11 @@
 Changelog (nionutils)
 =====================
 
+0.3.18 (UNRELEASED)
+-------------------
+
+- Ensure FuncStreamValueModel handles threading properly.
+
 0.3.17 (2019-02-27)
 -------------------
 

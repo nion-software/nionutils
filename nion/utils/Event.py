@@ -41,23 +41,39 @@ class Event:
     # this would facilitate the ability to only listen to _another_ object if the object embedding
     # this event had listeners.
 
-    def __init__(self):
-        self.__weak_listeners = []
+    def __init__(self, trace=False):
+        self.__weak_listeners = list()
         self.__weak_listeners_mutex = threading.RLock()
+        self.__listeners = dict()
+        self.__trace = trace
 
     @property
     def listener_count(self):
         return len(self.__weak_listeners)
 
-    def listen(self, listener_fn):
+    @property
+    def listeners(self):
+        return [w() for w in self.__weak_listeners]
+
+    def listen(self, listener_fn, *, owner=None, trace=False):
         """Add a listener function and return listener token. Token can be closed or deleted to unlisten."""
         listener = EventListener(listener_fn)
         def remove_listener(weak_listener):
+            if trace:
+                import traceback
+                traceback.print_stack()
             with self.__weak_listeners_mutex:
                 self.__weak_listeners.remove(weak_listener)
         weak_listener = weakref.ref(listener, remove_listener)
         with self.__weak_listeners_mutex:
             self.__weak_listeners.append(weak_listener)
+        if owner:
+            def owner_gone(weak_owner):
+                listener = self.__listeners[id(weak_owner)][0]
+                listener.close()
+                del self.__listeners[id(weak_owner)]
+            weak_owner = weakref.ref(owner, owner_gone)
+            self.__listeners[id(weak_owner)] = listener, weak_owner
         return listener
 
     def fire(self, *args, **keywords):

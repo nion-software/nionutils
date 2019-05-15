@@ -17,6 +17,7 @@ from nion.utils import ListModel as ListModelModule
 
 
 # TODO: logical types: datetime, timestamp, uuid, etc.
+# TODO: object references (w/ content changed, delete, etc.)
 
 
 MDescription = typing.Union[str, dict]  # when napolean works: typing.NewType("MDescription", typing.Dict)

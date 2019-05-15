@@ -228,6 +228,9 @@ class PropertyBinding(Binding):
     The owner should call close on this object.
     """
 
+    # TODO: generalize to 'getter binding'
+    # TODO: generalize to 'two way getter connection'
+
     def __init__(self, source, property_name: str, *, converter=None, validator=None, fallback=None):
         super().__init__(source, converter=converter, validator=validator, fallback=fallback)
         self.__property_name = property_name

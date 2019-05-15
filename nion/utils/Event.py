@@ -14,7 +14,7 @@ import weakref
 # None
 
 
-class EventListener(object):
+class EventListener:
 
     def __init__(self, listener_fn):
         self.__listener_fn = listener_fn
@@ -34,7 +34,7 @@ class EventListener(object):
         self.call = void
 
 
-class Event(object):
+class Event:
     """An event object that to which listeners can be attached."""
 
     # TODO: add events to this object itself to indicate a listener being added or removed

@@ -20,8 +20,8 @@ class Style(enum.Enum):
     multiple = 3
 
 
-class IndexedSelection(object):
-    def __init__(self, selection_style=None):
+class IndexedSelection:
+    def __init__(self, selection_style: Style=None):
         super(IndexedSelection, self).__init__()
         self.__changed_event = Event.Event()
         self.__indexes = set()

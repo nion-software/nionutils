@@ -4,6 +4,8 @@ Changelog (nionutils)
 0.3.19 (UNRELEASED)
 -------------------
 
+- Improve stack traceback during events (fire, listen, handler).
+
 - Add auto-close (based on weak refs) and tracing (debugging) to Event objects.
 
 0.3.18 (2019-03-11)

@@ -36,6 +36,12 @@ class EventListener:
             pass
         self.call = void
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
 
 class Event:
     """An event object that to which listeners can be attached."""

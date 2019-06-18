@@ -4,6 +4,8 @@ Changelog (nionutils)
 0.3.19 (UNRELEASED)
 -------------------
 
+- Make event listeners context manager aware.
+
 - Improve stack traceback during events (fire, listen, handler).
 
 - Add auto-close (based on weak refs) and tracing (debugging) to Event objects.

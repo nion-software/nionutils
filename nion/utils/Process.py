@@ -15,6 +15,7 @@ import threading
 
 
 class TaskQueue(queue.Queue):
+
     def perform_tasks(self):
         # perform any pending operations
         qsize = self.qsize()
@@ -25,6 +26,18 @@ class TaskQueue(queue.Queue):
                 pass
             else:
                 task()
+                self.task_done()
+            qsize -= 1
+
+    def clear_tasks(self):
+        # perform any pending operations
+        qsize = self.qsize()
+        while not self.empty() and qsize > 0:
+            try:
+                task = self.get(False)
+            except queue.Empty:
+                pass
+            else:
                 self.task_done()
             qsize -= 1
 

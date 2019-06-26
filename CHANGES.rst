@@ -4,6 +4,8 @@ Changelog (nionutils)
 0.3.19 (UNRELEASED)
 -------------------
 
+- Add method to clear TaskQueue.
+
 - Make event listeners context manager aware.
 
 - Improve stack traceback during events (fire, listen, handler).

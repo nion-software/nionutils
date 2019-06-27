@@ -1,7 +1,7 @@
 Changelog (nionutils)
 =====================
 
-0.3.19 (UNRELEASED)
+0.3.19 (2019-06-27)
 -------------------
 
 - Add method to clear TaskQueue.

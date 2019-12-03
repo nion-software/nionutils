@@ -281,6 +281,9 @@ class FilteredListModel(Observable.Observable):
                 self.__binding.end_change()
         return ChangeTracker(self)
 
+    def mark_changed(self) -> None:
+        with self.changes(): pass
+
     # thread safe.
     @property
     def sort_key(self) -> SortKeyCallable:

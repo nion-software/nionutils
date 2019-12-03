@@ -44,7 +44,6 @@ class Binding:
 
     def __init__(self, source, *, converter=None, validator=None, fallback=None):
         super().__init__()
-        self.__source = None
         self.__converter = converter
         self.__validator = validator
         self.fallback = fallback

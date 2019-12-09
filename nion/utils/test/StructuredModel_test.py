@@ -1,5 +1,5 @@
 # standard libraries
-import collections
+import collections.abc
 import contextlib
 import copy
 import unittest
@@ -55,7 +55,7 @@ class TestStructuredModelClass(unittest.TestCase):
         str_field = StructuredModel.define_field("a", array_field)
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
-        self.assertIsInstance(model.a, collections.Sequence)
+        self.assertIsInstance(model.a, collections.abc.Sequence)
 
     def test_str_array_defaults(self):
         # test that an array of simple fields (str) can be initialized with default values

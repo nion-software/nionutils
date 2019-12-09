@@ -230,12 +230,16 @@ class IntPoint:
     y = property(__get_y)
 
     def __eq__(self, other):
-        other = IntPoint.make(other)
-        return self.__x == other.x and self.__y == other.y
+        if other is not None:
+            other = IntPoint.make(other)
+            return self.__x == other.x and self.__y == other.y
+        return False
 
     def __ne__(self, other):
-        other = IntPoint.make(other)
-        return self.__x != other.x or self.__y != other.y
+        if other is not None:
+            other = IntPoint.make(other)
+            return self.__x != other.x or self.__y != other.y
+        return True
 
     def __neg__(self):
         return IntPoint(y=-self.__y, x=-self.__x)
@@ -303,12 +307,16 @@ class IntSize:
     height = property(__get_height)
 
     def __eq__(self, other):
-        other = IntSize.make(other)
-        return self.__width == other.width and self.__height == other.height
+        if other is not None:
+            other = IntSize.make(other)
+            return self.__width == other.width and self.__height == other.height
+        return False
 
     def __ne__(self, other):
-        other = IntSize.make(other)
-        return self.__width != other.width or self.__height != other.height
+        if other is not None:
+            other = IntSize.make(other)
+            return self.__width != other.width or self.__height != other.height
+        return True
 
     def __neg__(self):
         return IntSize(-self.__height, -self.__width)
@@ -455,12 +463,16 @@ class IntRect:
     center = property(__get_center)
 
     def __eq__(self, other):
-        other = IntRect.make(other)
-        return self.__origin == other.origin and self.__size == other.size
+        if other is not None:
+            other = IntRect.make(other)
+            return self.__origin == other.origin and self.__size == other.size
+        return False
 
     def __ne__(self, other):
-        other = IntRect.make(other)
-        return self.__origin != other.origin or self.__size != other.size
+        if other is not None:
+            other = IntRect.make(other)
+            return self.__origin != other.origin or self.__size != other.size
+        return True
 
     def __getitem__(self, index):
         return (self.__origin, self.__size)[index]
@@ -543,12 +555,16 @@ class FloatPoint:
     y = property(__get_y)
 
     def __eq__(self, other):
-        other = FloatPoint.make(other)
-        return self.__x == other.x and self.__y == other.y
+        if other is not None:
+            other = FloatPoint.make(other)
+            return self.__x == other.x and self.__y == other.y
+        return False
 
     def __ne__(self, other):
-        other = FloatPoint.make(other)
-        return self.__x != other.x or self.__y != other.y
+        if other is not None:
+            other = FloatPoint.make(other)
+            return self.__x != other.x or self.__y != other.y
+        return True
 
     def __neg__(self):
         return FloatPoint(y=-self.__y, x=-self.__x)
@@ -628,12 +644,16 @@ class FloatSize:
     height = property(__get_height)
 
     def __eq__(self, other):
-        other = FloatSize.make(other)
-        return self.__width == other.width and self.__height == other.height
+        if other is not None:
+            other = FloatSize.make(other)
+            return self.__width == other.width and self.__height == other.height
+        return False
 
     def __ne__(self, other):
-        other = FloatSize.make(other)
-        return self.__width != other.width or self.__height != other.height
+        if other is not None:
+            other = FloatSize.make(other)
+            return self.__width != other.width or self.__height != other.height
+        return True
 
     def __neg__(self):
         return FloatSize(-self.__height, -self.__width)
@@ -781,12 +801,16 @@ class FloatRect:
     center = property(__get_center)
 
     def __eq__(self, other):
-        other = FloatRect.make(other)
-        return self.__origin == other.origin and self.__size == other.size
+        if other is not None:
+            other = FloatRect.make(other)
+            return self.__origin == other.origin and self.__size == other.size
+        return False
 
     def __ne__(self, other):
-        other = FloatRect.make(other)
-        return self.__origin != other.origin or self.__size != other.size
+        if other is not None:
+            other = FloatRect.make(other)
+            return self.__origin != other.origin or self.__size != other.size
+        return True
 
     def __getitem__(self, index):
         return (self.__origin, self.__size)[index]

@@ -3,6 +3,7 @@ Utility classes for implementing task queues and sets.
 """
 
 # standard libraries
+import asyncio
 import copy
 import queue
 import threading
@@ -62,3 +63,20 @@ class TaskSet(object):
             self.__task_dict.clear()
         for task in task_dict.values():
             task()
+
+
+def close_event_loop(event_loop: asyncio.AbstractEventLoop) -> None:
+    # give event loop one chance to finish up
+    event_loop.stop()
+    event_loop.run_forever()
+    # wait for everything to finish, including tasks running in executors
+    # this assumes that all outstanding tasks finish in a reasonable time (i.e. no infinite loops).
+    tasks = asyncio.all_tasks(loop=event_loop) if hasattr(asyncio, "all_tasks") else asyncio.Task.all_tasks(loop=event_loop)
+    if tasks:
+        gather_future = asyncio.gather(*tasks, return_exceptions=True)
+    else:
+        # work around bad design in gather (always uses global event loop in Python 3.8)
+        gather_future = event_loop.create_future()
+        gather_future.set_result([])
+    event_loop.run_until_complete(gather_future)
+    event_loop.close()

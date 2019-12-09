@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.20 (UNRELEASED)
 -------------------
+- Add Process.close_event_loop for standardized way of closing event loops.
 - Improve geometry comparisons so handle other being None.
 
 0.3.19 (2019-06-27)

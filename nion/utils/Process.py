@@ -79,4 +79,9 @@ def close_event_loop(event_loop: asyncio.AbstractEventLoop) -> None:
         gather_future = event_loop.create_future()
         gather_future.set_result([])
     event_loop.run_until_complete(gather_future)
+    # due to a bug in Python libraries, the default executor needs to be shutdown explicitly before the event loop
+    # see http://bugs.python.org/issue28464 . this bug manifests itself in at least one way: an intermittent failure
+    # in test_document_controller_releases_itself. reproduce by running the contents of that test in a loop of 100.
+    if hasattr(event_loop, "_default_executor"):
+        event_loop._default_executor.shutdown()
     event_loop.close()

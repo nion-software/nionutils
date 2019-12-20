@@ -61,6 +61,9 @@ class Binding:
         related actions. Not thread safe.
         """
         self.__source = None
+        self.source_getter = None
+        self.source_setter = None
+        self.target_setter = None
         self._closed = True
 
     @property

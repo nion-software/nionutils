@@ -259,6 +259,7 @@ class ArrayModel(ListModelModule.ListModel):
             if trampoline:
                 trampoline.close()
         self.__model_changed_listeners = list()
+        super().close()
 
     def __deepcopy__(self, memo):
         values = self.to_dict_value()

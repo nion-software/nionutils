@@ -252,6 +252,8 @@ class IntPoint:
             return IntPoint(y=self.__y + other.y, x=self.__x + other.x)
         elif isinstance(other, IntSize):
             return IntPoint(y=self.__y + other.height, x=self.__x + other.width)
+        elif isinstance(other, IntRect):
+            return other + self
         else:
             raise NotImplementedError()
 
@@ -260,6 +262,8 @@ class IntPoint:
             return IntPoint(y=self.__y - other.y, x=self.__x - other.x)
         elif isinstance(other, IntSize):
             return IntPoint(y=self.__y - other.height, x=self.__x - other.width)
+        elif isinstance(other, IntRect):
+            return IntRect.from_center_and_size(self - other.center, other.size)
         else:
             raise NotImplementedError()
 
@@ -277,13 +281,13 @@ class IntSize:
         elif h is not None:
             self.__height = int(h)
         else:
-            self.__height = 0.0
+            self.__height = 0
         if width is not None:
             self.__width = int(width)
         elif w is not None:
             self.__width = int(w)
         else:
-            self.__width = None
+            self.__width = 0
 
     @classmethod
     def make(cls, value):
@@ -459,7 +463,7 @@ class IntRect:
 
     def __get_center(self):
         """ Return the center point. """
-        return IntPoint(y=(self.top + self.bottom) * 0.5, x=(self.left + self.right) * 0.5)
+        return IntPoint(y=(self.top + self.bottom) // 2, x=(self.left + self.right) // 2)
     center = property(__get_center)
 
     def __eq__(self, other):
@@ -577,6 +581,8 @@ class FloatPoint:
             return FloatPoint(y=self.__y + other.y, x=self.__x + other.x)
         elif isinstance(other, FloatSize):
             return FloatPoint(y=self.__y + other.height, x=self.__x + other.width)
+        elif isinstance(other, FloatRect):
+            return other + self
         else:
             raise NotImplementedError()
 
@@ -585,6 +591,8 @@ class FloatPoint:
             return FloatPoint(y=self.__y - other.y, x=self.__x - other.x)
         elif isinstance(other, FloatSize):
             return FloatPoint(y=self.__y - other.height, x=self.__x - other.width)
+        elif isinstance(other, FloatRect):
+            return FloatRect.from_center_and_size(self - other.center, other.size)
         else:
             raise NotImplementedError()
 
@@ -620,7 +628,7 @@ class FloatSize:
         elif w is not None:
             self.__width = float(w)
         else:
-            self.__width = None
+            self.__width = 0.0
 
     @classmethod
     def make(cls, value):

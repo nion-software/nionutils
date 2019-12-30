@@ -737,6 +737,10 @@ class FloatRect:
         size = FloatSize(height=height, width=width)
         return FloatRect(origin, size)
 
+    @classmethod
+    def unit_rect(cls) -> "FloatRect":
+        return cls.from_tlhw(0, 0, 1, 1)
+
     def __str__(self):
         return "(o={}, s={})".format(self.__origin, self.__size)
 
@@ -869,3 +873,18 @@ class FloatRect:
             return FloatRect.from_center_and_size(self.center - other, self.size)
         else:
             raise NotImplementedError()
+
+
+def map_point(p: FloatPoint, f: FloatRect, t: FloatRect) -> FloatPoint:
+    return FloatPoint(y=((p.y - f.top) / f.height) * t.height + t.top,
+                      x=((p.x - f.left) / f.width) * t.width + t.left)
+
+
+def map_size(s: FloatSize, f: FloatRect, t: FloatRect) -> FloatSize:
+    return FloatSize(height=(s.height / f.height) * t.height,
+                     width=(s.width / f.width) * t.width)
+
+
+def map_rect(r: FloatRect, f: FloatRect, t: FloatRect) -> FloatRect:
+    return FloatRect.from_center_and_size(map_point(r.center, f, t),
+                                          map_size(r.size, f, t))

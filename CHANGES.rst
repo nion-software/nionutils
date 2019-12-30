@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.20 (UNRELEASED)
 -------------------
+- Add various geometry functions.
 - Add Process.close_event_loop for standardized way of closing event loops.
 - Improve geometry comparisons so handle other being None.
 

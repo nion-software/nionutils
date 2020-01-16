@@ -1,5 +1,13 @@
 """
-An registry for objects by id, uuid, type.
+A registry for objects by component type.
+
+A registry is used to look up objects by their name (component type).
+
+It is useful when an object used by an application is determined at run time. In that case it insulates the application
+from having to know the specific object being used.
+
+It is also useful when more than one object can be registered as a specific component type. In that case, the
+application can ask for all objects registered of a specific type.
 """
 
 # standard libraries

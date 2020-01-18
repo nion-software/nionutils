@@ -9,6 +9,7 @@
 # standard libraries
 import collections
 import math
+import typing
 
 # third party libraries
 # None
@@ -270,6 +271,10 @@ class IntPoint:
     def __getitem__(self, index):
         return (self.__y, self.__x)[index]
 
+    def __iter__(self):
+        yield self.__y
+        yield self.__x
+
 
 class IntSize:
 
@@ -349,6 +354,10 @@ class IntSize:
 
     def __getitem__(self, index):
         return (self.__height, self.__width)[index]
+
+    def __iter__(self):
+        yield self.__height
+        yield self.__width
 
     def __get_aspect_ratio(self):
         """ Return the aspect ratio as a float. """
@@ -466,6 +475,10 @@ class IntRect:
         return IntPoint(y=(self.top + self.bottom) // 2, x=(self.left + self.right) // 2)
     center = property(__get_center)
 
+    @property
+    def slice(self) -> typing.Tuple[slice, slice]:
+        return slice(self.top, self.bottom), slice(self.left, self.right)
+
     def __eq__(self, other):
         if other is not None:
             other = IntRect.make(other)
@@ -479,7 +492,11 @@ class IntRect:
         return True
 
     def __getitem__(self, index):
-        return (self.__origin, self.__size)[index]
+        return (tuple(self.__origin), tuple(self.__size))[index]
+
+    def __iter__(self):
+        yield tuple(self.__origin)
+        yield tuple(self.__size)
 
     def __get_aspect_ratio(self):
         """ Return the aspect ratio as a float. """
@@ -611,6 +628,10 @@ class FloatPoint:
     def __getitem__(self, index):
         return (self.__y, self.__x)[index]
 
+    def __iter__(self):
+        yield self.__y
+        yield self.__x
+
 
 class FloatSize:
 
@@ -691,6 +712,10 @@ class FloatSize:
 
     def __getitem__(self, index):
         return (self.__height, self.__width)[index]
+
+    def __iter__(self):
+        yield self.__height
+        yield self.__width
 
     def __get_aspect_ratio(self):
         """ Return the aspect ratio as a float. """
@@ -825,7 +850,11 @@ class FloatRect:
         return True
 
     def __getitem__(self, index):
-        return (self.__origin, self.__size)[index]
+        return (tuple(self.__origin), tuple(self.__size))[index]
+
+    def __iter__(self):
+        yield tuple(self.__origin)
+        yield tuple(self.__size)
 
     def __get_aspect_ratio(self):
         """ Return the aspect ratio as a float. """

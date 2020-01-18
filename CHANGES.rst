@@ -3,7 +3,7 @@ Changelog (nionutils)
 
 0.3.20 (UNRELEASED)
 -------------------
-- Add various geometry functions.
+- Add various geometry functions; facilitate geometry objects conversions to tuples.
 - Add Process.close_event_loop for standardized way of closing event loops.
 - Improve geometry comparisons so handle other being None.
 

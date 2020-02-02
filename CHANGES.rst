@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.3.21 (UNRELEASED)
+-------------------
+- Add geometry functions to convert from int to float versions.
+
 0.3.20 (2020-01-28)
 -------------------
 - Add various geometry functions; facilitate geometry objects conversions to tuples.

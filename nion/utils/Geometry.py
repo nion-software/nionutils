@@ -220,6 +220,9 @@ class IntPoint:
     def __repr__(self):
         return "{2} (x={0}, y={1})".format(self.__x, self.__y, super(IntPoint, self).__repr__())
 
+    def to_float_point(self) -> "FloatPoint":
+        return FloatPoint(y=self.y, x=self.x)
+
     def __get_x(self):
         """ Return the x coordinate. """
         return self.__x
@@ -304,6 +307,9 @@ class IntSize:
 
     def __repr__(self):
         return "{2} (w={0}, h={1})".format(self.__width, self.__height, super(IntSize, self).__repr__())
+
+    def to_float_size(self) -> "FloatSize":
+        return FloatSize(h=self.height, w=self.width)
 
     def __get_width(self):
         """ Return the width. """
@@ -409,6 +415,9 @@ class IntRect:
 
     def __repr__(self):
         return "{2} (o={0}, s={1})".format(self.__origin, self.__size, super(IntRect, self).__repr__())
+
+    def to_float_rect(self) -> "FloatRect":
+        return FloatRect.from_tlbr(self.top, self.left, self.bottom, self.right)
 
     def __get_origin(self):
         """ Return the origin as IntPoint. """
@@ -882,7 +891,7 @@ class FloatRect:
 
     def translated(self, point):
         """ Return the rectangle translated by the point or size. """
-        return IntRect(self.origin + IntPoint.make(point), self.size)
+        return FloatRect(self.origin + FloatPoint.make(point), self.size)
 
     def inset(self, dx, dy=None):
         """ Returns the rectangle inset by the specified amount. """

@@ -542,6 +542,20 @@ class IntRect:
         size = IntSize(height=self.height - dy * 2, width=self.width - dx * 2)
         return IntRect(origin, size)
 
+    def intersect(self, rect: "IntRect") -> "IntRect":
+        top = max(self.top, rect.top)
+        left = max(self.left, rect.left)
+        bottom = min(self.bottom, rect.bottom)
+        right = min(self.right, rect.right)
+        return IntRect.from_tlbr(top, left, bottom, right)
+
+    def union(self, rect: "IntRect") -> "IntRect":
+        top = min(self.top, rect.top)
+        left = min(self.left, rect.left)
+        bottom = max(self.bottom, rect.bottom)
+        right = max(self.right, rect.right)
+        return IntRect.from_tlbr(top, left, bottom, right)
+
     def __add__(self, other) -> "IntRect":
         if isinstance(other, IntPoint):
             return IntRect.from_center_and_size(self.center + other, self.size)
@@ -899,6 +913,20 @@ class FloatRect:
         origin = FloatPoint(y=self.top + dy, x=self.left + dx)
         size = FloatSize(height=self.height - dy * 2, width=self.width - dx * 2)
         return FloatRect(origin, size)
+
+    def intersect(self, rect: "FloatRect") -> "FloatRect":
+        top = max(self.top, rect.top)
+        left = max(self.left, rect.left)
+        bottom = min(self.bottom, rect.bottom)
+        right = min(self.right, rect.right)
+        return FloatRect.from_tlbr(top, left, bottom, right)
+
+    def union(self, rect: "FloatRect") -> "FloatRect":
+        top = min(self.top, rect.top)
+        left = min(self.left, rect.left)
+        bottom = max(self.bottom, rect.bottom)
+        right = max(self.right, rect.right)
+        return FloatRect.from_tlbr(top, left, bottom, right)
 
     def __add__(self, other) -> "FloatRect":
         if isinstance(other, FloatPoint):

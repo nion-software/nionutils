@@ -115,3 +115,8 @@ def listen_component_registered_event(listener_fn) -> Event.EventListener:
 def listen_component_unregistered_event(listener_fn) -> Event.EventListener:
     """Add a listener for the component unregistered event."""
     return ComponentManager().component_unregistered_event.listen(listener_fn)
+
+
+def fire_existing_component_registered_events(component_type: str) -> None:
+    for component in get_components_by_type(component_type):
+        ComponentManager().component_registered_event.fire(component, {component_type})

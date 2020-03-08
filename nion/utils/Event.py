@@ -103,39 +103,42 @@ class Event:
     def fire(self, *args, **keywords):
         """Calls listeners (in order added) unconditionally."""
         listener = None
-        try:
-            with self.__weak_listeners_mutex:
-                listeners = [weak_listener() for weak_listener in self.__weak_listeners]
-            for listener in listeners:
-                if listener:
-                    listener.call(*args, **keywords)
-        except Exception as e:
-            self.__print_event_exception(listener)
+        if self.__weak_listeners:
+            try:
+                with self.__weak_listeners_mutex:
+                    listeners = [weak_listener() for weak_listener in self.__weak_listeners]
+                for listener in listeners:
+                    if listener:
+                        listener.call(*args, **keywords)
+            except Exception as e:
+                self.__print_event_exception(listener)
 
     def fire_any(self, *args, **keywords):
         """Calls listeners (in order added) until one returns True or else return False."""
         listener = None
-        try:
-            with self.__weak_listeners_mutex:
-                listeners = [weak_listener() for weak_listener in self.__weak_listeners]
-            for listener in listeners:
-                if listener:
-                    if listener.call(*args, **keywords):
-                        return True
-            return False
-        except Exception as e:
-            self.__print_event_exception(listener)
+        if self.__weak_listeners:
+            try:
+                with self.__weak_listeners_mutex:
+                    listeners = [weak_listener() for weak_listener in self.__weak_listeners]
+                for listener in listeners:
+                    if listener:
+                        if listener.call(*args, **keywords):
+                            return True
+                return False
+            except Exception as e:
+                self.__print_event_exception(listener)
 
     def fire_all(self, *args, **keywords):
         """Calls listeners (in order added) until one returns False or else return True."""
         listener = None
-        try:
-            with self.__weak_listeners_mutex:
-                listeners = [weak_listener() for weak_listener in self.__weak_listeners]
-            for listener in listeners:
-                if listener:
-                    if not listener.call(*args, **keywords):
-                        return False
-            return True
-        except Exception as e:
-            self.__print_event_exception(listener)
+        if self.__weak_listeners:
+            try:
+                with self.__weak_listeners_mutex:
+                    listeners = [weak_listener() for weak_listener in self.__weak_listeners]
+                for listener in listeners:
+                    if listener:
+                        if not listener.call(*args, **keywords):
+                            return False
+                return True
+            except Exception as e:
+                self.__print_event_exception(listener)

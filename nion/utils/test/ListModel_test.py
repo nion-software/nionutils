@@ -113,6 +113,63 @@ class TestListModelClass(unittest.TestCase):
         self.assertEqual(["4", "1", "2", "3"], l3.items)
         self.assertEqual(["4", "1", "2", "3"], l4.items)
 
+    def test_filtered_list_sends_begin_end_changes_for_single_insert_and_remove(self):
+        l = ListModel.ListModel("items")
+        l.append_item("3")
+        l.append_item("1")
+        l.append_item("4")
+        l.append_item("2")
+        l2 = ListModel.FilteredListModel(container=l, items_key="items")
+        l2.sort_key = lambda x: x
+
+        begin_changes_count = 0
+        end_changes_count = 0
+
+        def begin_changes(key):
+            nonlocal begin_changes_count
+            begin_changes_count += 1
+
+        def end_changes(key):
+            nonlocal end_changes_count
+            end_changes_count += 1
+
+        with l2.begin_changes_event.listen(begin_changes), l2.end_changes_event.listen(end_changes):
+            l.insert_item(0, "5")
+            l.remove_item(0)
+
+        self.assertEqual(2, begin_changes_count)
+        self.assertEqual(2, end_changes_count)
+
+    def test_filtered_list_sends_begin_end_changes_for_grouped_insert_and_remove(self):
+        l = ListModel.ListModel("items")
+        l.append_item("3")
+        l.append_item("1")
+        l.append_item("4")
+        l.append_item("2")
+        l2 = ListModel.FilteredListModel(container=l, items_key="items")
+        l2.sort_key = lambda x: x
+
+        begin_changes_count = 0
+        end_changes_count = 0
+
+        def begin_changes(key):
+            nonlocal begin_changes_count
+            begin_changes_count += 1
+
+        def end_changes(key):
+            nonlocal end_changes_count
+            end_changes_count += 1
+
+        with l2.begin_changes_event.listen(begin_changes), l2.end_changes_event.listen(end_changes):
+            with l2.changes():
+                l.insert_item(0, "5")
+                l.insert_item(0, "6")
+                l.remove_item(0)
+                l.remove_item(0)
+
+        self.assertEqual(1, begin_changes_count)
+        self.assertEqual(1, end_changes_count)
+
     def test_initial_mapped_model_values_are_correct(self):
         l = ListModel.ListModel("items")
         l.append_item(A("1"))
@@ -165,6 +222,65 @@ class TestListModelClass(unittest.TestCase):
         s.add(2)
         l.remove_item(1)
         self.assertEqual({0, 1}, s.indexes)
+
+    def test_mapped_list_sends_begin_end_changes_for_single_insert_and_remove(self):
+        l = ListModel.ListModel("items")
+        l.append_item("3")
+        l.append_item("1")
+        l.append_item("4")
+        l.append_item("2")
+        l1 = ListModel.FilteredListModel(container=l, master_items_key="items", items_key="mitems")
+        l1.sort_key = lambda x: x
+        l2 = ListModel.MappedListModel(container=l1, master_items_key="mitems", items_key="items")
+
+        begin_changes_count = 0
+        end_changes_count = 0
+
+        def begin_changes(key):
+            nonlocal begin_changes_count
+            begin_changes_count += 1
+
+        def end_changes(key):
+            nonlocal end_changes_count
+            end_changes_count += 1
+
+        with l2.begin_changes_event.listen(begin_changes), l2.end_changes_event.listen(end_changes):
+            l.insert_item(0, "5")
+            l.remove_item(0)
+
+        self.assertEqual(2, begin_changes_count)
+        self.assertEqual(2, end_changes_count)
+
+    def test_mapped_list_sends_begin_end_changes_for_grouped_insert_and_remove(self):
+        l = ListModel.ListModel("items")
+        l.append_item("3")
+        l.append_item("1")
+        l.append_item("4")
+        l.append_item("2")
+        l1 = ListModel.FilteredListModel(container=l, master_items_key="items", items_key="mitems")
+        l1.sort_key = lambda x: x
+        l2 = ListModel.MappedListModel(container=l1, master_items_key="mitems", items_key="items")
+
+        begin_changes_count = 0
+        end_changes_count = 0
+
+        def begin_changes(key):
+            nonlocal begin_changes_count
+            begin_changes_count += 1
+
+        def end_changes(key):
+            nonlocal end_changes_count
+            end_changes_count += 1
+
+        with l2.begin_changes_event.listen(begin_changes), l2.end_changes_event.listen(end_changes):
+            with l2.changes():
+                l.insert_item(0, "5")
+                l.insert_item(0, "6")
+                l.remove_item(0)
+                l.remove_item(0)
+
+        self.assertEqual(1, begin_changes_count)
+        self.assertEqual(1, end_changes_count)
 
     def test_flattened_model_initializes_properly(self):
         l = ListModel.ListModel("as")

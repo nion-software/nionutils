@@ -29,6 +29,90 @@ class TestListModelClass(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def test_filtered_list_is_sorted(self):
+        l = ListModel.ListModel("items")
+        l.append_item("3")
+        l.append_item("1")
+        l.append_item("4")
+        l.append_item("2")
+        l2 = ListModel.FilteredListModel(container=l, items_key="items")
+        l2.sort_key = lambda x: x
+        l2.mark_changed()
+        self.assertEqual(["1", "2", "3", "4"], l2.items)
+        l.remove_item(1)
+        l.remove_item(1)
+        self.assertEqual(["2", "3"], l2.items)
+        l.insert_item(0, "5")
+        l.insert_item(0, "1")
+        self.assertEqual(["1", "2", "3", "5"], l2.items)
+
+    def test_filtered_list_unsorted_retains_order(self):
+        l = ListModel.ListModel("items")
+        l.append_item("3")
+        l.append_item("1")
+        l.append_item("4")
+        l.append_item("2")
+        l2 = ListModel.FilteredListModel(container=l, items_key="items")
+        l2.filter = ListModel.PredicateFilter(lambda x: x != "4")
+        self.assertEqual(["3", "1", "2"], l2.items)
+        l.remove_item(0)
+        self.assertEqual(["1", "2"], l2.items)
+        l.insert_item(0, "3")
+        l.append_item("44")
+        self.assertEqual(["3", "1", "2", "44"], l2.items)
+        l2.begin_change()
+        l.insert_item(0, "5")
+        l.append_item("6")
+        l2.end_change()
+        self.assertEqual(["5", "3", "1", "2", "44", "6"], l2.items)
+
+    def test_filtered_list_changing_from_sorted_to_unsorted_retains_order(self):
+        l = ListModel.ListModel("items")
+        l.append_item("3")
+        l.append_item("1")
+        l.append_item("4")
+        l.append_item("2")
+        l2 = ListModel.FilteredListModel(container=l, items_key="items")
+        l2.sort_key = lambda x: x
+        self.assertEqual(["1", "2", "3", "4"], l2.items)
+        l2.filter = ListModel.PredicateFilter(lambda x: x != "4")
+        l2.sort_key = None
+        self.assertEqual(["3", "1", "2"], l2.items)
+        l.remove_item(1)
+        self.assertEqual(["3", "2"], l2.items)
+
+    def test_filtered_list_changing_container_under_changes_retains_order(self):
+        # the bug was that if list model is under a change and items are only
+        # being rearranged (easy to occur with dependent list being sorted differently)
+        # then there is no way to detect that it is not sorted anymore so it proceeds
+        # as if it is already sorted properly.
+        l = ListModel.ListModel("items")
+        l.append_item("3")
+        l.append_item("1")
+        l.append_item("4")
+        l.append_item("2")
+        l2 = ListModel.ListModel("items")
+        l2.append_item("4")
+        l2.append_item("1")
+        l2.append_item("2")
+        l2.append_item("3")
+        l3 = ListModel.FilteredListModel(container=l, items_key="items")
+        self.assertEqual(["3", "1", "4", "2"], l3.items)
+        l4 = ListModel.FilteredListModel(container=l3, items_key="items")
+        self.assertEqual(["3", "1", "4", "2"], l4.items)
+        l4.begin_change()
+        l3.begin_change()
+        l3.filter = ListModel.Filter(True)
+        l3.end_change()
+        l4.end_change()
+        l4.begin_change()
+        l3.begin_change()
+        l3.container = l2
+        l3.end_change()
+        l4.end_change()
+        self.assertEqual(["4", "1", "2", "3"], l3.items)
+        self.assertEqual(["4", "1", "2", "3"], l4.items)
+
     def test_initial_mapped_model_values_are_correct(self):
         l = ListModel.ListModel("items")
         l.append_item(A("1"))

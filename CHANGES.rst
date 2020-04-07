@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.21 (UNRELEASED)
 -------------------
+- Add a pathlib.Path converter.
 - Improve performance of filtered list models.
 - Add Registry function to send registry events to existing components. Useful for initialization.
 - Add geometry rectangle functions for intersect and union.

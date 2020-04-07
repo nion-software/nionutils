@@ -5,6 +5,7 @@
 # standard libraries
 import re
 import locale
+import pathlib
 import uuid
 
 # third party libraries
@@ -141,3 +142,10 @@ class UuidToStringConverter:
                         value.strip(), re.IGNORECASE) is not None:
             return uuid.UUID(value.strip())
         return None
+
+
+class PathToStringConverter:
+    def convert(self, value):
+        return str(value) if value else None
+    def convert_back(self, value):
+        return pathlib.Path(value) if value else None

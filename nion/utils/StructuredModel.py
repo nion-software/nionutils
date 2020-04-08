@@ -64,7 +64,7 @@ def define_array(items: MDescription) -> MDescription:
 def build_model(schema: MDescription, *, default_value=None, value=None):
     if schema in ("string", "boolean", "int", "float"):
         return FieldPropertyModel(default_value if default_value is not None else value)
-    type = schema.get("type")
+    type = typing.cast(dict, schema).get("type")
     if type in ("string", "boolean", "int", "float"):
         return FieldPropertyModel(default_value if default_value is not None else value)
     elif type == "record":
@@ -78,7 +78,7 @@ def build_model(schema: MDescription, *, default_value=None, value=None):
 def build_value(schema: MDescription, *, value=None):
     if schema in ("string", "boolean", "int", "float"):
         return value
-    type = schema.get("type")
+    type = typing.cast(dict, schema).get("type")
     if type in ("string", "boolean", "int", "float"):
         return value
     elif type == "record":
@@ -130,6 +130,7 @@ class RecordModel(Observable.Observable):
         self.__array_item_inserted_listeners = dict()
         self.__array_item_removed_listeners = dict()
         self.schema = schema
+        assert isinstance(schema, dict)
         for field_schema in schema["fields"]:
             field_name = field_schema["name"]
             field_type = field_schema["type"]
@@ -180,6 +181,7 @@ class RecordModel(Observable.Observable):
 
     def to_dict_value(self) -> typing.Optional[typing.Any]:
         d = dict()
+        assert isinstance(self.schema, dict)
         for field_schema in self.schema["fields"]:
             field_name = field_schema["name"]
             field_value = self.__field_models[field_name].to_dict_value()
@@ -234,7 +236,9 @@ class ArrayModel(ListModelModule.ListModel):
 
     def __init__(self, schema: MDescription, values=None):
         if values is not None:
-            items = list()
+            items : typing.Optional[typing.List] = list()
+            assert isinstance(schema, dict)
+            assert isinstance(items, list)
             item_schema = schema["items"]
             for value in values:
                 items.append(build_value(item_schema, value=value))

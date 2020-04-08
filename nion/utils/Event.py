@@ -18,7 +18,7 @@ import weakref
 
 class EventListener:
 
-    def __init__(self, listener_fn, trace):
+    def __init__(self, listener_fn, trace: bool):
         self.__listener_fn = listener_fn
         self.tb = traceback.extract_stack() if trace else None
         # the call function is very performance critical; make it fast by using a property

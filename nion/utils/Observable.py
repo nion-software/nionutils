@@ -1,4 +1,5 @@
 # standard libraries
+import typing
 
 # third party libraries
 # None
@@ -23,7 +24,7 @@ class Observable:
         self.item_removed_event = Event.Event()
         self.item_content_changed_event = Event.Event()
 
-    def notify_property_changed(self, key):
+    def notify_property_changed(self, key: str) -> None:
         self.property_changed_event.fire(key)
 
     def notify_set_item(self, key, item):

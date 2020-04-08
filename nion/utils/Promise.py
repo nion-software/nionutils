@@ -9,14 +9,14 @@ class Promise(typing.Generic[T]):
 
     Pass a callable to produce a value. Access the value using the value or opt_value properties.
     """
-    def __init__(self, fn: typing.Callable[[], typing.Generic[T]]):
+    def __init__(self, fn: typing.Callable[[], T]):
         assert fn
         self.__lock = threading.RLock()
-        self.__value = None
-        self.__fn = fn
+        self.__value : typing.Optional[T] = None
+        self.__fn : typing.Optional[typing.Callable[[], T]] = fn
 
     @property
-    def value(self) -> T:
+    def value(self) -> typing.Optional[T]:
         """Evaluate the value if not already evaluated and return the value."""
         with self.__lock:
             if callable(self.__fn):
@@ -25,7 +25,7 @@ class Promise(typing.Generic[T]):
             return self.__value
 
     @property
-    def opt_value(self) -> T:
+    def opt_value(self) -> typing.Optional[T]:
         """Return the value but do not evaluate it if it hasn't already been evaluated."""
         return self.__value
 

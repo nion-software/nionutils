@@ -5,6 +5,7 @@ A collection of useful classes for handling selections.
 # standard libraries
 import enum
 import numbers
+import typing
 
 # third party libraries
 # None
@@ -22,9 +23,9 @@ class Style(enum.Enum):
 
 class IndexedSelection:
     def __init__(self, selection_style: Style=None):
-        super(IndexedSelection, self).__init__()
+        super().__init__()
         self.__changed_event = Event.Event()
-        self.__indexes = set()
+        self.__indexes : typing.MutableSet[int] = set()
         self.__anchor_index = None
         self.selection_style = selection_style if selection_style else Style.multiple
 

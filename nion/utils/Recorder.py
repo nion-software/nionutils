@@ -31,9 +31,9 @@ class Recorder:
         for key in object.relationship_names:
             items = getattr(object, key)
             for index, item in enumerate(items):
-                def item_accessor(key, index, x):
+                def item_index_accessor(key: str, index: int, x):
                     return getattr(self.__accessor_fn(x), key)[index]
-                self.__relationship_recorders[key].append(Recorder(item, functools.partial(item_accessor, key, index), self.__logger))
+                self.__relationship_recorders[key].append(Recorder(item, functools.partial(item_index_accessor, key, index), self.__logger))
 
     def close(self):
         self.__property_changed_event_listener.close()

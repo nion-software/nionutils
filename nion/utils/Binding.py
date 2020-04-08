@@ -3,10 +3,7 @@
 """
 
 # standard libraries
-# none
-
-# types
-from typing import Any, Callable, Sequence
+import typing
 
 # third party libraries
 # none
@@ -184,16 +181,16 @@ class ListBinding(Binding):
     def __init__(self, source, key: str):
         super().__init__(source)
         self.__key = key
-        self.inserter = None  # type: Callable[[Any, int], None]
-        self.remover = None  # type: Callable[[int], None]
+        self.inserter: typing.Optional[typing.Callable[[typing.Any, int], None]] = None
+        self.remover: typing.Optional[typing.Callable[[int], None]] = None
 
         # thread safe
-        def item_inserted(key_: str, item: Any, before_index: int) -> None:
+        def item_inserted(key_: str, item: typing.Any, before_index: int) -> None:
             if key_ == self.__key and callable(self.inserter):
                 self.inserter(item, before_index)
 
         # thread safe
-        def item_removed(key_: str, item: Any, index: int) -> None:
+        def item_removed(key_: str, item: typing.Any, index: int) -> None:
             if key_ == self.__key and callable(self.remover):
                 self.remover(index)
 
@@ -208,7 +205,7 @@ class ListBinding(Binding):
         super().close()
 
     @property
-    def items(self) -> Sequence[Any]:
+    def items(self) -> typing.Sequence:
         """ Return the items of the list. Thread safe. """
         return getattr(self.source, self.__key)
 

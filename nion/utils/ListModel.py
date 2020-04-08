@@ -21,7 +21,7 @@ class ListModel(Observable.Observable):
     def __init__(self, key: str=None, items=None):
         super().__init__()
         self.__key = key
-        self.__items = list(items) if items else list()
+        self.__items : typing.List = list(items) if items else list()
 
     def close(self):
         pass
@@ -643,7 +643,7 @@ class MappedListModel(Observable.Observable):
         self.__items_key = items_key
         self.__map_fn = map_fn or (lambda x: x)
         self.__unmap_fn = unmap_fn or (lambda x: x)
-        self.__items = list()  # a list of transformed items
+        self.__items : typing.List = list()  # a list of transformed items
         self._update_mutex = threading.RLock()
         self.__change_level = 0
         self.begin_changes_event = Event.Event()
@@ -792,14 +792,14 @@ class FlattenedListModel(Observable.Observable):
         self.__master_items_key = master_items_key
         self.__child_items_key = child_items_key
         self.__items_key = items_key if items_key else child_items_key
-        self.__master_items = list()  # a list of master items (to be transformed)
-        self.__items = list()  # a list of flattened items
-        self.__children = dict()  # map master item to children
+        self.__master_items : typing.List = list()  # a list of master items (to be transformed)
+        self.__items : typing.List = list()  # a list of flattened items
+        self.__children : typing.Dict[typing.Any, typing.List] = dict()  # map master item to children
         self._update_mutex = threading.RLock()
         self.__item_inserted_event_listener = None
         self.__item_removed_event_listener = None
-        self.__child_item_inserted_event_listener = dict()
-        self.__child_item_removed_event_listener = dict()
+        self.__child_item_inserted_event_listener : typing.Dict = dict()
+        self.__child_item_removed_event_listener : typing.Dict = dict()
         self.__selections = list()
         if selection:
             self.__selections.append(selection)

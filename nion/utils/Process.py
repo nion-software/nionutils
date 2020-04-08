@@ -71,7 +71,10 @@ def close_event_loop(event_loop: asyncio.AbstractEventLoop) -> None:
     event_loop.run_forever()
     # wait for everything to finish, including tasks running in executors
     # this assumes that all outstanding tasks finish in a reasonable time (i.e. no infinite loops).
-    tasks = asyncio.all_tasks(loop=event_loop) if hasattr(asyncio, "all_tasks") else asyncio.Task.all_tasks(loop=event_loop)
+    all_tasks_fn = getattr(asyncio, "all_tasks", None)
+    if not all_tasks_fn:
+        all_tasks_fn = asyncio.Task.all_tasks
+    tasks = all_tasks_fn(loop=event_loop)
     if tasks:
         gather_future = asyncio.gather(*tasks, return_exceptions=True)
     else:

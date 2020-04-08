@@ -29,8 +29,8 @@ install:
 
 # command to run tests
 script:
-  python -m unittest discover -p '*_test.py'
-  mypy --namespace-packages nion/utils/
+  - python -m unittest discover -p '*_test.py'
+  - mypy --namespace-packages nion/utils/
 
 # command to deploy to pypi on tags
 deploy:

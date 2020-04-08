@@ -24,11 +24,13 @@ branches:
 
 # command to install dependencies
 install:
-  - python setup.py -q install
+  - python -m setup install
+  - python -m pip install mypy
 
 # command to run tests
 script:
   python -m unittest discover -p '*_test.py'
+  mypy --namespace-packages nion/utils/
 
 # command to deploy to pypi on tags
 deploy:

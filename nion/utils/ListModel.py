@@ -15,34 +15,40 @@ from nion.utils import Event
 from nion.utils import Observable
 from nion.utils import Selection
 
+T = typing.TypeVar('T')
 
-class ListModel(Observable.Observable):
 
-    def __init__(self, key: str=None, items=None):
+class ListModel(Observable.Observable, typing.Generic[T]):
+
+    def __init__(self, key: str = None, items: typing.Sequence[T] = None):
         super().__init__()
         self.__key = key
-        self.__items : typing.List = list(items) if items else list()
+        self.__items : typing.List[T] = list(items) if items else list()
 
-    def close(self):
+    def close(self) -> None:
         pass
 
-    def insert_item(self, index: int, value) -> None:
+    def clear_items(self) -> None:
+        while self.__items:
+            self.remove_item(len(self.__items) - 1)
+
+    def insert_item(self, index: int, value: T) -> None:
         self.__items.insert(index, value)
         self.notify_insert_item(self.__key if self.__key else "items", value, index)
 
-    def remove_item(self, index:int) -> None:
+    def remove_item(self, index: int) -> None:
         value = self.__items[index]
         del self.__items[index]
         self.notify_remove_item(self.__key if self.__key else "items", value, index)
 
-    def append_item(self, value) -> None:
+    def append_item(self, value: T) -> None:
         self.insert_item(len(self.__items), value)
 
     @property
-    def items(self):
+    def items(self) -> typing.List[T]:
         return self.__items
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> typing.List[T]:
         if self.__key and item == self.__key:
             return self.items
         raise AttributeError()

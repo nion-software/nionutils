@@ -4,42 +4,43 @@
 
 # standard libraries
 import asyncio
-import concurrent.futures
 import operator
-import threading
+import typing
 
 # third party libraries
 # none
 
 # local libraries
-from . import Event
 from . import Observable
 from . import Stream
 
+T = typing.TypeVar('T')
+OptionalT = typing.Optional[T]
 
-class PropertyModel(Observable.Observable):
 
+class PropertyModel(Observable.Observable, typing.Generic[T]):
+    """Holds a value which can be observed for changes.
+
+    The value can be any type that supports equality test.
+
+    An optional on_value_changed method gets called when the value changes.
     """
-        Holds a value which can be observed for changes. The value can be any type that supports equality test.
 
-        An optional on_value_changed method gets called when the value changes.
-    """
-
-    def __init__(self, value=None, cmp=None):
-        super(PropertyModel, self).__init__()
+    def __init__(self, value: OptionalT = None, cmp: typing.Optional[typing.Callable[[OptionalT, OptionalT], bool]] = None):
+        super().__init__()
         self.__value = value
         self.__cmp = cmp if cmp else operator.eq
-        self.on_value_changed = None
+        self.on_value_changed : typing.Optional[typing.Callable[[OptionalT], None]] = None
 
-    def close(self):
+    def close(self) -> None:
         self.on_value_changed = None
 
     @property
-    def value(self):
+    def value(self) -> OptionalT:
         return self.__value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: OptionalT) -> None:
         if self.__value is None:
             not_equal = value is not None
         elif value is None:

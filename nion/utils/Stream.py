@@ -161,19 +161,19 @@ class DebounceStream(AbstractStream):
         self.__loop = None
         super().close()
 
-    async def debounce_delay(self, loop: asyncio.AbstractEventLoop) -> None:
+    async def debounce_delay(self) -> None:
         try:
-            await asyncio.sleep(self.__period, loop=loop)
+            await asyncio.sleep(self.__period)
             self.value_stream.fire(self.__value)
         finally:
             self.__debounce_task = None
 
     def __value_changed(self, value):
         self.__value = value
-        current_time = time.time()
+        # current_time = time.time()
         # if current_time - self.__last_time > self.__period:  # only trigger new task if necessary
         if not self.__debounce_task:  # only trigger new task if necessary
-            self.__debounce_task = self.__loop.create_task(self.debounce_delay(self.__loop))
+            self.__debounce_task = self.__loop.create_task(self.debounce_delay())
 
     @property
     def value(self):
@@ -199,7 +199,7 @@ class SampleStream(AbstractStream):
 
         def next_sample(f):
             if not self.__done:
-                self.__sample_loop_task = loop.create_task(self.sample_loop(loop))
+                self.__sample_loop_task = loop.create_task(self.sample_loop())
                 self.__sample_loop_task.add_done_callback(next_sample)
 
         next_sample(None)
@@ -214,8 +214,8 @@ class SampleStream(AbstractStream):
         self.__sample_loop_task = None
         super().close()
 
-    async def sample_loop(self, loop: asyncio.AbstractEventLoop) -> None:
-        await asyncio.sleep(self.__period, loop=loop)
+    async def sample_loop(self) -> None:
+        await asyncio.sleep(self.__period)
         with self.__value_dirty_lock:
             value_dirty = self.__value_dirty
             self.__value_dirty = False

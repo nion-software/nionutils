@@ -1,3 +1,5 @@
-import typing
+# sets up nion namespace
+# type: ignore
+
 from pkgutil import extend_path
-__path__ = extend_path(__path__, __name__)  # type: typing.Iterable[str]
+__path__ = extend_path(__path__, __name__)

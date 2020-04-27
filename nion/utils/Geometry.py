@@ -133,7 +133,10 @@ class Ticker:
             return (u"{0:0." + u"{0:d}".format(precision) + "f}").format(value)
 
     def value_label(self, value: float) -> str:
-        return self.__nice_label(value, self.__precision, self.__factor10)
+        if self.__logarithmic:
+            return self.__nice_label(value, self.__precision, math.pow(10, int(self.__value_high)))
+        else:
+            return self.__nice_label(value, self.__precision, self.__factor10)
 
     @property
     def values(self):

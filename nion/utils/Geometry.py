@@ -134,7 +134,7 @@ class Ticker:
 
     def value_label(self, value: float) -> str:
         if self.__logarithmic:
-            return self.__nice_label(value, self.__precision, math.pow(10, int(self.__value_high)))
+            return self.__nice_label(value, self.__precision, int(math.pow(10, int(self.__value_high))))
         else:
             return self.__nice_label(value, self.__precision, self.__factor10)
 

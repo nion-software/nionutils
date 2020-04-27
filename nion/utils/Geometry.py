@@ -8,6 +8,7 @@
 
 # standard libraries
 import collections
+import copy
 import math
 import typing
 
@@ -54,7 +55,7 @@ def make_pretty2(val, rounding):
     return make_pretty(val, rounding)[0]
 
 
-def make_pretty_range2(value_low, value_high, ticks=5):
+def make_pretty_range2(value_low, value_high, ticks=5, logarithmic=False):
     """
         Returns minimum, maximum, list of tick values, division, and precision.
 
@@ -86,12 +87,19 @@ def make_pretty_range2(value_low, value_high, ticks=5):
     # make the tick range a pretty range
     division, factor10 = make_pretty(value_range/(ticks-1), True)
 
+
+
     # calculate the graph minimum and maximum
     if division == 0:
         return 0, 0, [0], 0, 0, 0
 
     graph_minimum = math.floor(value_low / division) * division
     graph_maximum = math.ceil(value_high / division) * division
+
+    # In logarithmic scale we calculate the ticks from the exponents of the values, so factor10 needs to
+    # be adjusted accordingly.
+    if logarithmic:
+        factor10 = math.pow(10, graph_maximum if abs(graph_maximum) > abs(graph_minimum) else graph_minimum)
 
     # calculate the precision
     precision = int(max(-math.floor(math.log10(division)), 0))
@@ -119,15 +127,26 @@ class Ticker:
         self.__value_high = value_high
         self.__ticks = ticks
         self.__logarithmic = logarithmic
-        self.__minimum, self.__maximum, self.__tick_values, self.__division, self.__precision, self.__factor10 = make_pretty_range2(value_low, value_high)
-        displayed_tick_values = (math.pow(10.0, tick_value) if logarithmic else tick_value for tick_value in self.__tick_values)
+        self.__minimum, self.__maximum, self.__tick_values, self.__division, self.__precision, self.__factor10 = make_pretty_range2(value_low, value_high, ticks=ticks, logarithmic=logarithmic)
+        # calculate the displayed tick values
+        if logarithmic:
+            # if logarithmic, ensure there are valid values
+            if len(self.__tick_values) > 1:
+                displayed_tick_values = (math.pow(10.0, tick_value) for tick_value in self.__tick_values)
+            # otherwise just use the single value (which will be 0)
+            else:
+                displayed_tick_values = self.__tick_values
+        else:
+            # if not logarithmic, use the tick values
+            displayed_tick_values = tuple(copy.copy(self.__tick_values))
         self.__tick_labels = list(self.value_label(tick_value) for tick_value in displayed_tick_values)
 
-    def __nice_label(self, value: float, precision: int, factor10: int) -> str:
+    def __nice_label(self, value: float, precision: int, factor10: float) -> str:
         f10 = int(math.log10(factor10)) if factor10 > 0 else 0
         if abs(f10) > 5:
-            f10x = int(math.log10(value)) if value > 0 else f10
-            precision = max(0, f10x - f10)
+            if not self.__logarithmic:
+                f10x = int(math.log10(value)) if value > 0 else f10
+                precision = max(0, f10x - f10)
             return (u"{0:0." + u"{0:d}".format(precision) + "e}").format(value)
         else:
             return (u"{0:0." + u"{0:d}".format(precision) + "f}").format(value)

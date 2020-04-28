@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.21 (UNRELEASED)
 -------------------
+- Extend PropertyChangedEventStream to optionally take an input stream rather than direct object.
 - Add added/discarded notifications to Observable for set-like behavior.
 - Add a pathlib.Path converter.
 - Improve performance of filtered list models.

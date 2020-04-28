@@ -7,31 +7,35 @@ import asyncio
 import functools
 import operator
 import threading
-import time
+import typing
 
 # third party libraries
 # None
 
 # local libraries
 from . import Event
+from . import Observable
 from . import ReferenceCounting
 
 
-class AbstractStream(ReferenceCounting.ReferenceCounted):
+T = typing.TypeVar('T')
+OptionalT = typing.Optional[T]
+
+class AbstractStream(ReferenceCounting.ReferenceCounted, typing.Generic[T]):
     """A stream provides a value property and a value_stream event that fires when the value changes."""
 
     def __init__(self):
         super().__init__()
         self.value_stream = None
 
-    def close(self):
+    def close(self) -> None:
         pass
 
-    def about_to_delete(self):
+    def about_to_delete(self) -> None:
         self.close()
 
     @property
-    def value(self):
+    def value(self) -> OptionalT:
         return None
 
 
@@ -233,29 +237,65 @@ class SampleStream(AbstractStream):
         return self.__value
 
 
+ConstantStreamT = typing.TypeVar('ConstantStreamT')
+
+class ConstantStream(AbstractStream[ConstantStreamT]):
+
+    def __init__(self, value: ConstantStreamT):
+        super().__init__()
+        self.__value = value
+        self.value_stream = Event.Event()
+
+    def close(self):
+        self.__value = None
+        super().close()
+
+    @property
+    def value(self) -> ConstantStreamT:
+        return self.__value
+
+
+PropertyChangedEventStreamT = typing.TypeVar('PropertyChangedEventStreamT')
+
 class PropertyChangedEventStream(AbstractStream):
     """A stream generated from observing a property changed event of an Observable object."""
 
     # see https://rehansaeed.com/reactive-extensions-part2-wrapping-events/
 
-    def __init__(self, source_object, property_name: str, cmp=None):
+    def __init__(self, source_object: typing.Union[Observable.Observable, AbstractStream[Observable.Observable]], property_name: str, cmp=None):
         super().__init__()
         # outgoing messages
         self.value_stream = Event.Event()
         # references
-        self.__source_object = source_object
+        if not isinstance(source_object, AbstractStream):
+            source_object = ConstantStream(source_object)
+        self.__source_stream = typing.cast(AbstractStream, source_object.add_ref())
+        self.__source_object = None
         # initialize
         self.__property_name = property_name
         self.__value = None
         self.__cmp = cmp if cmp else operator.eq
-        # listen for display changes
-        self.__property_changed_listener = source_object.property_changed_event.listen(self.__property_changed)
-        self.__property_changed(property_name)
+        self.__property_changed_listener = None
+        # listen for stream changes
+        def source_object_changed(source_object: typing.Optional[Observable.Observable]) -> None:
+            if self.__property_changed_listener:
+                self.__property_changed_listener.close()
+                self.__property_changed_listener = None
+            self.__source_object = source_object
+            if self.__source_object:
+                self.__property_changed_listener = self.__source_object.property_changed_event.listen(self.__property_changed)
+                self.__property_changed(property_name)
+        self.__source_stream_listener = self.__source_stream.value_stream.listen(source_object_changed)
+        source_object_changed(self.__source_stream.value)
 
     def close(self):
-        self.__property_changed_listener.close()
-        self.__property_changed_listener = None
-        self.__source_object = None
+        if self.__property_changed_listener:
+            self.__property_changed_listener.close()
+            self.__property_changed_listener = None
+        self.__source_stream_listener.close()
+        self.__source_stream_listener = None
+        self.__source_stream.remove_ref()
+        self.__source_stream = None
         super().close()
 
     @property

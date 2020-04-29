@@ -98,13 +98,13 @@ class MapStream(AbstractStream):
 class CombineLatestStream(AbstractStream):
     """A stream that produces a tuple of values when input streams change."""
 
-    def __init__(self, stream_list, value_fn):
+    def __init__(self, stream_list, value_fn: typing.Callable[[typing.Tuple], typing.Any] = None):
         super().__init__()
         # outgoing messages
         self.value_stream = Event.Event()
         # references
         self.__stream_list = [stream.add_ref() for stream in stream_list]
-        self.__value_fn = value_fn
+        self.__value_fn = value_fn or (lambda *x: tuple(x))
         # initialize values
         self.__values = [None] * len(stream_list)
         self.__value = None

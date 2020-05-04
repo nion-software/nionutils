@@ -55,7 +55,7 @@ def make_pretty2(val, rounding):
     return make_pretty(val, rounding)[0]
 
 
-def make_pretty_range2(value_low, value_high, ticks=5, logarithmic=False):
+def make_pretty_range2(value_low, value_high, ticks=5, logarithmic=False) -> typing.Tuple[float, float, typing.Sequence[float], float, int, float]:
     """
         Returns minimum, maximum, list of tick values, division, and precision.
 
@@ -86,8 +86,6 @@ def make_pretty_range2(value_low, value_high, ticks=5, logarithmic=False):
 
     # make the tick range a pretty range
     division, factor10 = make_pretty(value_range/(ticks-1), True)
-
-
 
     # calculate the graph minimum and maximum
     if division == 0:
@@ -132,13 +130,13 @@ class Ticker:
         if logarithmic:
             # if logarithmic, ensure there are valid values
             if len(self.__tick_values) > 1:
-                displayed_tick_values = (math.pow(10.0, tick_value) for tick_value in self.__tick_values)
+                displayed_tick_values = tuple(math.pow(10.0, tick_value) for tick_value in self.__tick_values)
             # otherwise just use the single value (which will be 0)
             else:
-                displayed_tick_values = self.__tick_values
+                displayed_tick_values = tuple(self.__tick_values)
         else:
             # if not logarithmic, use the tick values
-            displayed_tick_values = tuple(copy.copy(self.__tick_values))
+            displayed_tick_values = tuple(self.__tick_values)
         self.__tick_labels = list(self.value_label(tick_value) for tick_value in displayed_tick_values)
 
     def __nice_label(self, value: float, precision: int, factor10: float) -> str:

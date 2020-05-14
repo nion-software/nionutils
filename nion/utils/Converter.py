@@ -3,9 +3,10 @@
 """
 
 # standard libraries
-import re
+import datetime
 import locale
 import pathlib
+import re
 import uuid
 
 # third party libraries
@@ -149,3 +150,17 @@ class PathToStringConverter:
         return str(value) if value else None
     def convert_back(self, value):
         return pathlib.Path(value) if value else None
+
+
+class DatetimeToStringConverter:
+    def convert(self, value):
+        return value.isoformat() if value is not None else None
+    def convert_back(self, value):
+        try:
+            if len(value) == 26:
+                return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+            elif len(value) == 19:
+                return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
+        except ValueError as e:
+            pass  # fall through
+        return None

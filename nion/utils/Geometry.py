@@ -125,22 +125,22 @@ class Ticker:
         self._value_high = value_high
         self._ticks = ticks
 
-        self._tick_values = []
-        self._tick_labels = []
-        self._minimum = 0
-        self._maximum = 0
-        self._division = 1
+        self._tick_values: typing.Sequence[float] = []
+        self._tick_labels: typing.Sequence[str] = []
+        self._minimum = 0.0
+        self._maximum = 0.0
+        self._division = 1.0
         self._precision = 0
 
     def value_label(self, value: float) -> str:
         raise NotImplementedError
 
     @property
-    def values(self) -> typing.List[float]:
+    def values(self) -> typing.Sequence[float]:
         return self._tick_values
 
     @property
-    def labels(self) -> typing.List[str]:
+    def labels(self) -> typing.Sequence[str]:
         return self._tick_labels
 
     @property

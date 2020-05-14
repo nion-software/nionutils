@@ -120,61 +120,116 @@ def make_pretty_range(value_low, value_high, tight=False, ticks=5):
 
 class Ticker:
 
-    def __init__(self, value_low: float, value_high: float, *, ticks: int=5, logarithmic: bool=False):
-        self.__value_low = value_low
-        self.__value_high = value_high
-        self.__ticks = ticks
-        self.__logarithmic = logarithmic
-        self.__minimum, self.__maximum, self.__tick_values, self.__division, self.__precision, self.__factor10 = make_pretty_range2(value_low, value_high, ticks=ticks, logarithmic=logarithmic)
-        # calculate the displayed tick values
-        if logarithmic:
-            # if logarithmic, ensure there are valid values
-            if len(self.__tick_values) > 1:
-                displayed_tick_values = tuple(math.pow(10.0, tick_value) for tick_value in self.__tick_values)
-            # otherwise just use the single value (which will be 0)
-            else:
-                displayed_tick_values = tuple(self.__tick_values)
-        else:
-            # if not logarithmic, use the tick values
-            displayed_tick_values = tuple(self.__tick_values)
-        self.__tick_labels = list(self.value_label(tick_value) for tick_value in displayed_tick_values)
+    def __init__(self, value_low: float, value_high: float, *, ticks: int=5):
+        self._value_low = value_low
+        self._value_high = value_high
+        self._ticks = ticks
+
+        self._tick_values = []
+        self._tick_labels = []
+        self._minimum = 0
+        self._maximum = 0
+        self._division = 1
+        self._precision = 0
+
+    def value_label(self, value: float) -> str:
+        raise NotImplementedError
+
+    @property
+    def values(self) -> typing.List[float]:
+        return self._tick_values
+
+    @property
+    def labels(self) -> typing.List[str]:
+        return self._tick_labels
+
+    @property
+    def minimum(self) -> float:
+        return self._minimum
+
+    @property
+    def maximum(self) -> float:
+        return self._maximum
+
+    @property
+    def division(self) -> float:
+        return self._division
+
+    @property
+    def precision(self) -> int:
+        return self._precision
+
+
+class LinearTicker(Ticker):
+
+    def __init__(self, value_low: float, value_high: float, *, ticks: int=5):
+        super().__init__(value_low, value_high, ticks=ticks)
+        self._minimum, self._maximum, self._tick_values, self._division, self._precision, self._factor10 = make_pretty_range2(value_low, value_high, ticks=ticks)
+        self._tick_labels = list(self.value_label(tick_value) for tick_value in self._tick_values)
 
     def __nice_label(self, value: float, precision: int, factor10: float) -> str:
         f10 = int(math.log10(factor10)) if factor10 > 0 else 0
         if abs(f10) > 5:
-            if not self.__logarithmic:
-                f10x = int(math.log10(value)) if value > 0 else f10
-                precision = max(0, f10x - f10)
+            f10x = int(math.log10(value)) if value > 0 else f10
+            precision = max(0, f10x - f10)
             return (u"{0:0." + u"{0:d}".format(precision) + "e}").format(value)
         else:
             return (u"{0:0." + u"{0:d}".format(precision) + "f}").format(value)
 
     def value_label(self, value: float) -> str:
-        return self.__nice_label(value, self.__precision, self.__factor10)
+        return self.__nice_label(value, self.precision, self._factor10)
+
+
+class LogTicker(Ticker):
+
+    def __init__(self, value_low: float, value_high:float, *, ticks: int = 5, base: int = 10):
+        super().__init__(value_low, value_high, ticks=ticks)
+        self._base = base
+
+        if not all([math.isfinite(val) for val in [value_low, value_high, base]]):
+            self._tick_values = [1]
+            self._tick_labels = ["0e+00"]
+            return
+
+        def arange(start, stop, step):
+            return [start + x * step for x in range(math.ceil((stop - start) / step))]
+
+        val_range = abs(self._value_high - self._value_low)
+        factor_b = math.pow(self.base, math.floor(math.log(val_range, self.base))) if 1 >= val_range > 0 else 1.0
+        self._minimum = math.floor(self._value_low / factor_b)
+        self._maximum = max(math.ceil(self._value_high / factor_b), self.minimum + 1)
+        self._precision = round(abs(math.log(factor_b, self.base)))
+
+        numdec = self.maximum - self.minimum
+        self._division = max((numdec + 1) // self._ticks, 1)
+
+        decades = arange(self.minimum, self.maximum + self.division, self.division)
+        diff = self._ticks - numdec
+        if factor_b != 1.0:
+           subs = []
+        elif diff >= self.base / 2 - 1:
+            subs = arange(2, self.base, 1)
+        elif diff >= self.base / 4 - 1:
+            subs = arange(2, self.base, 2)
+        else:
+            subs = []
+
+        tick_values = list()
+        for decade_start in decades:
+            decade = math.pow(self.base, decade_start * factor_b)
+            tick_values.append(decade)
+            for sub in subs:
+                tick_values.append(sub * decade)
+
+        self._tick_labels = [self.value_label(value) for value in tick_values]
+        self._tick_values = [math.log(value, self.base) for value in tick_values]
+
+    def value_label(self, value: float) -> str:
+        return (u"{0:." + u"{0:d}".format(self.precision) + "e}").format(value)
 
     @property
-    def values(self):
-        return self.__tick_values
-
-    @property
-    def labels(self):
-        return self.__tick_labels
-
-    @property
-    def minimum(self):
-        return self.__minimum
-
-    @property
-    def maximum(self):
-        return self.__maximum
-
-    @property
-    def division(self):
-        return self.__division
-
-    @property
-    def precision(self):
-        return self.__precision
+    def base(self) -> int:
+        return self._base
 
 
 def fit_to_aspect_ratio(rect, aspect_ratio):

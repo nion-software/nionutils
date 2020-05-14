@@ -53,36 +53,45 @@ class TestGeometryClass(unittest.TestCase):
                 if not logarithmic or (l > 0 and h > 0):
                     with self.subTest(l=l, h=h, logarithmic=logarithmic):
                         if logarithmic:
-                            ticker = Geometry.Ticker(math.log10(l), math.log10(h), logarithmic=logarithmic)
+                            ticker = Geometry.LogTicker(math.log10(l), math.log10(h))
                         else:
-                            ticker = Geometry.Ticker(l, h, logarithmic=logarithmic)
+                            ticker = Geometry.LinearTicker(l, h)
                         self.assertEqual(len(set(ticker.labels)), len(ticker.labels))
             # print(ticker.labels)
 
-    def test_ticker_handles_edge_cases(self):
-        for logarithmic in (False, True):
-            self.assertEqual(Geometry.Ticker(0, 0, logarithmic=logarithmic).labels, ['0'])
-            self.assertEqual(Geometry.Ticker(1, 1, logarithmic=logarithmic).labels, ['1'])
-            self.assertEqual(Geometry.Ticker(-1, -1, logarithmic=logarithmic).labels, ['-1'])
-            self.assertEqual(Geometry.Ticker(-math.inf, math.inf, logarithmic=logarithmic).labels, ['0'])
-            self.assertEqual(Geometry.Ticker(-math.nan, math.nan, logarithmic=logarithmic).labels, ['0'])
-            self.assertEqual(Geometry.Ticker(math.nan, 1, logarithmic=logarithmic).labels, ['0'])
-            self.assertEqual(Geometry.Ticker(-math.inf, 1, logarithmic=logarithmic).labels, ['0'])
-            self.assertEqual(Geometry.Ticker(0, math.inf, logarithmic=logarithmic).labels, ['0'])
+    def test_linear_ticker_handles_edge_cases(self):
+        self.assertEqual(Geometry.LinearTicker(0, 0).labels, ['0'])
+        self.assertEqual(Geometry.LinearTicker(1, 1).labels, ['1'])
+        self.assertEqual(Geometry.LinearTicker(-1, -1).labels, ['-1'])
+        self.assertEqual(Geometry.LinearTicker(-math.inf, math.inf).labels, ['0'])
+        self.assertEqual(Geometry.LinearTicker(-math.nan, math.nan).labels, ['0'])
+        self.assertEqual(Geometry.LinearTicker(math.nan, 1).labels, ['0'])
+        self.assertEqual(Geometry.LinearTicker(-math.inf, 1).labels, ['0'])
+        self.assertEqual(Geometry.LinearTicker(0, math.inf).labels, ['0'])
+
+    def test_log_ticker_handles_edge_cases(self):
+        self.assertEqual(Geometry.LogTicker(0, 0, ticks=3).labels, ['1e+00', '2e+00', '4e+00', '6e+00', '8e+00', '1e+01', '2e+01', '4e+01', '6e+01', '8e+01'])
+        self.assertEqual(Geometry.LogTicker(1, 1, ticks=3).labels, ['1e+01', '2e+01', '4e+01', '6e+01', '8e+01', '1e+02', '2e+02', '4e+02', '6e+02', '8e+02'])
+        self.assertEqual(Geometry.LogTicker(-1, -1, ticks=3).labels, ['1e-01', '2e-01', '4e-01', '6e-01', '8e-01', '1e+00', '2e+00', '4e+00', '6e+00', '8e+00'])
+        self.assertEqual(Geometry.LogTicker(-math.inf, math.inf).labels, ['0e+00'])
+        self.assertEqual(Geometry.LogTicker(-math.nan, math.nan).labels, ['0e+00'])
+        self.assertEqual(Geometry.LogTicker(math.nan, 1).labels, ['0e+00'])
+        self.assertEqual(Geometry.LogTicker(-math.inf, 1).labels, ['0e+00'])
+        self.assertEqual(Geometry.LogTicker(0, math.inf).labels, ['0e+00'])
 
     def test_ticker_produces_expected_labels(self):
-        self.assertListEqual(Geometry.Ticker(0, 1e8, ticks=3, logarithmic=False).labels, ['0e+00', '5e+07', '1.0e+08'])
-        self.assertListEqual(Geometry.Ticker(0, 8, ticks=3, logarithmic=True).labels, ['1e+00', '1e+05', '1e+10'])
-        self.assertListEqual(Geometry.Ticker(0, 1000, ticks=3, logarithmic=False).labels, ['0', '500', '1000'])
-        self.assertListEqual(Geometry.Ticker(0, 3, ticks=3, logarithmic=True).labels, ['1', '100', '10000'])
-        self.assertListEqual(Geometry.Ticker(2e-18, 1.11252e-10, ticks=5, logarithmic=False).labels, ['0e+00', '5.0e-11', '1.0e-10', '1.50e-10'])
-        self.assertListEqual(Geometry.Ticker(math.log10(2e-18), math.log10(1.11252e-10), ticks=5, logarithmic=True).labels, ['1e-18', '1e-16', '1e-14', '1e-12', '1e-10', '1e-08'])
-        self.assertListEqual(Geometry.Ticker(math.log10(1E12), math.log10(1.000062E12), ticks=5, logarithmic=True).labels, ['1.00000e+12', '1.00002e+12', '1.00005e+12', '1.00007e+12'])
-        self.assertListEqual(Geometry.Ticker(math.log10(1E8 - 0.002), math.log10(1E8 + 0.002), ticks=3, logarithmic=True).labels, ['9.99999999977e+07', '1.00000000000e+08', '1.00000000002e+08'])
+        self.assertListEqual(Geometry.LinearTicker(0, 1e8, ticks=3).labels, ['0e+00', '5e+07', '1.0e+08'])
+        self.assertListEqual(Geometry.LogTicker(0, 8, ticks=3).labels, ['1e+00', '1e+03', '1e+06', '1e+09'])
+        self.assertListEqual(Geometry.LinearTicker(0, 1000, ticks=3).labels, ['0', '500', '1000'])
+        self.assertListEqual(Geometry.LogTicker(0, 3, ticks=3).labels, ['1e+00', '1e+01', '1e+02', '1e+03'])
+        self.assertListEqual(Geometry.LinearTicker(2e-18, 1.11252e-10, ticks=5).labels, ['0e+00', '5.0e-11', '1.0e-10', '1.50e-10'])
+        self.assertListEqual(Geometry.LogTicker(math.log10(2e-18), math.log10(1.11252e-10), ticks=5).labels, ['1e-18', '1e-16', '1e-14', '1e-12', '1e-10', '1e-08'])
+        self.assertListEqual(Geometry.LogTicker(math.log10(1E12), math.log10(1.000062E12), ticks=5).labels, ['1.00000e+12', '1.00002e+12', '1.00005e+12', '1.00007e+12'])
+        self.assertListEqual(Geometry.LogTicker(math.log10(1E8 - 0.002), math.log10(1E8 + 0.002), ticks=3).labels, ['9.99999999977e+07', '1.00000000000e+08', '1.00000000002e+08'])
 
     def test_ticker_value_label(self):
         mn, mx = 18000000, 21000000
-        ticker = Geometry.Ticker(mn, mx)
+        ticker = Geometry.LinearTicker(mn, mx)
         self.assertIsNotNone(ticker.value_label(900000))
 
 if __name__ == '__main__':

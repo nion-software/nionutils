@@ -6,9 +6,10 @@
     Includes IntPoint, IntSize, and IntRect classes.
 """
 
+from __future__ import annotations
+
 # standard libraries
 import collections
-import copy
 import math
 import typing
 
@@ -237,7 +238,7 @@ class IntPoint:
     def __repr__(self):
         return "{2} (x={0}, y={1})".format(self.__x, self.__y, super(IntPoint, self).__repr__())
 
-    def to_float_point(self) -> "FloatPoint":
+    def to_float_point(self) -> FloatPoint:
         return FloatPoint(y=self.y, x=self.x)
 
     def __get_x(self):
@@ -325,7 +326,7 @@ class IntSize:
     def __repr__(self):
         return "{2} (w={0}, h={1})".format(self.__width, self.__height, super(IntSize, self).__repr__())
 
-    def to_float_size(self) -> "FloatSize":
+    def to_float_size(self) -> FloatSize:
         return FloatSize(h=self.height, w=self.width)
 
     def __get_width(self):
@@ -433,7 +434,7 @@ class IntRect:
     def __repr__(self):
         return "{2} (o={0}, s={1})".format(self.__origin, self.__size, super(IntRect, self).__repr__())
 
-    def to_float_rect(self) -> "FloatRect":
+    def to_float_rect(self) -> FloatRect:
         return FloatRect.from_tlbr(self.top, self.left, self.bottom, self.right)
 
     def __get_origin(self):
@@ -559,27 +560,27 @@ class IntRect:
         size = IntSize(height=self.height - dy * 2, width=self.width - dx * 2)
         return IntRect(origin, size)
 
-    def intersect(self, rect: "IntRect") -> "IntRect":
+    def intersect(self, rect: IntRect) -> IntRect:
         top = max(self.top, rect.top)
         left = max(self.left, rect.left)
         bottom = min(self.bottom, rect.bottom)
         right = min(self.right, rect.right)
         return IntRect.from_tlbr(top, left, bottom, right)
 
-    def union(self, rect: "IntRect") -> "IntRect":
+    def union(self, rect: IntRect) -> IntRect:
         top = min(self.top, rect.top)
         left = min(self.left, rect.left)
         bottom = max(self.bottom, rect.bottom)
         right = max(self.right, rect.right)
         return IntRect.from_tlbr(top, left, bottom, right)
 
-    def __add__(self, other) -> "IntRect":
+    def __add__(self, other) -> IntRect:
         if isinstance(other, IntPoint):
             return IntRect.from_center_and_size(self.center + other, self.size)
         else:
             raise NotImplementedError()
 
-    def __sub__(self, other) -> "IntRect":
+    def __sub__(self, other) -> IntRect:
         if isinstance(other, IntPoint):
             return IntRect.from_center_and_size(self.center - other, self.size)
         else:
@@ -653,15 +654,15 @@ class FloatPoint:
         else:
             raise NotImplementedError()
 
-    def __mul__(self, multiplicand) -> "FloatPoint":
+    def __mul__(self, multiplicand) -> FloatPoint:
         multiplicand = float(multiplicand)
         return FloatPoint(y=self.__y * multiplicand, x=self.__x * multiplicand)
 
-    def __rmul__(self, multiplicand) -> "FloatPoint":
+    def __rmul__(self, multiplicand) -> FloatPoint:
         multiplicand = float(multiplicand)
         return FloatPoint(y=self.__y * multiplicand, x=self.__x * multiplicand)
 
-    def __truediv__(self, dividend) -> "FloatPoint":
+    def __truediv__(self, dividend) -> FloatPoint:
         dividend = float(dividend)
         return FloatPoint(y=self.__y / dividend, x=self.__x / dividend)
 
@@ -746,7 +747,7 @@ class FloatSize:
         multiplicand = float(multiplicand)
         return FloatSize(self.__height * multiplicand, self.__width * multiplicand)
 
-    def __truediv__(self, dividend) -> "FloatSize":
+    def __truediv__(self, dividend) -> FloatSize:
         dividend = float(dividend)
         return FloatSize(self.__height / dividend, self.__width / dividend)
 
@@ -803,7 +804,7 @@ class FloatRect:
         return FloatRect(origin, size)
 
     @classmethod
-    def unit_rect(cls) -> "FloatRect":
+    def unit_rect(cls) -> FloatRect:
         return cls.from_tlhw(0, 0, 1, 1)
 
     def __str__(self):
@@ -931,27 +932,27 @@ class FloatRect:
         size = FloatSize(height=self.height - dy * 2, width=self.width - dx * 2)
         return FloatRect(origin, size)
 
-    def intersect(self, rect: "FloatRect") -> "FloatRect":
+    def intersect(self, rect: FloatRect) -> FloatRect:
         top = max(self.top, rect.top)
         left = max(self.left, rect.left)
         bottom = min(self.bottom, rect.bottom)
         right = min(self.right, rect.right)
         return FloatRect.from_tlbr(top, left, bottom, right)
 
-    def union(self, rect: "FloatRect") -> "FloatRect":
+    def union(self, rect: FloatRect) -> FloatRect:
         top = min(self.top, rect.top)
         left = min(self.left, rect.left)
         bottom = max(self.bottom, rect.bottom)
         right = max(self.right, rect.right)
         return FloatRect.from_tlbr(top, left, bottom, right)
 
-    def __add__(self, other) -> "FloatRect":
+    def __add__(self, other) -> FloatRect:
         if isinstance(other, FloatPoint):
             return FloatRect.from_center_and_size(self.center + other, self.size)
         else:
             raise NotImplementedError()
 
-    def __sub__(self, other) -> "FloatRect":
+    def __sub__(self, other) -> FloatRect:
         if isinstance(other, FloatPoint):
             return FloatRect.from_center_and_size(self.center - other, self.size)
         else:

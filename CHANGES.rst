@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.21 (UNRELEASED)
 -------------------
+- Fix case of extending selection with no anchor.
 - Add separate LogTicker class. Renamed old Ticker to LinearTicker. Add base Ticker class.
 - Add date time to string converter.
 - Extend PropertyChangedEventStream to optionally take an input stream rather than direct object.

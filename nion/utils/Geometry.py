@@ -128,6 +128,7 @@ class Ticker:
 
         self._tick_values: typing.Sequence[float] = []
         self._tick_labels: typing.Sequence[str] = []
+        self._minor_tick_indices: typing.Sequence[int] = []
         self._minimum = 0.0
         self._maximum = 0.0
         self._division = 1.0
@@ -135,6 +136,10 @@ class Ticker:
 
     def value_label(self, value: float) -> str:
         raise NotImplementedError
+
+    @property
+    def ticks(self) -> int:
+        return self._ticks
 
     @property
     def values(self) -> typing.Sequence[float]:
@@ -159,6 +164,10 @@ class Ticker:
     @property
     def precision(self) -> int:
         return self._precision
+
+    @property
+    def minor_tick_indices(self) -> typing.Sequence[int]:
+        return self._minor_tick_indices
 
 
 class LinearTicker(Ticker):
@@ -196,34 +205,53 @@ class LogTicker(Ticker):
             return [start + x * step for x in range(math.ceil((stop - start) / step))]
 
         val_range = abs(self._value_high - self._value_low)
-        factor_b = math.pow(self.base, math.floor(math.log(val_range, self.base))) if 1 >= val_range > 0 else 1.0
-        self._minimum = math.floor(self._value_low / factor_b)
-        self._maximum = max(math.ceil(self._value_high / factor_b), self.minimum + 1)
-        self._precision = round(abs(math.log(factor_b, self.base)))
+        self._factor_b = math.pow(self.base, math.floor(math.log(val_range, self.base))) if (self._ticks-2)/self._base > val_range > 0 else 1.0
+        self._minimum = math.floor(self._value_low / self._factor_b)
+        self._maximum = max(math.ceil(self._value_high / self._factor_b), self._minimum + 1)
+        self._precision = round(abs(math.log(self._factor_b, self.base)))
 
-        numdec = self.maximum - self.minimum
+        numdec = self._maximum - self._minimum
+
+        while abs(numdec) > 1.5 * val_range and self._factor_b == 1.0 and numdec > 0:
+            numdec -= 1
+
         self._division = max((numdec + 1) // self._ticks, 1)
+        decades = arange(self._minimum, self._maximum + self.division, self.division)
+        if self._factor_b == 1.0:
+            self._maximum = self._minimum + numdec
+        # We will get len(decades) * subs ticks, so calculate the number of subs we need
+        num_subs = self._ticks / (val_range / self._division) if val_range > 0 else 0.0
 
-        decades = arange(self.minimum, self.maximum + self.division, self.division)
-        diff = self._ticks - numdec
-        if factor_b != 1.0:
+        if self._factor_b != 1.0:
            subs = []
-        elif diff >= self.base / 2 - 1:
+        elif num_subs >= (self.base - 2):
             subs = arange(2, self.base, 1)
-        elif diff >= self.base / 4 - 1:
+        elif num_subs >= (self.base - 2) * 0.5:
             subs = arange(2, self.base, 2)
+        elif num_subs >= (self.base - 2) * 0.25:
+            subs = [round(self.base * 0.5)]
         else:
             subs = []
 
+        if subs and self._value_high >= self._maximum:
+            high_floor = math.floor(self._value_high)
+            self._maximum = high_floor + math.log(math.floor(math.pow(self.base, self._value_high - high_floor)) + 1, self.base)
+
         tick_values = list()
         for decade_start in decades:
-            decade = math.pow(self.base, decade_start * factor_b)
+            decade = math.pow(self.base, decade_start * self._factor_b)
             tick_values.append(decade)
             for sub in subs:
                 tick_values.append(sub * decade)
+                self._minor_tick_indices.append(len(tick_values) - 1)
 
         self._tick_labels = [self.value_label(value) for value in tick_values]
         self._tick_values = [math.log(value, self.base) for value in tick_values]
+
+         # Revert maximum to its original value because it is used for auto display limits
+        self._maximum *= self._factor_b
+        # Set minimum slightly lower than the data minimum because it is used for auto display limits
+        self._minimum = self._value_low - (self._maximum - self._value_low) * 0.01
 
     def value_label(self, value: float) -> str:
         return (u"{0:." + u"{0:d}".format(self.precision) + "e}").format(value)

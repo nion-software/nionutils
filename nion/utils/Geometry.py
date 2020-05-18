@@ -128,7 +128,7 @@ class Ticker:
 
         self._tick_values: typing.Sequence[float] = []
         self._tick_labels: typing.Sequence[str] = []
-        self._minor_tick_indices: typing.Sequence[int] = []
+        self._minor_tick_indices: typing.List[int] = []
         self._minimum = 0.0
         self._maximum = 0.0
         self._division = 1.0
@@ -166,7 +166,7 @@ class Ticker:
         return self._precision
 
     @property
-    def minor_tick_indices(self) -> typing.Sequence[int]:
+    def minor_tick_indices(self) -> typing.List[int]:
         return self._minor_tick_indices
 
 

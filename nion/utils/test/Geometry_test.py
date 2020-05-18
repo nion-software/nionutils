@@ -70,9 +70,9 @@ class TestGeometryClass(unittest.TestCase):
         self.assertEqual(Geometry.LinearTicker(0, math.inf).labels, ['0'])
 
     def test_log_ticker_handles_edge_cases(self):
-        self.assertEqual(Geometry.LogTicker(0, 0, ticks=3).labels, ['1e+00', '2e+00', '4e+00', '6e+00', '8e+00', '1e+01', '2e+01', '4e+01', '6e+01', '8e+01'])
-        self.assertEqual(Geometry.LogTicker(1, 1, ticks=3).labels, ['1e+01', '2e+01', '4e+01', '6e+01', '8e+01', '1e+02', '2e+02', '4e+02', '6e+02', '8e+02'])
-        self.assertEqual(Geometry.LogTicker(-1, -1, ticks=3).labels, ['1e-01', '2e-01', '4e-01', '6e-01', '8e-01', '1e+00', '2e+00', '4e+00', '6e+00', '8e+00'])
+        self.assertEqual(Geometry.LogTicker(0, 0, ticks=3).labels, ['1e+00', '1e+01'])
+        self.assertEqual(Geometry.LogTicker(1, 1, ticks=3).labels, ['1e+01', '1e+02'])
+        self.assertEqual(Geometry.LogTicker(-1, -1, ticks=3).labels, ['1e-01', '1e+00'])
         self.assertEqual(Geometry.LogTicker(-math.inf, math.inf).labels, ['0e+00'])
         self.assertEqual(Geometry.LogTicker(-math.nan, math.nan).labels, ['0e+00'])
         self.assertEqual(Geometry.LogTicker(math.nan, 1).labels, ['0e+00'])

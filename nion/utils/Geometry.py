@@ -756,6 +756,16 @@ class FloatPoint:
         yield self.__y
         yield self.__x
 
+    def rotate(self, radians: float, origin: typing.Optional[FloatPoint] = None) -> FloatPoint:
+        origin = origin or FloatPoint()
+        dx = self.x - origin.x
+        dy = self.y - origin.y
+        cos_rad = math.cos(radians)
+        sin_rad = math.sin(radians)
+        x = origin.x + cos_rad * dx - sin_rad * dy
+        y = origin.y + sin_rad * dx + cos_rad * dy
+        return FloatPoint(x=x, y=y)
+
 
 class FloatSize:
 
@@ -845,6 +855,15 @@ class FloatSize:
         """ Return the aspect ratio as a float. """
         return float(self.__width) / float(self.__height) if self.__height != 0 else 1.0
     aspect_ratio = property(__get_aspect_ratio)
+
+    def rotate(self, radians: float) -> FloatSize:
+        dx = self.width
+        dy = self.height
+        cos_rad = math.cos(radians)
+        sin_rad = math.sin(radians)
+        x = cos_rad * dx - sin_rad * dy
+        y = sin_rad * dx + cos_rad * dy
+        return FloatSize(w=x, h=y)
 
 
 class FloatRect:

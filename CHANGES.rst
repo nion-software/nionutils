@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.21 (UNRELEASED)
 -------------------
+- Add rotate methods to FloatPoint and FloatSize.
 - Improve LogTicker. Add support for major and minor ticks.
 - Fix case of extending selection with no anchor.
 - Add separate LogTicker class. Renamed old Ticker to LinearTicker. Add base Ticker class.

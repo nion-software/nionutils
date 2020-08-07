@@ -62,10 +62,10 @@ def define_array(items: MDescription) -> MDescription:
 
 
 def build_model(schema: MDescription, *, default_value=None, value=None):
-    if schema in ("string", "boolean", "int", "float"):
+    if schema in ("string", "boolean", "int", "double"):
         return FieldPropertyModel(default_value if default_value is not None else value)
     type = typing.cast(dict, schema).get("type")
-    if type in ("string", "boolean", "int", "float"):
+    if type in ("string", "boolean", "int", "double"):
         return FieldPropertyModel(default_value if default_value is not None else value)
     elif type == "record":
         record_values = copy.copy(default_value or dict())
@@ -76,10 +76,10 @@ def build_model(schema: MDescription, *, default_value=None, value=None):
 
 
 def build_value(schema: MDescription, *, value=None):
-    if schema in ("string", "boolean", "int", "float"):
+    if schema in ("string", "boolean", "int", "double"):
         return value
     type = typing.cast(dict, schema).get("type")
-    if type in ("string", "boolean", "int", "float"):
+    if type in ("string", "boolean", "int", "double"):
         return value
     elif type == "record":
         return RecordModel(schema, values=value)

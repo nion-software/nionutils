@@ -48,6 +48,12 @@ class ListModel(Observable.Observable, typing.Generic[T]):
     def items(self) -> typing.List[T]:
         return self.__items
 
+    @items.setter
+    def items(self, items: typing.List[T]) -> None:
+        self.clear_items()
+        for item in items:
+            self.insert_item(len(self.__items), item)
+
     def __getattr__(self, item: str) -> typing.List[T]:
         if self.__key and item == self.__key:
             return self.items

@@ -262,7 +262,7 @@ class FilteredListModel(Observable.Observable):
         self.reset_list_event = Event.Event()
         self.begin_changes_event = Event.Event()
         self.end_changes_event = Event.Event()
-        self.__item_changed_event_listeners = dict()
+        self.__item_changed_event_listeners = list()
         self.__item_inserted_event_listener = None
         self.__item_removed_event_listener = None
         self.__reset_list_event_listener = None
@@ -575,7 +575,7 @@ class FilteredListModel(Observable.Observable):
             if self.__reset_list_event_listener:
                 self.__reset_list_event_listener.close()
                 self.__reset_list_event_listener = None
-            for item in reversed(copy.copy(getattr(self.__container, self.__master_items_key))):
+            for item in reversed(copy.copy(self._get_master_items())):
                 self.__item_removed(self.__master_items_key, item, len(self._get_master_items()) - 1)
         self.__container = container
         self.__items_sorted = False
@@ -615,7 +615,7 @@ class FilteredListModel(Observable.Observable):
 
     # thread safe.
     def __item_inserted(self, key, item, before_index):
-        """ Insert the item. Called from the container. """
+        """ Insert the master item. Called from the container. """
         if key == self.__master_items_key:
             with self._update_mutex:
                 assert not item in self.__master_items
@@ -627,20 +627,20 @@ class FilteredListModel(Observable.Observable):
                         assert item in self.__master_items
                         self.__updated_master_item(item)
 
-                self.__item_changed_event_listeners[id(item)] = item.item_changed_event.listen(item_content_changed) if hasattr(item, "item_changed_event") else None
+                self.__item_changed_event_listeners.insert(before_index, item.item_changed_event.listen(item_content_changed) if hasattr(item, "item_changed_event") else None)
                 self.__inserted_master_item(before_index, item)
                 for selection in self.__selections:
                     selection.insert_index(before_index)
 
     # thread safe.
     def __item_removed(self, key, item, index):
-        """ Remove the item. Called from the container. """
+        """ Remove the master item. Called from the container. """
         if key == self.__master_items_key:
             with self._update_mutex:
                 del self.__master_items[index]
-                if self.__item_changed_event_listeners[id(item)]:
-                    self.__item_changed_event_listeners[id(item)].close()
-                del self.__item_changed_event_listeners[id(item)]
+                if self.__item_changed_event_listeners[index]:
+                    self.__item_changed_event_listeners[index].close()
+                del self.__item_changed_event_listeners[index]
                 self.__removed_master_item(index, item)
                 for selection in self.__selections:
                     selection.remove_index(index)

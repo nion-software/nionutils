@@ -170,6 +170,27 @@ class TestListModelClass(unittest.TestCase):
         self.assertEqual(1, begin_changes_count)
         self.assertEqual(1, end_changes_count)
 
+    def test_filtered_list_does_not_access_container_when_closing(self):
+        class Container(Observable.Observable):
+            def __init__(self):
+                super().__init__()
+                self.__items = [1, 2, 3]
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+            @property
+            def items(self):
+                if not self.closed:
+                    return self.__items
+                return None
+
+        c = Container()
+        l2 = ListModel.FilteredListModel(container=c, items_key="items")
+        c.close()
+        l2.close()
+
     def test_initial_mapped_model_values_are_correct(self):
         l = ListModel.ListModel("items")
         l.append_item(A("1"))

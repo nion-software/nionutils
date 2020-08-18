@@ -62,6 +62,7 @@ class FuncStreamValueModel(PropertyModel):
         self.__value_func_stream = value_func_stream.add_ref()
         self.__event_loop = event_loop
         self.__count = 0
+        self.__pending_task = None
 
         def handle_value_func(value_func):
             async def update_value():
@@ -73,13 +74,20 @@ class FuncStreamValueModel(PropertyModel):
                 self.value = value
                 self.notify_property_changed("value")
                 self.__count -= 1
+                self.__pending_task = None
             self.__count += 1
-            event_loop.create_task(update_value())
+            if self.__pending_task:
+                self.__count -= 1
+                self.__pending_task.cancel()
+            self.__pending_task = event_loop.create_task(update_value())
 
         self.__stream_listener = value_func_stream.value_stream.listen(handle_value_func)
         handle_value_func(self.__value_func_stream.value)
 
     def close(self):
+        if self.__pending_task:
+            self.__pending_task.cancel()
+            self.__pending_task = None
         self.__stream_listener.close()
         self.__stream_listener = None
         self.__value_func_stream.remove_ref()

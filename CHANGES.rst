@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.21 (UNRELEASED)
 -------------------
+- Fix issue with stream calling stale function.
 - Filtered lists no longer access their container's master items when closing.
 - Add rotate methods to FloatPoint and FloatSize.
 - Improve LogTicker. Add support for major and minor ticks.

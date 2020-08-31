@@ -1,7 +1,7 @@
 Changelog (nionutils)
 =====================
 
-0.3.21 (UNRELEASED)
+0.3.21 (2020-08-31)
 -------------------
 - Fix issue with stream calling stale function.
 - Filtered lists no longer access their container's master items when closing.

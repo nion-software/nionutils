@@ -238,7 +238,7 @@ class PropertyBinding(Binding):
         def property_changed(property_name_: str) -> None:
             assert not self._closed
             if property_name_ == self.__property_name:
-                value = getattr(source, property_name)
+                value = self.source_getter()
                 if value is not None:
                     self.update_target(value)
                 else:

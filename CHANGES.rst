@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.3.22 (UNRELEASED)
+-------------------
+- Fix property binding inconsistency.
+
 0.3.21 (2020-08-31)
 -------------------
 - Fix issue with stream calling stale function.

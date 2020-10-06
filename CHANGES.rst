@@ -1,7 +1,7 @@
 Changelog (nionutils)
 =====================
 
-0.3.22 (UNRELEASED)
+0.3.22 (2020-10-06)
 -------------------
 - Fix property binding inconsistency.
 

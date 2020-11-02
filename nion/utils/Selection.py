@@ -83,7 +83,10 @@ class IndexedSelection:
             self.__indexes = set()
             self.__anchor_index = None
         if old_index != self.__indexes:
-            self.__changed_event.fire()
+            self.__fire_changed_event()
+
+    def __fire_changed_event(self):
+        self.__changed_event.fire()
 
     def __update_anchor_index(self) -> None:
         for index in self.__indexes:
@@ -100,7 +103,7 @@ class IndexedSelection:
             if len(old_index) == 0:
                 self.__anchor_index = index
             if old_index != self.__indexes:
-                self.__changed_event.fire()
+                self.__fire_changed_event()
         else:
             self.clear()
 
@@ -112,7 +115,7 @@ class IndexedSelection:
             if not self.__anchor_index in self.__indexes:
                 self.__update_anchor_index()
             if old_index != self.__indexes:
-                self.__changed_event.fire()
+                self.__fire_changed_event()
         elif self.selection_style in (Style.single, ):
             pass
         else:
@@ -129,7 +132,7 @@ class IndexedSelection:
             self.__indexes.update(indexes)
             self.__anchor_index = list(indexes)[0] if len(indexes) > 0 else None
             if old_index != self.__indexes:
-                self.__changed_event.fire()
+                self.__fire_changed_event()
         elif self.selection_style in (Style.single, Style.single_or_none) and len(indexes) == 1:
             self.set(list(indexes)[0])
         else:
@@ -143,7 +146,7 @@ class IndexedSelection:
             self.__indexes.add(index)
             self.__anchor_index = index
             if old_index != self.__indexes:
-                self.__changed_event.fire()
+                self.__fire_changed_event()
         else:
             self.clear()
 
@@ -169,7 +172,7 @@ class IndexedSelection:
                 self.__anchor_index = index
                 self.__indexes.add(index)
             if old_index != self.__indexes:
-                self.__changed_event.fire()
+                self.__fire_changed_event()
         elif self.selection_style in (Style.single, Style.single_or_none):
             self.set(index)
         else:

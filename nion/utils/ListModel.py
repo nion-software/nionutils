@@ -605,7 +605,7 @@ class FilteredListModel(Observable.Observable):
             for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
                 self.__item_inserted(self.__master_items_key, item, index)
 
-    def make_selection(self):
+    def make_selection(self) -> Selection.IndexedSelection:
         selection = Selection.IndexedSelection()
         self.__selections.append(selection)
         return selection

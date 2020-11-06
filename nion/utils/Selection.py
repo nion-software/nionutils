@@ -23,9 +23,22 @@ class Style(enum.Enum):
 
 
 class IndexedSelection:
-    def __init__(self, selection_style: Style=None):
+    """Track a selection using integer indexes.
+
+    Supplies many routines for manipulating the selection.
+
+    Fires `changed()` events when the selection changes.
+
+    The `expanded_changed_event` attribute was introduced in 0.3.23 to indicate that it is
+    ok to send changed events when the auto adjusting methods `insert_index` or `remove_index`
+    are called. Explicitly opting into this behavior is required to maintain backwards
+    compatibility. New uses of the class should always set that attribute and it is expected
+    to be default behavior in 0.4.0.
+    """
+    def __init__(self, selection_style: Style = None, expanded_changed_event: bool = False):
         super().__init__()
         self.__changed_event = Event.Event()
+        self.expanded_changed_event = expanded_changed_event  # whether to fire when updating indexes
         self.__indexes : typing.MutableSet[int] = set()
         self.__anchor_index : typing.Optional[int] = None
         self.selection_style = selection_style if selection_style else Style.multiple
@@ -35,6 +48,18 @@ class IndexedSelection:
 
     def __ne__(self, other) -> bool:
         return not isinstance(other, IndexedSelection) or self.indexes != other.indexes or self.anchor_index != other.anchor_index
+
+    def __copy__(self):
+        selection = self.__class__(self.selection_style)
+        selection.set_multiple(set(self.__indexes))
+        selection.anchor_index = self.__anchor_index
+        return selection
+
+    def __deepcopy__(self, memo):
+        selection = self.__class__(self.selection_style)
+        selection.set_multiple(set(self.__indexes))
+        selection.anchor_index = self.__anchor_index
+        return selection
 
     @property
     def changed_event(self) -> Event.Event:
@@ -64,7 +89,7 @@ class IndexedSelection:
 
     @property
     def indexes(self) -> typing.Set[int]:
-        return typing.cast(typing.Set[int], self.__indexes)
+        return typing.cast(typing.Set[int], copy.copy(self.__indexes))
 
     @property
     def ordered_indexes(self) -> typing.Sequence[int]:
@@ -190,6 +215,8 @@ class IndexedSelection:
                 self.__anchor_index += 1
         if self.__indexes != new_indexes:
             self.__indexes = new_indexes
+            if self.expanded_changed_event:
+                self.__fire_changed_event()
 
     def remove_index(self, remove_index: int) -> None:
         new_indexes = set()
@@ -206,3 +233,5 @@ class IndexedSelection:
                 self.__anchor_index -= 1
         if self.__indexes != new_indexes:
             self.__indexes = new_indexes
+            if self.expanded_changed_event:
+                self.__fire_changed_event()

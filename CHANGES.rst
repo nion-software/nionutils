@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.3.23 (UNRELEASED)
+-------------------
+- Change selection to (optionally) fire changed messages when adjusting indexes.
+
 0.3.22 (2020-10-06)
 -------------------
 - Fix property binding inconsistency.

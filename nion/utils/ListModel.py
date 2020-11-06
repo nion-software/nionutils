@@ -268,6 +268,7 @@ class FilteredListModel(Observable.Observable):
         self.__reset_list_event_listener = None
         self.__begin_changes_event_listener = None
         self.__end_changes_event_listener = None
+        self.__selection_changes: typing.List[typing.Tuple[bool, int]] = list()
         self.__selections = list()
         if selection:
             self.__selections.append(selection)
@@ -592,6 +593,15 @@ class FilteredListModel(Observable.Observable):
                 def end_changes(key):
                     if key == self.__master_items_key:
                         self.end_changes_event.fire(self.__items_key)
+                    for selection in self.__selections:
+                        selection_copy = copy.copy(selection)
+                        for do_insert, index in self.__selection_changes:
+                            if do_insert:
+                                selection_copy.insert_index(index)
+                            else:
+                                selection_copy.remove_index(index)
+                        selection.set_multiple(selection_copy.indexes)
+                    self.__selection_changes = list()
 
                 self.__begin_changes_event_listener = self.__container.begin_changes_event.listen(begin_changes)
                 self.__end_changes_event_listener = self.__container.end_changes_event.listen(end_changes)
@@ -629,8 +639,13 @@ class FilteredListModel(Observable.Observable):
 
                 self.__item_changed_event_listeners.insert(before_index, item.item_changed_event.listen(item_content_changed) if hasattr(item, "item_changed_event") else None)
                 self.__inserted_master_item(before_index, item)
-                for selection in self.__selections:
-                    selection.insert_index(before_index)
+
+                # only update the selection here if there is no end changes event listener.
+                # if there is a listener, updating the selection is done in end changes.
+                self.__selection_changes.append((True, before_index))
+                if not self.__end_changes_event_listener:
+                    for selection in self.__selections:
+                        selection.insert_index(before_index)
 
     # thread safe.
     def __item_removed(self, key, item, index):
@@ -642,8 +657,12 @@ class FilteredListModel(Observable.Observable):
                     self.__item_changed_event_listeners[index].close()
                 del self.__item_changed_event_listeners[index]
                 self.__removed_master_item(index, item)
-                for selection in self.__selections:
-                    selection.remove_index(index)
+                # only update the selection here if there is no end changes event listener.
+                # if there is a listener, updating the selection is done in end changes.
+                self.__selection_changes.append((False, index))
+                if not self.__end_changes_event_listener:
+                    for selection in self.__selections:
+                        selection.remove_index(index)
 
 
 class MappedListModel(Observable.Observable):

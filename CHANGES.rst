@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.23 (UNRELEASED)
 -------------------
+- Change list model to more efficiently send change events.
 - Change selection to (optionally) fire changed messages when adjusting indexes.
 
 0.3.22 (2020-10-06)

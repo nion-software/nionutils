@@ -6,6 +6,7 @@ name: Python package
 on:
   push:
     branches: [ master ]
+    tags: '*'
   pull_request:
     branches: [ master ]
 
@@ -45,14 +46,6 @@ jobs:
       with:
         name: distribution
         path: dist
-    - name: Debug
-      if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/heads') && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8'
-      run: |
-        echo "github.event_name ${{ github.event_name }}"
-        echo "github.ref ${{ github.ref }}"
-        echo "github.event.ref ${{ github.event.ref }}"
-        echo "matrix.os ${{ matrix.os }}"
-        echo "matrix.python-version ${{ matrix.python-version }}"
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@master
       if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8'

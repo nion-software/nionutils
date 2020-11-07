@@ -46,6 +46,7 @@ jobs:
         name: distribution
         path: dist
     - name: Debug
+      if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/heads') && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.8'
       run: |
         echo "github.event_name ${{ github.event_name }}"
         echo "github.ref ${{ github.ref }}"

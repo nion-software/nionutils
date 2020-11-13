@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.3.24 (UNRELEASED)
+-------------------
+- Add ListPropertyModel to treat a list like a single property.
+
 0.3.23 (2020-11-06)
 -------------------
 - Change list model to more efficiently send change events.

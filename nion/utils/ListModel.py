@@ -939,3 +939,33 @@ class FlattenedListModel(Observable.Observable):
             self.notify_remove_item(self.__items_key, item, master_index)
             for selection in self.__selections:
                 selection.remove_index(master_index)
+
+
+class ListPropertyModel(Observable.Observable):
+    """Treat a list as a single value property.
+
+    Watches for changes to the list and fires property changed events.
+
+    Does not currently handle item content changes.
+    """
+
+    def __init__(self, list_model):
+        super().__init__()
+        self.__list_model = list_model
+        self.__item_inserted_event_listener = list_model.item_inserted_event.listen(self.__item_inserted)
+        self.__item_removed_event_listener = list_model.item_removed_event.listen(self.__item_removed)
+
+    def close(self) -> None:
+        self.__list_model = None
+        self.__item_inserted_event_listener = None
+        self.__item_removed_event_listener = None
+
+    def __item_inserted(self, key: str, item, before_index: int) -> None:
+        self.notify_property_changed("value")
+
+    def __item_removed(self, key: str, item, index: int) -> None:
+        self.notify_property_changed("value")
+
+    @property
+    def value(self):
+        return self.__list_model.items

@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.24 (UNRELEASED)
 -------------------
+- Fix issue updating selection on master instead of filtered items.
 - Add ListPropertyModel to treat a list like a single property.
 
 0.3.23 (2020-11-06)

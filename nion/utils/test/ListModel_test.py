@@ -191,6 +191,24 @@ class TestListModelClass(unittest.TestCase):
         c.close()
         l2.close()
 
+    def test_filtered_list_updates_filtered_selection(self):
+        l = ListModel.ListModel("items")
+        l.append_item("A1")
+        l.append_item("B1")
+        l.append_item("A2")
+        l.append_item("B2")
+        l.append_item("A3")
+        l.append_item("B3")
+        l2 = ListModel.FilteredListModel(container=l, items_key="items")
+        s = l2.make_selection()
+        s.set_multiple({0, 1, 2, 3})
+        l2.filter = ListModel.PredicateFilter(lambda x: x.startswith("A"))
+        s.set_multiple({0, 1, 2})
+        l.remove_item(1)  # B
+        self.assertEqual({0, 1, 2}, s.indexes)
+        l.remove_item(0)  # A
+        self.assertEqual({0, 1}, s.indexes)
+
     def test_initial_mapped_model_values_are_correct(self):
         l = ListModel.ListModel("items")
         l.append_item(A("1"))

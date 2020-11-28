@@ -20,6 +20,17 @@ class TestSelection(unittest.TestCase):
         self.assertEqual({0}, s.indexes)
         self.assertEqual(0, s.anchor_index)
 
+    def test_inserting_index_into_empty_selection_results_in_empty_index(self):
+        s = Selection.IndexedSelection()
+        s.insert_index(0)
+        self.assertEqual(set(), s.indexes)
+
+    def test_inserting_index_into_non_empty_selection_adjusts_indexes(self):
+        s = Selection.IndexedSelection()
+        s.set_multiple({0, 2, 4})
+        s.insert_index(1)
+        self.assertEqual({0, 3, 5}, s.indexes)
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

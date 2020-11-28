@@ -411,6 +411,12 @@ class FilteredListModel(Observable.Observable):
         self.begin_changes_event.fire(self.__items_key)
         self.notify_insert_item(self.__items_key, item, before_index)
         self.end_changes_event.fire(self.__items_key)
+        # only update the selection here if there is no end changes event listener.
+        # if there is a listener, updating the selection is done in end changes.
+        self.__selection_changes.append((True, before_index))
+        if not self.__end_changes_event_listener:
+            for selection in self.__selections:
+                selection.insert_index(before_index)
 
     def __remove_item(self, item):
         item_index = self.__items.index(item)
@@ -418,6 +424,12 @@ class FilteredListModel(Observable.Observable):
         self.begin_changes_event.fire(self.__items_key)
         self.notify_remove_item(self.__items_key, item, item_index)
         self.end_changes_event.fire(self.__items_key)
+        # only update the selection here if there is no end changes event listener.
+        # if there is a listener, updating the selection is done in end changes.
+        self.__selection_changes.append((False, item_index))
+        if not self.__end_changes_event_listener:
+            for selection in self.__selections:
+                selection.remove_index(item_index)
 
     # thread safe
     def __removed_master_item(self, index, item):
@@ -519,36 +531,36 @@ class FilteredListModel(Observable.Observable):
             # t0 = time.perf_counter()
             self.begin_changes_event.fire(self.__items_key)
             if self.__items_sorted:
+                old_sort_reverse = self.__sort_reverse
                 sort_key = self.sort_key
                 if not sort_key:
                     indexes = {item: index for index, item in enumerate(items)}
                     sort_key = lambda x: indexes[x]
+                    self.__sort_reverse = False
                 old_items_set = set(old_items)
                 new_items_set = set(items)
                 insert_items_set = new_items_set - old_items_set
                 remove_items_set = old_items_set - new_items_set
-                items_removed = 0
                 # remove old items by iterating through all and checking whether in remove items set
                 for index, item in enumerate(old_items):
                     if item in remove_items_set:
-                        item_index = index - items_removed
-                        del self.__items[item_index]
-                        self.notify_remove_item(self.__items_key, item, item_index)
-                        items_removed += 1
+                        self.__remove_item(item)
                 # insert using sorting
                 for item in insert_items_set:
                     self.__insert_item(item, sort_key)
+                self.__sort_reverse = old_sort_reverse
             else:
                 # requires sorting and not already sorted or not sorted: fall back to full replacement
                 for item in old_items:
                     # remove all items
-                    self.__items.pop()
-                    self.notify_remove_item(self.__items_key, item, len(self.__items))
+                    self.__remove_item(item)
+                indexes = {item: index for index, item in enumerate(items)}
+                sort_key = lambda x: indexes[x]
+                old_sort_reverse = self.__sort_reverse
+                self.__sort_reverse = False
                 for item in items:
-                    # insert all items, but items are already sorted
-                    item_index = len(self.__items)
-                    self.__items.append(item)
-                    self.notify_insert_item(self.__items_key, item, item_index)
+                    self.__insert_item(item, sort_key)
+                self.__sort_reverse = old_sort_reverse
             self.__items_sorted = True
             self.end_changes_event.fire(self.__items_key)
             # t1 = time.perf_counter()
@@ -596,6 +608,8 @@ class FilteredListModel(Observable.Observable):
                     for selection in self.__selections:
                         selection_copy = copy.copy(selection)
                         for do_insert, index in self.__selection_changes:
+                            # adjust the selection copy for the new index, but don't add/remove the new index itself.
+                            # leaves the selected items the same.
                             if do_insert:
                                 selection_copy.insert_index(index)
                             else:
@@ -640,13 +654,6 @@ class FilteredListModel(Observable.Observable):
                 self.__item_changed_event_listeners.insert(before_index, item.item_changed_event.listen(item_content_changed) if hasattr(item, "item_changed_event") else None)
                 self.__inserted_master_item(before_index, item)
 
-                # only update the selection here if there is no end changes event listener.
-                # if there is a listener, updating the selection is done in end changes.
-                self.__selection_changes.append((True, before_index))
-                if not self.__end_changes_event_listener:
-                    for selection in self.__selections:
-                        selection.insert_index(before_index)
-
     # thread safe.
     def __item_removed(self, key, item, index):
         """ Remove the master item. Called from the container. """
@@ -657,12 +664,6 @@ class FilteredListModel(Observable.Observable):
                     self.__item_changed_event_listeners[index].close()
                 del self.__item_changed_event_listeners[index]
                 self.__removed_master_item(index, item)
-                # only update the selection here if there is no end changes event listener.
-                # if there is a listener, updating the selection is done in end changes.
-                self.__selection_changes.append((False, index))
-                if not self.__end_changes_event_listener:
-                    for selection in self.__selections:
-                        selection.remove_index(index)
 
 
 class MappedListModel(Observable.Observable):

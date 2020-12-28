@@ -19,17 +19,25 @@ import uuid
 class IntegerToStringConverter:
     """ Convert between int value and formatted string. """
 
-    def __init__(self, format=None):
+    def __init__(self, format=None, pass_none=False, fuzzy=True):
         """ format specifies int to string conversion """
         self.__format = format if format else "{:d}"
+        self.__pass_none = pass_none
+        self.__fuzzy = fuzzy
 
     def convert(self, value):
         """ Convert value to string using format string """
+        if self.__pass_none and value is None:
+            return None
         return self.__format.format(int(value))
 
     def convert_back(self, formatted_value):
         """ Convert string to value using standard int conversion """
-        return int(formatted_value)
+        formatted_value = re.sub("[^0-9]", "", formatted_value) if self.__fuzzy and formatted_value else None
+        if formatted_value:
+            return int(formatted_value)
+        else:
+            return None if self.__pass_none else 0
 
 
 class FloatToStringConverter:

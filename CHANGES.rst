@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+UNRELEASED
+----------
+- Add None and fuzzy options to int converter.
+
 0.3.24 (2020-12-07)
 -------------------
 - Fix issue updating selection on master instead of filtered items.

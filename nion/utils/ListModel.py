@@ -817,6 +817,10 @@ class MappedListModel(Observable.Observable):
 
 
 class FlattenedListModel(Observable.Observable):
+    """A flattened list model (list of lists).
+
+    Watches child items in the master items in the container and flattens them into a list.
+    """
 
     def __init__(self, *, container=None, master_items_key: str=None, child_items_key: str=None, items_key: str=None, selection: Selection.IndexedSelection=None):
         super().__init__()

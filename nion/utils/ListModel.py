@@ -232,7 +232,7 @@ class PredicateFilter(Filter):
         return self.__predicate(d)
 
 
-SortKeyCallable = typing.Callable
+SortKeyCallable = typing.Optional[typing.Callable]
 
 
 class FilteredListModel(Observable.Observable):
@@ -256,7 +256,7 @@ class FilteredListModel(Observable.Observable):
         self.__items_sorted = False
         self._update_mutex = threading.RLock()
         self.__filter = Filter(True)
-        self.__sort_key = None
+        self.__sort_key: SortKeyCallable = None
         self.__sort_reverse = False
         self.__change_level = 0
         self.reset_list_event = Event.Event()

@@ -1,8 +1,8 @@
 Changelog (nionutils)
 =====================
 
-UNRELEASED
-----------
+0.3.25 (2021-02-02)
+-------------------
 - Add None and fuzzy options to int converter.
 
 0.3.24 (2020-12-07)

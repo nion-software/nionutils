@@ -1,7 +1,7 @@
 Changelog (nionutils)
 =====================
 
-0.3.26 (UNRELEASED)
+0.3.26 (2021-03-12)
 -------------------
 - Add select forward/backward methods to IndexedSelection.
 

@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.3.26 (UNRELEASED)
+-------------------
+- Add select forward/backward methods to IndexedSelection.
+
 0.3.25 (2021-02-02)
 -------------------
 - Add None and fuzzy options to int converter.

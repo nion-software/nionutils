@@ -203,6 +203,40 @@ class IndexedSelection:
         else:
             self.clear()
 
+    def select_forward(self, item_count: int, extend: bool = False, amount: int = 1, wrap: bool = False) -> None:
+        new_index = None
+        indexes = self.indexes
+        if len(indexes) > 0:
+            if wrap:
+                new_index = (max(indexes) + amount) % item_count
+            else:
+                new_index = min(max(indexes) + amount, item_count - 1)
+        elif item_count > 0:
+            # nothing is selected, just select the first item
+            new_index = 0
+        if new_index is not None:
+            if extend:
+                self.extend(new_index)
+            else:
+                self.set(new_index)
+
+    def select_backward(self, item_count: int, extend: bool = False, amount: int = 1, wrap: bool = False) -> None:
+        new_index = None
+        indexes = self.indexes
+        if len(indexes) > 0:
+            if wrap:
+                new_index = (item_count + min(indexes) - amount) % item_count
+            else:
+                new_index = max(min(indexes) - amount, 0)
+        elif item_count > 0:
+            # nothing is selected, just select the last item
+            new_index = item_count - 1
+        if new_index is not None:
+            if extend:
+                self.extend(new_index)
+            else:
+                self.set(new_index)
+
     def insert_index(self, new_index: int) -> None:
         new_indexes = set()
         for index in self.__indexes:

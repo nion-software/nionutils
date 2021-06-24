@@ -3,11 +3,13 @@ Useful classes for handling threads.
 """
 
 # standard libraries
+import concurrent.futures
 import copy
 import logging
 import queue
 import threading
 import time
+import typing
 
 # third party libraries
 # None
@@ -183,3 +185,57 @@ class ThreadPool(object):
             if task and not self.__closed:
                 task.execute()
             self.__queue.task_done()
+
+
+class SingleItemDispatcher:
+    """Dispatch a function to the thread pool, ensuring only one is running at once."""
+
+    def __init__(self, *, executor: typing.Optional[concurrent.futures.ThreadPoolExecutor] = None, minimum_period: float = 0.0):
+        self.__executor = executor or concurrent.futures.ThreadPoolExecutor()
+        self.__minimum_period = minimum_period
+        self.__is_dispatching_lock = threading.RLock()
+        self.__is_dispatch_pending = False
+        self.__dispatch_future: typing.Optional[concurrent.futures.Future] = None
+        self.__dispatch_thread_cancel = threading.Event()
+        self.__cached_value_time = 0
+        self.on_computed: typing.Optional[typing.Callable[[], None]] = None
+
+    def close(self) -> None:
+        self.on_computed = None
+        recompute_future = self.__dispatch_future  # avoid race by using local
+        if recompute_future:
+            self.__dispatch_thread_cancel.set()
+            concurrent.futures.wait([recompute_future])
+
+    def __dispatch_task(self, fn: typing.Callable[[], None]) -> None:
+        while True:
+            try:
+                if self.__dispatch_thread_cancel.wait(0.05):  # gather changes and helps tests run faster
+                    return
+                minimum_time = self.__minimum_period
+                current_time = time.time()
+                if current_time < self.__cached_value_time + minimum_time:
+                    if self.__dispatch_thread_cancel.wait(self.__cached_value_time + minimum_time - current_time):
+                        return
+                self.__is_dispatch_pending = False  # any pending calls up to this point will be realized in the recompute
+                fn()
+            finally:
+                with self.__is_dispatching_lock:
+                    # the only way the thread can end is if not pending within lock.
+                    # recompute_future can only be set within lock.
+                    if not self.__is_dispatch_pending:
+                        self.__dispatch_future = None
+                        break
+
+    def dispatch(self, fn: typing.Callable[[], None]) -> concurrent.futures.Future:
+        # dispatch the function on a thread.
+        # if already executing, ensure the thread dispatch again.
+        # may be called on the main thread or a thread - must return quickly in both cases.
+        with self.__is_dispatching_lock:
+            # in case thread is already running, set pending.
+            # the only way the thread can end is if not pending within lock.
+            # dispatch_future can only be set within lock.
+            self.__is_dispatch_pending = True
+            if not self.__dispatch_future:
+                self.__dispatch_future = self.__executor.submit(self.__dispatch_task, fn)
+            return self.__dispatch_future

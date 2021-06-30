@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.27 (UNRELEASED)
 -------------------
+- Add method to sync but not close event loop.
 - Add a single item dispatcher to thread pool.
 
 0.3.26 (2021-03-12)

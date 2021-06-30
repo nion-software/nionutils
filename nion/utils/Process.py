@@ -7,6 +7,7 @@ import asyncio
 import copy
 import queue
 import threading
+import typing
 
 # third party libraries
 # None
@@ -65,7 +66,12 @@ class TaskSet(object):
             task()
 
 
-def close_event_loop(event_loop: asyncio.AbstractEventLoop) -> None:
+def sync_event_loop(event_loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
+    """Synchronize the event loop, ensuring all tasks are complete.
+
+    Uses the current event loop if event_loop is None.
+    """
+    event_loop = event_loop or asyncio.get_event_loop()
     # give event loop one chance to finish up
     event_loop.stop()
     event_loop.run_forever()
@@ -79,10 +85,19 @@ def close_event_loop(event_loop: asyncio.AbstractEventLoop) -> None:
         gather_future = event_loop.create_future()
         gather_future.set_result([])
     event_loop.run_until_complete(gather_future)
-    # due to a bug in Python libraries, the default executor needs to be shutdown explicitly before the event loop
-    # see http://bugs.python.org/issue28464 . this bug manifests itself in at least one way: an intermittent failure
-    # in test_document_controller_releases_itself. reproduce by running the contents of that test in a loop of 100.
-    _default_executor = getattr(event_loop, "_default_executor", None)
-    if _default_executor:
-        _default_executor.shutdown()
-    event_loop.close()
+
+
+def close_event_loop(event_loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
+    """Synchronize and optionally close the event loop.
+
+    If a specific event loop is passed, it will be closed. Otherwise only synchronized.
+    """
+    sync_event_loop(event_loop)
+    if event_loop:
+        # due to a bug in Python libraries, the default executor needs to be shutdown explicitly before the event loop
+        # see http://bugs.python.org/issue28464 . this bug manifests itself in at least one way: an intermittent failure
+        # in test_document_controller_releases_itself. reproduce by running the contents of that test in a loop of 100.
+        _default_executor = getattr(event_loop, "_default_executor", None)
+        if _default_executor:
+            _default_executor.shutdown()
+        event_loop.close()

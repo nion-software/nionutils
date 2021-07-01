@@ -1,9 +1,11 @@
 """
 Classes related to streams of values, used for reactive style programming.
 """
+from __future__ import annotations
 
 # standard libraries
 import asyncio
+import enum
 import functools
 import operator
 import threading
@@ -39,9 +41,10 @@ class AbstractStream(ReferenceCounting.ReferenceCounted, typing.Generic[T]):
         return None
 
 
-class ValueStream(AbstractStream):
+class ValueStream(AbstractStream[T]):
     """A stream that sends out value when value is set."""
-    def __init__(self, value=None):
+
+    def __init__(self, value: OptionalT = None):
         super().__init__()
         # internal values
         self.__value = value
@@ -49,14 +52,18 @@ class ValueStream(AbstractStream):
         self.value_stream = Event.Event()
 
     @property
-    def value(self):
+    def value(self) -> OptionalT:
         return self.__value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: OptionalT) -> None:
         if self.__value != value:
             self.__value = value
-            self.value_stream.fire(self.value)
+            self._send_value()
+
+    def _send_value(self) -> None:
+        """Subclasses may override this to filter or modify."""
+        self.value_stream.fire(self.value)
 
 
 class MapStream(AbstractStream):
@@ -284,7 +291,7 @@ class PropertyChangedEventStream(AbstractStream):
             self.__source_object = source_object
             if self.__source_object:
                 self.__property_changed_listener = self.__source_object.property_changed_event.listen(self.__property_changed)
-                self.__property_changed(property_name)
+            self.__property_changed(property_name)
         self.__source_stream_listener = self.__source_stream.value_stream.listen(source_object_changed)
         source_object_changed(self.__source_stream.value)
 
@@ -304,7 +311,7 @@ class PropertyChangedEventStream(AbstractStream):
 
     def __property_changed(self, key):
         if key == self.__property_name:
-            new_value = getattr(self.__source_object, self.__property_name)
+            new_value = getattr(self.__source_object, self.__property_name, None)
             if not self.__cmp(new_value, self.__value):
                 self.__value = new_value
                 self.value_stream.fire(self.__value)
@@ -357,3 +364,154 @@ class ConcatStream(AbstractStream):
         else:
             self.__value = None
             self.value_stream.fire(None)
+
+
+class OptionalStream(AbstractStream):
+    """Sends value from input stream or None."""
+
+    def __init__(self, stream: AbstractStream, pred: typing.Callable[[typing.Any], bool]):
+        super().__init__()
+        self.__stream = stream.add_ref()
+        self.__pred = pred
+        self.__stream_listener = self.__stream.value_stream.listen(self.__value_changed)
+        self.value_stream = Event.Event()
+        self.__value_changed(self.__stream.value)
+
+    def close(self):
+        self.__stream_listener.close()
+        self.__stream_listener = None
+        self.__stream.remove_ref()
+        self.__stream = None
+        super().close()
+
+    @property
+    def value(self):
+        return None
+
+    def __value_changed(self, value) -> None:
+        if self.__pred(value):
+            self.value_stream.fire(value)
+        else:
+            self.value_stream.fire(None)
+
+
+class PrintStream(ReferenceCounting.ReferenceCounted):
+    """Prints value from input stream."""
+
+    def __init__(self, stream: AbstractStream):
+        super().__init__()
+        self.__stream = stream.add_ref()
+        self.__stream_listener = self.__stream.value_stream.listen(self.__value_changed)
+
+    def close(self) -> None:
+        self.__stream_listener.close()
+        self.__stream_listener = None
+        self.__stream.remove_ref()
+        self.__stream = None
+
+    def __value_changed(self, value) -> None:
+        print(f"value={value}")
+
+
+class ValueStreamAction:
+    """Calls an action function when the stream value changes."""
+
+    def __init__(self, stream: AbstractStream, fn: typing.Callable[[typing.Any], None]):
+        super().__init__()
+        self.__stream = stream.add_ref()
+        self.__stream_listener = self.__stream.value_stream.listen(self.__value_changed)
+        self.__fn = fn
+
+    def close(self) -> None:
+        self.__stream_listener.close()
+        self.__stream_listener = None
+        self.__stream.remove_ref()
+        self.__stream = None
+        self.__fn = typing.cast(typing.Callable[[typing.Any], None], None)
+
+    def __value_changed(self, value) -> None:
+        self.__fn(value)
+
+
+class ValueChangeType(enum.IntEnum):
+    BEGIN = 0
+    CHANGE = 1
+    END = 2
+
+
+class ValueChange(typing.Generic[T]):
+    def __init__(self, state: int, value: T):
+        self.state = state
+        self.value = value
+
+    @property
+    def is_begin(self) -> bool:
+        return self.state == ValueChangeType.BEGIN
+
+    @property
+    def is_end(self) -> bool:
+        return self.state == ValueChangeType.END
+
+
+class ValueChangeStream(ValueStream[ValueChange[T]]):
+    def __init__(self, value_stream: AbstractStream[T]):
+        super().__init__()
+        self.__value_stream = value_stream.add_ref()
+        self.__value_stream_listener = self.__value_stream.value_stream.listen(self.__value_changed)
+        self.__is_active = False
+
+    def close(self) -> None:
+        self.__value_stream_listener.close()
+        self.__value_stream_listener = None
+        self.__value_stream.remove_ref()
+        self.__value_stream = None
+        super().close()
+
+    def _send_value(self) -> None:
+        if self.__is_active:
+            assert self.value is not None
+            super()._send_value()
+
+    def begin(self) -> None:
+        self.__is_active = True
+        self.value = ValueChange(ValueChangeType.BEGIN, self.__value_stream.value)
+
+    def end(self) -> None:
+        self.value = ValueChange(ValueChangeType.END, self.__value_stream.value)
+        self.__is_active = False
+
+    def __value_changed(self, value: typing.Optional[T]) -> None:
+        self.value = ValueChange(ValueChangeType.CHANGE, self.__value_stream.value)
+
+
+class ValueChangeStreamReactor:
+    def __init__(self, value_change_stream: ValueChangeStream):
+        self.__value_change_stream = value_change_stream.add_ref()
+        self.__value_changed_listener = value_change_stream.value_stream.listen(self.__value_changed)
+        self.__event_queue: asyncio.Queue = asyncio.Queue()
+        self.__task: typing.Optional[asyncio.Task] = None
+
+    def close(self) -> None:
+        if self.__task:
+            self.__task.cancel()
+            self.__task = None
+        self.__value_changed_listener.close()
+        self.__value_changed_listener = None
+        self.__value_change_stream.remove_ref()
+        self.__value_change_stream = None
+
+    def __value_changed(self, value_change: ValueChange[float]) -> None:
+        self.__event_queue.put_nowait(value_change)
+
+    def run(self, cfn: typing.Callable[[ValueChangeStreamReactor], typing.Coroutine]) -> None:
+        assert not self.__task
+        self.__task = asyncio.get_event_loop().create_task(cfn(self))
+
+    async def begin(self) -> None:
+        while True:
+            value_change = await self.__event_queue.get()
+            if value_change.state == ValueChangeType.BEGIN:
+                break
+
+    async def next_value_change(self) -> ValueChange:
+        return await self.__event_queue.get()

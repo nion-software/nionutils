@@ -642,7 +642,7 @@ class FilteredListModel(Observable.Observable):
         """ Insert the master item. Called from the container. """
         if key == self.__master_items_key:
             with self._update_mutex:
-                assert not item in self.__master_items
+                assert item is None or not item in self.__master_items, f"{item} already in {self.__master_items}"
                 self.__master_items.insert(before_index, item)
 
                 # thread safe

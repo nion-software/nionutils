@@ -30,11 +30,8 @@ class AbstractStream(ReferenceCounting.ReferenceCounted, typing.Generic[T]):
         super().__init__()
         self.value_stream = None
 
-    def close(self) -> None:
-        pass
-
     def about_to_delete(self) -> None:
-        self.close()
+        pass
 
     @property
     def value(self) -> OptionalT:
@@ -88,14 +85,14 @@ class MapStream(AbstractStream):
         self.__listener = stream.value_stream.listen(update_value)
         update_value(stream.value)
 
-    def close(self):
+    def about_to_delete(self) -> None:
         self.value_stream.fire(self.value)
         self.__listener.close()
         self.__listener = None
         self.__stream.remove_ref()
         self.__stream = None
         self.__value = None
-        super().close()
+        super().about_to_delete()
 
     @property
     def value(self):
@@ -122,7 +119,7 @@ class CombineLatestStream(AbstractStream):
             self.__values[index] = stream.value
         self.__values_changed()
 
-    def close(self):
+    def about_to_delete(self) -> None:
         self.value_stream.fire(self.value)
         for index, stream in enumerate(self.__stream_list):
             self.__listeners[index].close()
@@ -131,7 +128,7 @@ class CombineLatestStream(AbstractStream):
         self.__stream_list = None
         self.__values = None
         self.__value = None
-        super().close()
+        super().about_to_delete()
 
     def __handle_stream_value(self, index, value):
         self.__values[index] = value
@@ -161,7 +158,7 @@ class DebounceStream(AbstractStream):
         self.__debounce_task = None
         self.__value_changed(input_stream.value)
 
-    def close(self):
+    def about_to_delete(self) -> None:
         self.__listener.close()
         self.__listener = None
         self.__input_stream.remove_ref()
@@ -170,7 +167,7 @@ class DebounceStream(AbstractStream):
             self.__debounce_task.cancel()
             self.__debounce_task = None
         self.__loop = None
-        super().close()
+        super().about_to_delete()
 
     async def debounce_delay(self) -> None:
         try:
@@ -215,7 +212,7 @@ class SampleStream(AbstractStream):
 
         next_sample(None)
 
-    def close(self):
+    def about_to_delete(self) -> None:
         self.__listener.close()
         self.__listener = None
         self.__input_stream.remove_ref()
@@ -223,7 +220,7 @@ class SampleStream(AbstractStream):
         self.__done = True
         self.__sample_loop_task.cancel()
         self.__sample_loop_task = None
-        super().close()
+        super().about_to_delete()
 
     async def sample_loop(self) -> None:
         await asyncio.sleep(self.__period)
@@ -253,9 +250,9 @@ class ConstantStream(AbstractStream[ConstantStreamT]):
         self.__value = value
         self.value_stream = Event.Event()
 
-    def close(self):
+    def about_to_delete(self) -> None:
         self.__value = None
-        super().close()
+        super().about_to_delete()
 
     @property
     def value(self) -> ConstantStreamT:
@@ -295,7 +292,7 @@ class PropertyChangedEventStream(AbstractStream):
         self.__source_stream_listener = self.__source_stream.value_stream.listen(source_object_changed)
         source_object_changed(self.__source_stream.value)
 
-    def close(self):
+    def about_to_delete(self) -> None:
         if self.__property_changed_listener:
             self.__property_changed_listener.close()
             self.__property_changed_listener = None
@@ -303,7 +300,7 @@ class PropertyChangedEventStream(AbstractStream):
         self.__source_stream_listener = None
         self.__source_stream.remove_ref()
         self.__source_stream = None
-        super().close()
+        super().about_to_delete()
 
     @property
     def value(self):
@@ -335,13 +332,13 @@ class ConcatStream(AbstractStream):
         self.__stream_listener = stream.value_stream.listen(self.__stream_changed)
         self.__stream_changed(stream.value)
 
-    def close(self):
+    def about_to_delete(self) -> None:
         self.__stream_changed(None)
         self.__stream_listener.close()
         self.__stream_listener = None
         self.__stream.remove_ref()
         self.__stream = None
-        super().close()
+        super().about_to_delete()
 
     @property
     def value(self):
@@ -377,12 +374,12 @@ class OptionalStream(AbstractStream):
         self.value_stream = Event.Event()
         self.__value_changed(self.__stream.value)
 
-    def close(self):
+    def about_to_delete(self) -> None:
         self.__stream_listener.close()
         self.__stream_listener = None
         self.__stream.remove_ref()
         self.__stream = None
-        super().close()
+        super().about_to_delete()
 
     @property
     def value(self):
@@ -403,11 +400,12 @@ class PrintStream(ReferenceCounting.ReferenceCounted):
         self.__stream = stream.add_ref()
         self.__stream_listener = self.__stream.value_stream.listen(self.__value_changed)
 
-    def close(self) -> None:
+    def about_to_delete(self) -> None:
         self.__stream_listener.close()
         self.__stream_listener = None
         self.__stream.remove_ref()
         self.__stream = None
+        super().about_to_delete()
 
     def __value_changed(self, value) -> None:
         print(f"value={value}")
@@ -460,12 +458,12 @@ class ValueChangeStream(ValueStream[ValueChange[T]]):
         self.__value_stream_listener = self.__value_stream.value_stream.listen(self.__value_changed)
         self.__is_active = False
 
-    def close(self) -> None:
+    def about_to_delete(self) -> None:
         self.__value_stream_listener.close()
         self.__value_stream_listener = None
         self.__value_stream.remove_ref()
         self.__value_stream = None
-        super().close()
+        super().about_to_delete()
 
     def _send_value(self) -> None:
         if self.__is_active:

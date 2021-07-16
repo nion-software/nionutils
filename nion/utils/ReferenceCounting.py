@@ -1,18 +1,22 @@
+from __future__ import annotations
+
 import threading
 
 
 class ReferenceCounted:
+    count = 0  # useful for detecting leaks in tests
 
     def __init__(self):
-        super(ReferenceCounted, self).__init__()
+        super().__init__()
         self.__ref_count = 0
         self.__ref_count_mutex = threading.RLock()  # access to the image
         self.__active = True
+        ReferenceCounted.count += 1
 
     # Give subclasses a chance to clean up. This gets called when reference
     # count goes to 0, but before deletion.
     def about_to_delete(self):
-        pass
+        ReferenceCounted.count -= 1
 
     def ref(self):
         class RefContextManager(object):
@@ -20,7 +24,7 @@ class ReferenceCounted:
                 self.__item = item
             def __enter__(self):
                 self.__item.add_ref()
-                return self
+                return self.__item
             def __exit__(self, type, value, traceback):
                 self.__item.remove_ref()
         return RefContextManager(self)

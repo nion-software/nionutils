@@ -30,9 +30,6 @@ class AbstractStream(ReferenceCounting.ReferenceCounted, typing.Generic[T]):
         super().__init__()
         self.value_stream = None
 
-    def about_to_delete(self) -> None:
-        pass
-
     @property
     def value(self) -> OptionalT:
         return None

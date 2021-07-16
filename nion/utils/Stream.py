@@ -52,8 +52,11 @@ class ValueStream(AbstractStream[T]):
     @value.setter
     def value(self, value: OptionalT) -> None:
         if self.__value != value:
-            self.__value = value
-            self._send_value()
+            self.send_value(value)
+
+    def send_value(self, value: OptionalT) -> None:
+        self.__value = value
+        self._send_value()
 
     def _send_value(self) -> None:
         """Subclasses may override this to filter or modify."""

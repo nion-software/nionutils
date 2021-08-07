@@ -245,7 +245,12 @@ class PropertyBinding(Binding):
                     self.update_target_direct(self.fallback)
 
         self.__property_changed_listener = source.property_changed_event.listen(property_changed)
-        self.source_setter = lambda value: setattr(self.source, self.__property_name, value)
+        def set_property_value(value) -> None:
+            try:
+                setattr(self.source, self.__property_name, value)
+            except AttributeError as exc:
+                raise AttributeError(self.__property_name) from None
+        self.source_setter = set_property_value
         self.source_getter = lambda: getattr(self.source, self.__property_name)
 
     def close(self):

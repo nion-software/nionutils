@@ -15,7 +15,7 @@ class ReferenceCounted:
 
     # Give subclasses a chance to clean up. This gets called when reference
     # count goes to 0, but before deletion.
-    def about_to_delete(self):
+    def about_to_delete(self) -> None:
         ReferenceCounted.count -= 1
 
     def ref(self):

@@ -8,7 +8,6 @@ import asyncio
 import enum
 import functools
 import operator
-import threading
 import typing
 
 # third party libraries
@@ -33,6 +32,34 @@ class AbstractStream(ReferenceCounting.ReferenceCounted, typing.Generic[T]):
     @property
     def value(self) -> OptionalT:
         return None
+
+
+class StreamTask:
+
+    def __init__(self, task: typing.Optional[typing.Any] = None, event_loop: typing.Optional[asyncio.AbstractEventLoop] = None):
+        self.__task: typing.Optional[asyncio.Task] = None
+        self.__event_loop = event_loop or asyncio.get_event_loop()
+        if task:
+            self.create_task(task)
+
+    def clear(self) -> None:
+        if self.__task:
+            self.__task.cancel()
+        self.__task = None
+
+    @property
+    def is_active(self) -> bool:
+        return self.__task is not None
+
+    def create_task(self, task: typing.Awaitable[None]) -> asyncio.Task:
+        assert self.__task is None
+        self.__task = self.__event_loop.create_task(task)
+
+        def zero_task(t: asyncio.Task) -> None:
+            self.__task = None
+
+        self.__task.add_done_callback(zero_task)
+        return self.__task
 
 
 class ValueStream(AbstractStream[T]):
@@ -143,19 +170,23 @@ class CombineLatestStream(AbstractStream):
         return self.__value
 
 
+class DebounceValue:
+    def __init__(self):
+        self.value = None
+
+
 class DebounceStream(AbstractStream):
     """A stream that produces latest value after a specified interval has elapsed."""
 
-    def __init__(self, input_stream, period: float, loop: asyncio.AbstractEventLoop):
+    def __init__(self, input_stream: AbstractStream, period: float, loop: typing.Optional[asyncio.AbstractEventLoop] = None):
         super().__init__()
         self.value_stream = Event.Event()
         self.__input_stream = input_stream.add_ref()
         self.__period = period
-        self.__loop = loop
         self.__last_time = 0
-        self.__value = None
+        self.__value_holder = DebounceValue()
         self.__listener = input_stream.value_stream.listen(self.__value_changed)
-        self.__debounce_task = None
+        self.__debounce_task = StreamTask()
         self.__value_changed(input_stream.value)
 
     def about_to_delete(self) -> None:
@@ -163,84 +194,72 @@ class DebounceStream(AbstractStream):
         self.__listener = None
         self.__input_stream.remove_ref()
         self.__input_stream = None
-        if self.__debounce_task:
-            self.__debounce_task.cancel()
-            self.__debounce_task = None
-        self.__loop = typing.cast(asyncio.AbstractEventLoop, None)
+        self.__debounce_task.clear()
+        self.__debounce_task = typing.cast(StreamTask, None)
         super().about_to_delete()
 
-    async def debounce_delay(self) -> None:
-        try:
-            await asyncio.sleep(self.__period)
-            self.value_stream.fire(self.__value)
-        finally:
-            self.__debounce_task = None
-
     def __value_changed(self, value):
-        self.__value = value
-        # current_time = time.time()
-        # if current_time - self.__last_time > self.__period:  # only trigger new task if necessary
-        if not self.__debounce_task:  # only trigger new task if necessary
-            self.__debounce_task = self.__loop.create_task(self.debounce_delay())
+        self.__value_holder.value = value
+        if not self.__debounce_task.is_active:  # only trigger new task if necessary
+
+            async def debounce_delay(period: float, value_stream: Event.Event, value_holder: DebounceValue) -> None:
+                await asyncio.sleep(period)
+                value_stream.fire(value_holder.value)
+
+            self.__debounce_task.create_task(debounce_delay(self.__period, self.value_stream, self.__value_holder))
 
     @property
     def value(self):
-        return self.__value
+        return self.__value_holder.value
+
+
+class SampleValue:
+    def __init__(self):
+        self.value = None
+        self.pending_value = None
+        self.is_dirty = False
+
+    def set_pending_value(self, value) -> None:
+        self.pending_value = value
+        self.is_dirty = True
 
 
 class SampleStream(AbstractStream):
     """A stream that produces new values at a specified interval."""
 
-    def __init__(self, input_stream, period: float, loop: asyncio.AbstractEventLoop):
+    def __init__(self, input_stream: AbstractStream, period: float, loop: typing.Optional[asyncio.AbstractEventLoop] = None):
         super().__init__()
         self.value_stream = Event.Event()
         self.__input_stream = input_stream.add_ref()
-        self.__period = period
-        self.__last_time = 0
-        self.__pending_value = None
-        self.__value = None
+        self.__sample_value = SampleValue()
         self.__listener = input_stream.value_stream.listen(self.__value_changed)
-        self.__value = input_stream.value
-        self.__value_dirty = True
-        self.__value_dirty_lock = threading.RLock()
-        self.__done = False
-        self.__sample_loop_task = None
+        self.__sample_value.value = input_stream.value
 
-        def next_sample(f):
-            if not self.__done:
-                self.__sample_loop_task = loop.create_task(self.sample_loop())
-                self.__sample_loop_task.add_done_callback(next_sample)
+        async def sample_loop(period: float, value_stream: Event.Event, sample_value: SampleValue) -> None:
+            while True:
+                await asyncio.sleep(period)
+                if sample_value.is_dirty:
+                    sample_value.value = sample_value.pending_value
+                    sample_value.is_dirty = False
+                    value_stream.fire(sample_value.value)
 
-        next_sample(None)
+        self.__sample_task = StreamTask(sample_loop(period, self.value_stream, self.__sample_value))
 
     def about_to_delete(self) -> None:
         self.__listener.close()
         self.__listener = None
         self.__input_stream.remove_ref()
         self.__input_stream = None
-        self.__done = True
-        if self.__sample_loop_task:
-            self.__sample_loop_task.cancel()
-            self.__sample_loop_task = None
+        self.__sample_task.clear()
+        self.__sample_task = typing.cast(StreamTask, None)
         super().about_to_delete()
 
-    async def sample_loop(self) -> None:
-        await asyncio.sleep(self.__period)
-        with self.__value_dirty_lock:
-            value_dirty = self.__value_dirty
-            self.__value_dirty = False
-        if value_dirty:
-            self.__value = self.__pending_value
-            self.value_stream.fire(self.__pending_value)
-
     def __value_changed(self, value):
-        with self.__value_dirty_lock:
-            self.__value_dirty = True
-        self.__pending_value = value
+        self.__sample_value.set_pending_value(value)
 
     @property
     def value(self):
-        return self.__value
+        return self.__sample_value.value
 
 
 ConstantStreamT = typing.TypeVar('ConstantStreamT')

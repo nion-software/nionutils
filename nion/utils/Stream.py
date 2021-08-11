@@ -5,14 +5,18 @@ from __future__ import annotations
 
 # standard libraries
 import asyncio
+import contextlib
 import enum
 import operator
+import types
 import typing
 
 # third party libraries
 # None
 
 # local libraries
+import weakref
+
 from . import Event
 from . import Observable
 from . import ReferenceCounting
@@ -23,7 +27,7 @@ OT = typing.TypeVar('OT')
 EqualityOperator = typing.Callable[[typing.Any, typing.Any], bool]
 
 
-class AbstractStream(ReferenceCounting.ReferenceCounted, typing.Generic[T]):
+class AbstractStream(typing.Generic[T]):
     """A stream provides a value property and a value_stream event that fires when the value changes."""
 
     def __init__(self) -> None:
@@ -34,9 +38,28 @@ class AbstractStream(ReferenceCounting.ReferenceCounted, typing.Generic[T]):
     def value(self) -> typing.Optional[T]:
         return None
 
+    def about_to_delete(self) -> None:
+        pass
+
     def add_ref(self) -> AbstractStream[T]:
-        super().add_ref()
         return self
+
+    def remove_ref(self, check:bool=True) -> None:
+        pass
+
+    class RefContextManager:
+        def __init__(self, item: AbstractStream[T]) -> None:
+            self.__item = item
+
+        def __enter__(self) -> AbstractStream[T]:
+            return self.__item
+
+        def __exit__(self, exception_type: typing.Optional[typing.Type[BaseException]],
+                     value: typing.Optional[BaseException], traceback: typing.Optional[types.TracebackType]) -> typing.Optional[bool]:
+            return None
+
+    def ref(self) -> contextlib.AbstractContextManager[AbstractStream[T]]:
+        return AbstractStream.RefContextManager(self)
 
 
 class StreamTask:
@@ -78,7 +101,6 @@ class ValueStream(AbstractStream[T], typing.Generic[T]):
         self.value_stream = Event.Event()
 
     def add_ref(self) -> ValueStream[T]:
-        super().add_ref()
         return self
 
     @property
@@ -121,14 +143,6 @@ class MapStream(AbstractStream[OT], typing.Generic[T, OT]):
         self.__listener = stream.value_stream.listen(weak_partial(update_value, self))
         update_value(self, stream.value)
 
-    def about_to_delete(self) -> None:
-        self.__listener.close()
-        self.__listener = typing.cast(Event.EventListener, None)
-        self.__stream.remove_ref()
-        self.__stream = typing.cast(AbstractStream[T], None)
-        self.__value = None
-        super().about_to_delete()
-
     @property
     def value(self) -> typing.Optional[OT]:
         return self.__value
@@ -162,18 +176,6 @@ class CombineLatestStream(AbstractStream[OT], typing.Generic[T, OT]):
             self.__listeners[index] = stream.value_stream.listen(weak_partial(handle_stream_value, self, index))
             self.__values[index] = stream.value
         self.__values_changed()
-
-    def about_to_delete(self) -> None:
-        for index, stream in enumerate(self.__stream_list):
-            self.__listeners[index].close()
-            self.__listeners[index] = typing.cast(Event.EventListener, None)
-            self.__values[index] = None
-            stream.remove_ref()
-        self.__stream_list = typing.cast(typing.List[AbstractStream[T]], None)
-        self.__listeners = typing.cast(typing.Dict[int, typing.Any], None)
-        self.__values = typing.cast(typing.List[typing.Optional[T]], None)
-        self.__value = None
-        super().about_to_delete()
 
     def __handle_stream_value(self, index: int, value: typing.Optional[T]) -> None:
         self.__values[index] = value
@@ -211,14 +213,10 @@ class DebounceStream(AbstractStream[T], typing.Generic[T]):
         self.__debounce_task = StreamTask()
         self.__value_changed(input_stream.value)
 
-    def about_to_delete(self) -> None:
-        self.__listener.close()
-        self.__listener = typing.cast(Event.EventListener, None)
-        self.__input_stream.remove_ref()
-        self.__input_stream = typing.cast(AbstractStream[T], None)
-        self.__debounce_task.clear()
-        self.__debounce_task = typing.cast(StreamTask, None)
-        super().about_to_delete()
+        def finalize(task: StreamTask, s: str) -> None:
+            task.clear()
+
+        weakref.finalize(self, finalize, self.__debounce_task, str(self))
 
     def __value_changed(self, value: typing.Optional[T]) -> None:
         self.__value_holder.value = value
@@ -272,14 +270,10 @@ class SampleStream(AbstractStream[T], typing.Generic[T]):
 
         self.__sample_task = StreamTask(sample_loop(period, self.value_stream, self.__sample_value))
 
-    def about_to_delete(self) -> None:
-        self.__listener.close()
-        self.__listener = typing.cast(Event.EventListener, None)
-        self.__input_stream.remove_ref()
-        self.__input_stream = typing.cast(AbstractStream[T], None)
-        self.__sample_task.clear()
-        self.__sample_task = typing.cast(StreamTask, None)
-        super().about_to_delete()
+        def finalize(task: StreamTask, s: str) -> None:
+            task.clear()
+
+        weakref.finalize(self, finalize, self.__sample_task, str(self))
 
     def __value_changed(self, value: typing.Optional[T]) -> None:
         self.__sample_value.set_pending_value(value)
@@ -295,10 +289,6 @@ class ConstantStream(AbstractStream[T], typing.Generic[T]):
         super().__init__()
         self.__value = value
         self.value_stream = Event.Event()
-
-    def about_to_delete(self) -> None:
-        self.__value = typing.cast(typing.Optional[T], None)
-        super().about_to_delete()
 
     @property
     def value(self) -> typing.Optional[T]:
@@ -335,16 +325,6 @@ class PropertyChangedEventStream(AbstractStream[T], typing.Generic[T]):
 
         self.__source_stream_listener = self.__source_stream.value_stream.listen(weak_partial(source_object_changed, self))
         source_object_changed(self, self.__source_stream.value)
-
-    def about_to_delete(self) -> None:
-        if self.__property_changed_listener:
-            self.__property_changed_listener.close()
-            self.__property_changed_listener = None
-        self.__source_stream_listener.close()
-        self.__source_stream_listener = typing.cast(Event.EventListener, None)
-        self.__source_stream.remove_ref()
-        self.__source_stream = typing.cast(AbstractStream[Observable.Observable], None)
-        super().about_to_delete()
 
     @property
     def value(self) -> typing.Optional[T]:
@@ -387,13 +367,6 @@ class OptionalStream(AbstractStream[T], typing.Generic[T]):
         self.value_stream = Event.Event()
         self.__value_changed(self.__stream.value)
 
-    def about_to_delete(self) -> None:
-        self.__stream_listener.close()
-        self.__stream_listener = typing.cast(Event.EventListener, None)
-        self.__stream.remove_ref()
-        self.__stream = typing.cast(AbstractStream[T], None)
-        super().about_to_delete()
-
     @property
     def value(self) -> typing.Optional[T]:
         return None
@@ -418,13 +391,6 @@ class PrintStream(ReferenceCounting.ReferenceCounted):
 
         self.__stream_listener = self.__stream.value_stream.listen(weak_partial(value_changed, self))
 
-    def about_to_delete(self) -> None:
-        self.__stream_listener.close()
-        self.__stream_listener = typing.cast(Event.EventListener, None)
-        self.__stream.remove_ref()
-        self.__stream = typing.cast(AbstractStream[typing.Any], None)
-        super().about_to_delete()
-
     def __value_changed(self, value: typing.Any) -> None:
         print(f"value={value}")
 
@@ -444,11 +410,7 @@ class ValueStreamAction(typing.Generic[T]):
         self.__fn = fn
 
     def close(self) -> None:
-        self.__stream_listener.close()
-        self.__stream_listener = typing.cast(Event.EventListener, None)
-        self.__stream.remove_ref()
-        self.__stream = typing.cast(AbstractStream[T], None)
-        self.__fn = typing.cast(typing.Callable[[typing.Any], None], None)
+        pass
 
     def __value_changed(self, value: typing.Optional[T]) -> None:
         self.__fn(value)
@@ -486,15 +448,7 @@ class ValueChangeStream(ValueStream[ValueChange[T]], typing.Generic[T]):
         self.__value_stream_listener = self.__value_stream.value_stream.listen(weak_partial(value_changed, self))
         self.__is_active = False
 
-    def about_to_delete(self) -> None:
-        self.__value_stream_listener.close()
-        self.__value_stream_listener = typing.cast(Event.EventListener, None)
-        self.__value_stream.remove_ref()
-        self.__value_stream = typing.cast(AbstractStream[T], None)
-        super().about_to_delete()
-
     def add_ref(self) -> ValueChangeStream[T]:
-        super().add_ref()
         return self
 
     def _send_value(self) -> None:
@@ -526,14 +480,11 @@ class ValueChangeStreamReactor(typing.Generic[T]):
         self.__event_queue: asyncio.Queue[ValueChange[T]] = asyncio.Queue()
         self.__task: typing.Optional[asyncio.Task[None]] = None
 
-    def close(self) -> None:
-        if self.__task:
-            self.__task.cancel()
-            self.__task = None
-        self.__value_changed_listener.close()
-        self.__value_changed_listener = typing.cast(Event.EventListener, None)
-        self.__value_change_stream.remove_ref()
-        self.__value_change_stream = typing.cast(ValueChangeStream[T], None)
+        def finalize(task: typing.Optional[asyncio.Task[None]], s: str) -> None:
+            if task:
+                task.cancel()
+
+        weakref.finalize(self, finalize, self.__task, str(self))
 
     def __value_changed(self, value_change: ValueChange[T]) -> None:
         self.__event_queue.put_nowait(value_change)

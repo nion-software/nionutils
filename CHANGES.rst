@@ -3,7 +3,8 @@ Changelog (nionutils)
 
 0.3.27 (UNRELEASED)
 -------------------
-- Add experiment stream, value change, and reactor functions.
+- Extend sync processes function to cancel outstanding async functions.
+- Add experimental stream, value change, and reactor functions.
 - Add method to sync but not close event loop.
 - Add a single item dispatcher to thread pool.
 

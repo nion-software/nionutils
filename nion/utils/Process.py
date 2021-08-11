@@ -79,6 +79,8 @@ def sync_event_loop(event_loop: typing.Optional[asyncio.AbstractEventLoop] = Non
     # this assumes that all outstanding tasks finish in a reasonable time (i.e. no infinite loops).
     tasks = asyncio.all_tasks(loop=event_loop)
     if tasks:
+        for task in tasks:
+            task.cancel()
         gather_future = asyncio.gather(*tasks, return_exceptions=True)
     else:
         # work around bad design in gather (always uses global event loop in Python 3.8)

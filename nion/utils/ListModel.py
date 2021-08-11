@@ -277,6 +277,8 @@ class FilteredListModel(Observable.Observable):
     def close(self):
         self.container = None
         self.__item_changed_event_listeners = None
+        self.__master_items = None
+        self.__items = None
 
     def begin_change(self):
         """ Begin a set of changes. Balance with end_changes. """

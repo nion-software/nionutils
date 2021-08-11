@@ -86,7 +86,6 @@ class MapStream(AbstractStream):
         update_value(stream.value)
 
     def about_to_delete(self) -> None:
-        self.value_stream.fire(self.value)
         self.__listener.close()
         self.__listener = None
         self.__stream.remove_ref()
@@ -120,13 +119,14 @@ class CombineLatestStream(AbstractStream):
         self.__values_changed()
 
     def about_to_delete(self) -> None:
-        self.value_stream.fire(self.value)
         for index, stream in enumerate(self.__stream_list):
             self.__listeners[index].close()
+            self.__listeners[index] = None
             self.__values[index] = None
             stream.remove_ref()
-        self.__stream_list = None
-        self.__values = None
+        self.__stream_list = typing.cast(typing.List, None)
+        self.__listeners = typing.cast(typing.Dict[int, typing.Any], None)
+        self.__values = typing.cast(typing.List, None)
         self.__value = None
         super().about_to_delete()
 
@@ -166,7 +166,7 @@ class DebounceStream(AbstractStream):
         if self.__debounce_task:
             self.__debounce_task.cancel()
             self.__debounce_task = None
-        self.__loop = None
+        self.__loop = typing.cast(asyncio.AbstractEventLoop, None)
         super().about_to_delete()
 
     async def debounce_delay(self) -> None:
@@ -204,6 +204,7 @@ class SampleStream(AbstractStream):
         self.__value_dirty = True
         self.__value_dirty_lock = threading.RLock()
         self.__done = False
+        self.__sample_loop_task = None
 
         def next_sample(f):
             if not self.__done:
@@ -218,8 +219,9 @@ class SampleStream(AbstractStream):
         self.__input_stream.remove_ref()
         self.__input_stream = None
         self.__done = True
-        self.__sample_loop_task.cancel()
-        self.__sample_loop_task = None
+        if self.__sample_loop_task:
+            self.__sample_loop_task.cancel()
+            self.__sample_loop_task = None
         super().about_to_delete()
 
     async def sample_loop(self) -> None:
@@ -251,7 +253,7 @@ class ConstantStream(AbstractStream[ConstantStreamT]):
         self.value_stream = Event.Event()
 
     def about_to_delete(self) -> None:
-        self.__value = None
+        self.__value = typing.cast(ConstantStreamT, None)
         super().about_to_delete()
 
     @property
@@ -299,7 +301,7 @@ class PropertyChangedEventStream(AbstractStream):
         self.__source_stream_listener.close()
         self.__source_stream_listener = None
         self.__source_stream.remove_ref()
-        self.__source_stream = None
+        self.__source_stream = typing.cast(AbstractStream, None)
         super().about_to_delete()
 
     @property
@@ -333,7 +335,12 @@ class ConcatStream(AbstractStream):
         self.__stream_changed(stream.value)
 
     def about_to_delete(self) -> None:
-        self.__stream_changed(None)
+        if self.__out_stream:
+            self.__out_stream_listener.close()
+            self.__out_stream_listener = None
+            self.__out_stream.remove_ref()
+            self.__out_stream = None
+        self.__value = None
         self.__stream_listener.close()
         self.__stream_listener = None
         self.__stream.remove_ref()

@@ -30,17 +30,21 @@ def void(*args: typing.Any, **kwargs: typing.Any) -> None:
 class EventListener:
 
     def __init__(self, listener_fn: EventListenerCallableType, trace: bool) -> None:
-        self.__listener_fn = listener_fn
         self.tb = traceback.extract_stack() if trace else None
         # the call function is very performance critical; make it fast by using a property
         # instead of a method lookup.
         if callable(listener_fn):
-            self.call = self.__listener_fn
+            self.call = listener_fn
         else:
             self.call = void
 
     def close(self) -> None:
-        self.__listener_fn = typing.cast(EventListenerCallableType, None)
+        """Optional. Replaces call to confirm the event is not triggered after called."""
+        call = self.call
+
+        def void(*args: typing.Any, **kwargs: typing.Any) -> None:
+            print(f"CALL AFTER CLOSE {call}")
+
         self.call = void
 
     def __enter__(self) -> EventListener:
@@ -53,10 +57,6 @@ class EventListener:
 
 class Event:
     """An event object that to which listeners can be attached."""
-
-    # TODO: add events to this object itself to indicate a listener being added or removed
-    # this would facilitate the ability to only listen to _another_ object if the object embedding
-    # this event had listeners.
 
     def __init__(self, trace: bool = False) -> None:
         self.__weak_listeners: typing.List[WeakListenerType] = list()
@@ -73,7 +73,7 @@ class Event:
         return [w() for w in self.__weak_listeners]
 
     def listen(self, listener_fn: EventListenerCallableType, *, owner: typing.Any = None, trace: bool = False) -> EventListener:
-        """Add a listener function and return listener token. Token can be closed or deleted to unlisten."""
+        """Add a listener function and return listener. Listener can be closed or unreferenced to unlisten."""
         listener = EventListener(listener_fn, self.__trace)
 
         def remove_listener(weak_listener: WeakListenerType) -> None:
@@ -121,11 +121,14 @@ class Event:
         listener = None
         if self.__weak_listeners:
             try:
+                # copy the weak listeners; be careful to unreference listener just after use.
                 with self.__weak_listeners_mutex:
-                    listeners = [weak_listener() for weak_listener in self.__weak_listeners]
-                for listener in listeners:
+                    weak_listeners = list(self.__weak_listeners)
+                for weak_listener in weak_listeners:
+                    listener = weak_listener()
                     if listener:
                         listener.call(*args, **keywords)
+                    listener = None
             except Exception as e:
                 if listener:
                     self.__print_event_exception(listener)
@@ -135,12 +138,15 @@ class Event:
         listener = None
         if self.__weak_listeners:
             try:
+                # copy the weak listeners; be careful to unreference listener just after use.
                 with self.__weak_listeners_mutex:
-                    listeners = [weak_listener() for weak_listener in self.__weak_listeners]
-                for listener in listeners:
+                    weak_listeners = list(self.__weak_listeners)
+                for weak_listener in weak_listeners:
+                    listener = weak_listener()
                     if listener:
                         if listener.call(*args, **keywords):
                             return True
+                    listener = None
             except Exception as e:
                 if listener:
                     self.__print_event_exception(listener)
@@ -151,12 +157,15 @@ class Event:
         listener = None
         if self.__weak_listeners:
             try:
+                # copy the weak listeners; be careful to unreference listener just after use.
                 with self.__weak_listeners_mutex:
-                    listeners = [weak_listener() for weak_listener in self.__weak_listeners]
-                for listener in listeners:
+                    weak_listeners = list(self.__weak_listeners)
+                for weak_listener in weak_listeners:
+                    listener = weak_listener()
                     if listener:
                         if not listener.call(*args, **keywords):
                             return False
+                    listener = None
             except Exception as e:
                 if listener:
                     self.__print_event_exception(listener)

@@ -11,6 +11,8 @@ import typing
 # none
 
 # local libraries
+import weakref
+
 from . import Observable
 from . import Stream
 
@@ -61,33 +63,39 @@ class FuncStreamValueModel(PropertyModel):
         super().__init__(value=value, cmp=cmp)
         self.__value_func_stream = value_func_stream.add_ref()
         self.__event_loop = event_loop
-        self.__count = 0
-        self.__pending_task = None
+        self.__pending_task = Stream.StreamTask()
+        self.__value_fn_ref = [lambda: None]
+        self.__event = asyncio.Event()
+
+        async def update_value(event: asyncio.Event, model_ref, value_fn_ref: typing.List) -> None:
+            while True:
+                await event.wait()
+                event.clear()
+                value = None
+
+                def eval():
+                    nonlocal value
+                    try:
+                        value = value_fn_ref[0]()
+                    except Exception as e:
+                        pass
+
+                await event_loop.run_in_executor(None, eval)
+                model = model_ref()
+                if model:
+                    model.value = value
 
         def handle_value_func(value_func):
-            async def update_value():
-                value_ref = [None]
-                def eval(value_ref):
-                    value_ref[0] = value_func()
-                await event_loop.run_in_executor(None, eval, value_ref)
-                value = value_ref[0]
-                self.value = value
-                self.notify_property_changed("value")
-                self.__count -= 1
-                self.__pending_task = None
-            self.__count += 1
-            if self.__pending_task:
-                self.__count -= 1
-                self.__pending_task.cancel()
-            self.__pending_task = event_loop.create_task(update_value())
+            self.__value_fn_ref[0] = value_func
+            self.__event.set()
 
+        self.__pending_task.create_task(update_value(self.__event, weakref.ref(self), self.__value_fn_ref))
         self.__stream_listener = value_func_stream.value_stream.listen(handle_value_func)
         handle_value_func(self.__value_func_stream.value)
 
     def close(self):
-        if self.__pending_task:
-            self.__pending_task.cancel()
-            self.__pending_task = None
+        self.__pending_task.clear()
+        self.__pending_task = None
         self.__stream_listener.close()
         self.__stream_listener = None
         self.__value_func_stream.remove_ref()
@@ -96,7 +104,7 @@ class FuncStreamValueModel(PropertyModel):
         super().close()
 
     def _run_until_complete(self):
-        while self.__count > 0:
+        for i in range(8):
             self.__event_loop.stop()
             self.__event_loop.run_forever()
 

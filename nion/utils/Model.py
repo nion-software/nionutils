@@ -39,7 +39,7 @@ class PropertyModel(Observable.Observable, typing.Generic[T]):
         self.on_value_changed : typing.Optional[typing.Callable[[typing.Optional[T]], None]] = None
 
     def close(self) -> None:
-        self.on_value_changed = None
+        pass
 
     @property
     def value(self) -> typing.Optional[T]:
@@ -104,15 +104,10 @@ class FuncStreamValueModel(PropertyModel[T], typing.Generic[T]):
         assert value_func
         self.__handle_value_func(value_func)
 
-    def close(self) -> None:
-        self.__pending_task.clear()
-        self.__pending_task = typing.cast(Stream.StreamTask, None)
-        self.__stream_listener.close()
-        self.__stream_listener = typing.cast(Event.EventListener, None)
-        self.__value_func_stream.remove_ref()
-        self.__value_func_stream = typing.cast(typing.Any, None)
-        self.__event_loop = typing.cast(asyncio.AbstractEventLoop, None)
-        super().close()
+        def finalize(pending_task: Stream.StreamTask) -> None:
+            pending_task.clear()
+
+        weakref.finalize(self, finalize, self.__pending_task)
 
     def _run_until_complete(self) -> None:
         while True:
@@ -146,13 +141,6 @@ class StreamValueModel(PropertyModel[T], typing.Generic[T]):
 
         handle_value(self, value_stream.value)
 
-    def close(self) -> None:
-        self.__stream_listener.close()
-        self.__stream_listener = typing.cast(Event.EventListener, None)
-        self.__value_stream.remove_ref()
-        self.__value_stream = typing.cast(Stream.AbstractStream[T], None)
-        super().close()
-
 
 class PropertyChangedPropertyModel(PropertyModel[T], typing.Generic[T]):
     """Observes a property on another item and makes it a standard property model.
@@ -173,11 +161,6 @@ class PropertyChangedPropertyModel(PropertyModel[T], typing.Generic[T]):
                 property_model.value = getattr(observable, property_name)
 
         self.__listener = self.__observable.property_changed_event.listen(weak_partial(property_changed, self, observable, property_name))
-
-    def close(self) -> None:
-        self.__listener.close()
-        self.__listener = typing.cast(Event.EventListener, None)
-        super().close()
 
     def _set_value(self, value: typing.Optional[T]) -> None:
         super()._set_value(value)

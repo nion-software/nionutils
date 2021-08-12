@@ -301,35 +301,7 @@ class FilteredListModel(Observable.Observable):
         self.container = container
 
     def close(self) -> None:
-        if self.__container:
-            if self.__item_inserted_event_listener:
-                self.__item_inserted_event_listener.close()
-                self.__item_inserted_event_listener = None
-            if self.__item_removed_event_listener:
-                self.__item_removed_event_listener.close()
-                self.__item_removed_event_listener = None
-            if self.__begin_changes_event_listener:
-                self.__begin_changes_event_listener.close()
-                self.__begin_changes_event_listener = None
-            if self.__end_changes_event_listener:
-                self.__end_changes_event_listener.close()
-                self.__end_changes_event_listener = None
-            if self.__reset_list_event_listener:
-                self.__reset_list_event_listener.close()
-                self.__reset_list_event_listener = None
-            for item in reversed(copy.copy(self._get_master_items())):
-                index = len(self._get_master_items()) - 1
-                del self.__master_items[index]
-                if self.__item_changed_event_listeners[index]:
-                    self.__item_changed_event_listeners[index].close()
-                del self.__item_changed_event_listeners[index]
-                if item in self.__items:
-                    item_index = self.__items.index(item)
-                    del self.__items[item_index]
-        self.__container = None
-        self.__item_changed_event_listeners = list()
-        self.__master_items = list()
-        self.__items = list()
+        pass
 
     def begin_change(self) -> None:
         """ Begin a set of changes. Balance with end_changes. """
@@ -751,9 +723,7 @@ class MappedListModel(Observable.Observable):
         self.container = container
 
     def close(self) -> None:
-        self.container = None
-        self.__map_fn = typing.cast(MappedListModel._MapFunctionType, None)
-        self.__unmap_fn = typing.cast(MappedListModel._MapFunctionType, None)
+        pass
 
     def begin_change(self) -> None:
         """ Begin a set of changes. Balance with end_changes. """
@@ -908,7 +878,7 @@ class FlattenedListModel(Observable.Observable):
         self.container = container
 
     def close(self) -> None:
-        self.container = None
+        pass
 
     @property
     def items(self) -> typing.Sequence[typing.Any]:
@@ -1029,9 +999,7 @@ class ListPropertyModel(Observable.Observable):
         self.__item_removed_event_listener = list_model.item_removed_event.listen(weak_partial(ListPropertyModel.__item_removed, self))
 
     def close(self) -> None:
-        self.__list_model = typing.cast(ListModelLike, None)
-        self.__item_inserted_event_listener = typing.cast(Event.EventListener, None)
-        self.__item_removed_event_listener = typing.cast(Event.EventListener, None)
+        pass
 
     def __item_inserted(self, key: str, item: typing.Any, before_index: int) -> None:
         self.notify_property_changed("value")

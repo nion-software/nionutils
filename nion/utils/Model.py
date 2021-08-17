@@ -66,10 +66,12 @@ class FuncStreamValueModel(PropertyModel):
         self.__pending_task = Stream.StreamTask()
         self.__value_fn_ref = [lambda: None]
         self.__event = asyncio.Event()
+        self.__evaluating = [False]
 
-        async def update_value(event: asyncio.Event, model_ref, value_fn_ref: typing.List) -> None:
+        async def update_value(event: asyncio.Event, evaluating: typing.List[bool], model_ref, value_fn_ref: typing.List) -> None:
             while True:
                 await event.wait()
+                evaluating[0] = True
                 event.clear()
                 value = None
 
@@ -84,12 +86,13 @@ class FuncStreamValueModel(PropertyModel):
                 model = model_ref()
                 if model:
                     model.value = value
+                evaluating[0] = event.is_set()
 
         def handle_value_func(value_func):
             self.__value_fn_ref[0] = value_func
             self.__event.set()
 
-        self.__pending_task.create_task(update_value(self.__event, weakref.ref(self), self.__value_fn_ref))
+        self.__pending_task.create_task(update_value(self.__event, self.__evaluating, weakref.ref(self), self.__value_fn_ref))
         self.__stream_listener = value_func_stream.value_stream.listen(handle_value_func)
         handle_value_func(self.__value_func_stream.value)
 
@@ -104,9 +107,11 @@ class FuncStreamValueModel(PropertyModel):
         super().close()
 
     def _run_until_complete(self):
-        for i in range(20):
+        while True:
             self.__event_loop.stop()
             self.__event_loop.run_forever()
+            if not self.__evaluating[0]:
+                break
 
     def _evaluate_immediate(self):
         return self.__value_func_stream.value()

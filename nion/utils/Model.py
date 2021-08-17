@@ -104,7 +104,7 @@ class FuncStreamValueModel(PropertyModel):
         super().close()
 
     def _run_until_complete(self):
-        for i in range(8):
+        for i in range(20):
             self.__event_loop.stop()
             self.__event_loop.run_forever()
 

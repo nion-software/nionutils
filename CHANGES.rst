@@ -7,6 +7,7 @@ Changelog (nionutils)
 - Add experimental stream, value change, and reactor functions.
 - Add method to sync but not close event loop.
 - Add a single item dispatcher to thread pool.
+- Deprecate ListBinding class.
 
 0.3.26 (2021-03-12)
 -------------------

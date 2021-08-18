@@ -3,7 +3,7 @@
 """
 
 # standard libraries
-import typing
+# none
 
 # third party libraries
 # none
@@ -157,57 +157,6 @@ class Binding:
             if source is not None:
                 return self.__converted_value(source)
         return self.fallback
-
-
-class ListBinding(Binding):
-    """One way binding from a source list to a target.
-
-    Observes item inserted and item removed events on a source and if the event
-    matches the key, calls the functions assigned to inserter and remover fields.
-
-    Source list must support item_inserted_event and item_removed_event with the
-    signatures:
-        item_inserted(key: str, item: Any, before_index: int) -> None
-        item_removed(key: str, item: Any, index: int) -> None
-
-    Client should set the inserter and remover functions to callables with the
-    signatures:
-        inserter(item: Any, before_index: int) -> None
-        remover(index: int) -> None.
-
-    The owner should call close on this object.
-    """
-
-    def __init__(self, source, key: str):
-        super().__init__(source)
-        self.__key = key
-        self.inserter: typing.Optional[typing.Callable[[typing.Any, int], None]] = None
-        self.remover: typing.Optional[typing.Callable[[int], None]] = None
-
-        # thread safe
-        def item_inserted(key_: str, item: typing.Any, before_index: int) -> None:
-            if key_ == self.__key and callable(self.inserter):
-                self.inserter(item, before_index)
-
-        # thread safe
-        def item_removed(key_: str, item: typing.Any, index: int) -> None:
-            if key_ == self.__key and callable(self.remover):
-                self.remover(index)
-
-        self.__item_inserted_listener = source.item_inserted_event.listen(item_inserted)
-        self.__item_removed_listener = source.item_removed_event.listen(item_removed)
-
-    def close(self):
-        self.__item_inserted_listener.close()
-        self.__item_inserted_listener = None
-        self.__item_removed_listener.close()
-        self.__item_removed_listener = None
-        super().close()
-
-    @property
-    def items(self) -> typing.Sequence:
-        """ Return the items of the list. Thread safe. """
-        return getattr(self.source, self.__key)
 
 
 class PropertyBinding(Binding):

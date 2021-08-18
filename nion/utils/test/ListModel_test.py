@@ -2,11 +2,13 @@
 import contextlib
 import logging
 import unittest
+import weakref
 
 # third party libraries
 # None
 
 # local libraries
+from nion.utils import Event
 from nion.utils import ListModel
 from nion.utils import Observable
 
@@ -21,6 +23,11 @@ class B:
         self.s = a.s + "_B"
 
 
+class C:
+    def __init__(self):
+        self.item_changed_event = Event.Event()
+
+
 class TestListModelClass(unittest.TestCase):
 
     def setUp(self):
@@ -28,6 +35,65 @@ class TestListModelClass(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_refcounts(self):
+        # list model
+        model = ListModel.ListModel("items")
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
+        # filtered model
+        l = ListModel.ListModel("items")
+        model = ListModel.FilteredListModel(container=l, items_key="items")
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
+        # nested filtered model
+        l = ListModel.ListModel("items")
+        l2 = ListModel.FilteredListModel(container=l, items_key="items")
+        model = ListModel.FilteredListModel(container=l2, items_key="items")
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
+        # filtered model with item changed event
+        l = ListModel.ListModel("items")
+        l.append_item(C())
+        model = ListModel.FilteredListModel(container=l, items_key="items")
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
+        # mapped model
+        l = ListModel.ListModel("items")
+        model = ListModel.MappedListModel(container=l, master_items_key="items", items_key="items")
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
+        # mapped model of filtered model
+        l = ListModel.ListModel("items")
+        l2 = ListModel.FilteredListModel(container=l, items_key="items")
+        model = ListModel.MappedListModel(container=l2, master_items_key="items", items_key="items")
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
+        # flattened model
+        l = ListModel.ListModel("items")
+        model = ListModel.FlattenedListModel(container=l, master_items_key="items", child_items_key="items", items_key="items")
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
+        # flattened model with items
+        l = ListModel.ListModel("items")
+        l.append_item(ListModel.ListModel("items"))
+        model = ListModel.FlattenedListModel(container=l, master_items_key="items", child_items_key="items", items_key="items")
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
+        # list property model
+        l = ListModel.ListModel("items")
+        model = ListModel.ListPropertyModel(l)
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
 
     def test_filtered_list_is_sorted(self):
         l = ListModel.ListModel("items")

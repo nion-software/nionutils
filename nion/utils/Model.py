@@ -1,6 +1,7 @@
 """
     Model classes. Useful for bindings.
 """
+from __future__ import annotations
 
 # standard libraries
 import asyncio
@@ -15,6 +16,7 @@ import weakref
 
 from . import Observable
 from . import Stream
+from .ReferenceCounting import weak_partial
 
 T = typing.TypeVar('T')
 OptionalT = typing.Optional[T]
@@ -88,13 +90,9 @@ class FuncStreamValueModel(PropertyModel):
                     model.value = value
                 evaluating[0] = event.is_set()
 
-        def handle_value_func(value_func):
-            self.__value_fn_ref[0] = value_func
-            self.__event.set()
-
         self.__pending_task.create_task(update_value(self.__event, self.__evaluating, weakref.ref(self), self.__value_fn_ref))
-        self.__stream_listener = value_func_stream.value_stream.listen(handle_value_func)
-        handle_value_func(self.__value_func_stream.value)
+        self.__stream_listener = value_func_stream.value_stream.listen(weak_partial(FuncStreamValueModel.__handle_value_func, self))
+        self.__handle_value_func(self.__value_func_stream.value)
 
     def close(self):
         self.__pending_task.clear()
@@ -116,6 +114,10 @@ class FuncStreamValueModel(PropertyModel):
     def _evaluate_immediate(self):
         return self.__value_func_stream.value()
 
+    def __handle_value_func(self, value_func: typing.Callable[[], typing.Any]) -> None:
+        self.__value_fn_ref[0] = value_func
+        self.__event.set()
+
 
 class StreamValueModel(PropertyModel):
     """Converts a stream to a property model."""
@@ -124,12 +126,12 @@ class StreamValueModel(PropertyModel):
         super().__init__(value=value, cmp=cmp)
         self.__value_stream = value_stream.add_ref()
 
-        def handle_value(value):
-            self.value = value
+        def handle_value(model: StreamValueModel, value: typing.Any) -> None:
+            model.value = value
 
-        self.__stream_listener = value_stream.value_stream.listen(handle_value)
+        self.__stream_listener = value_stream.value_stream.listen(weak_partial(handle_value, self))
 
-        handle_value(value_stream.value)
+        handle_value(self, value_stream.value)
 
     def close(self):
         self.__stream_listener.close()

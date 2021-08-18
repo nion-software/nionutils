@@ -2,7 +2,6 @@
 
 # standard libraries
 import copy
-import functools
 import operator
 import threading
 import typing
@@ -14,6 +13,7 @@ import typing
 from nion.utils import Event
 from nion.utils import Observable
 from nion.utils import Selection
+from .ReferenceCounting import weak_partial
 
 T = typing.TypeVar('T')
 
@@ -596,20 +596,20 @@ class FilteredListModel(Observable.Observable):
         self.__items_sorted = False
         self.reset_list_event.fire(self.__items_key)
         if self.__container:
-            self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(self.__item_inserted)
-            self.__item_removed_event_listener = self.__container.item_removed_event.listen(self.__item_removed)
+            self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(weak_partial(FilteredListModel.__item_inserted, self))
+            self.__item_removed_event_listener = self.__container.item_removed_event.listen(weak_partial(FilteredListModel.__item_removed, self))
             if hasattr(self.__container, "begin_changes_event") and hasattr(self.__container, "end_changes_event"):
 
-                def begin_changes(key):
-                    if key == self.__master_items_key:
-                        self.begin_changes_event.fire(self.__items_key)
+                def begin_changes(list_model: FilteredListModel, key: str) -> None:
+                    if key == list_model.__master_items_key:
+                        list_model.begin_changes_event.fire(list_model.__items_key)
 
-                def end_changes(key):
-                    if key == self.__master_items_key:
-                        self.end_changes_event.fire(self.__items_key)
-                    for selection in self.__selections:
+                def end_changes(list_model: FilteredListModel, key: str) -> None:
+                    if key == list_model.__master_items_key:
+                        list_model.end_changes_event.fire(list_model.__items_key)
+                    for selection in list_model.__selections:
                         selection_copy = copy.copy(selection)
-                        for do_insert, index in self.__selection_changes:
+                        for do_insert, index in list_model.__selection_changes:
                             # adjust the selection copy for the new index, but don't add/remove the new index itself.
                             # leaves the selected items the same.
                             if do_insert:
@@ -617,17 +617,17 @@ class FilteredListModel(Observable.Observable):
                             else:
                                 selection_copy.remove_index(index)
                         selection.set_multiple(selection_copy.indexes)
-                    self.__selection_changes = list()
+                    list_model.__selection_changes = list()
 
-                self.__begin_changes_event_listener = self.__container.begin_changes_event.listen(begin_changes)
-                self.__end_changes_event_listener = self.__container.end_changes_event.listen(end_changes)
+                self.__begin_changes_event_listener = self.__container.begin_changes_event.listen(weak_partial(begin_changes, self))
+                self.__end_changes_event_listener = self.__container.end_changes_event.listen(weak_partial(end_changes, self))
             if hasattr(self.__container, "reset_list_event"):
 
-                def reset_list(key):
-                    self.__items_sorted = False
-                    self.reset_list_event.fire(self.__items_key)
+                def reset_list(list_model: FilteredListModel, key: str) -> None:
+                    list_model.__items_sorted = False
+                    list_model.reset_list_event.fire(list_model.__items_key)
 
-                self.__reset_list_event_listener = self.__container.reset_list_event.listen(reset_list)
+                self.__reset_list_event_listener = self.__container.reset_list_event.listen(weak_partial(reset_list, self))
             for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
                 self.__item_inserted(self.__master_items_key, item, index)
 
@@ -648,12 +648,12 @@ class FilteredListModel(Observable.Observable):
                 self.__master_items.insert(before_index, item)
 
                 # thread safe
-                def item_content_changed():
-                    with self._update_mutex:
-                        assert item in self.__master_items
-                        self.__updated_master_item(item)
+                def item_content_changed(list_model: FilteredListModel) -> None:
+                    with list_model._update_mutex:
+                        assert item in list_model.__master_items
+                        list_model.__updated_master_item(item)
 
-                self.__item_changed_event_listeners.insert(before_index, item.item_changed_event.listen(item_content_changed) if hasattr(item, "item_changed_event") else None)
+                self.__item_changed_event_listeners.insert(before_index, item.item_changed_event.listen(weak_partial(item_content_changed, self)) if hasattr(item, "item_changed_event") else None)
                 self.__inserted_master_item(before_index, item)
 
     # thread safe.
@@ -768,20 +768,20 @@ class MappedListModel(Observable.Observable):
         # add new master items
         self.__container = container
         if self.__container:
-            self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(self.__master_item_inserted)
-            self.__item_removed_event_listener = self.__container.item_removed_event.listen(self.__master_item_removed)
+            self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(weak_partial(MappedListModel.__master_item_inserted, self))
+            self.__item_removed_event_listener = self.__container.item_removed_event.listen(weak_partial(MappedListModel.__master_item_removed, self))
             if hasattr(self.__container, "begin_changes_event") and hasattr(self.__container, "end_changes_event"):
 
-                def begin_changes(key):
-                    if key == self.__master_items_key:
-                        self.begin_change()
+                def begin_changes(list_model: FilteredListModel, key: str) -> None:
+                    if key == list_model.__master_items_key:
+                        list_model.begin_change()
 
-                def end_changes(key):
-                    if key == self.__master_items_key:
-                        self.end_change()
+                def end_changes(list_model: FilteredListModel, key: str) -> None:
+                    if key == list_model.__master_items_key:
+                        list_model.end_change()
 
-                self.__begin_changes_event_listener = self.__container.begin_changes_event.listen(begin_changes)
-                self.__end_changes_event_listener = self.__container.end_changes_event.listen(end_changes)
+                self.__begin_changes_event_listener = self.__container.begin_changes_event.listen(weak_partial(begin_changes, self))
+                self.__end_changes_event_listener = self.__container.end_changes_event.listen(weak_partial(end_changes, self))
             for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
                 self.__master_item_inserted(self.__master_items_key, item, index)
 
@@ -876,8 +876,8 @@ class FlattenedListModel(Observable.Observable):
         # add new master items
         self.__container = container
         if self.__container:
-            self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(self.__master_item_inserted)
-            self.__item_removed_event_listener = self.__container.item_removed_event.listen(self.__master_item_removed)
+            self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(weak_partial(FlattenedListModel.__master_item_inserted, self))
+            self.__item_removed_event_listener = self.__container.item_removed_event.listen(weak_partial(FlattenedListModel.__master_item_removed, self))
             for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
                 self.__master_item_inserted(self.__master_items_key, item, index)
 
@@ -899,8 +899,8 @@ class FlattenedListModel(Observable.Observable):
                 assert not item in self.__master_items, "master item already in " + str(self.__master_items_key) + " (" + str(self.__items_key) + " / " + str(self.__child_items_key) + ")"
                 # print(f"{self} inserted {item} {before_index} ({len(getattr(item, self.__child_items_key))})")
                 self.__master_items.insert(before_index, item)
-                self.__child_item_inserted_event_listener[item] = item.item_inserted_event.listen(functools.partial(self.__child_item_inserted, item))
-                self.__child_item_removed_event_listener[item] = item.item_removed_event.listen(functools.partial(self.__child_item_removed, item))
+                self.__child_item_inserted_event_listener[item] = item.item_inserted_event.listen(weak_partial(FlattenedListModel.__child_item_inserted, self, item))
+                self.__child_item_removed_event_listener[item] = item.item_removed_event.listen(weak_partial(FlattenedListModel.__child_item_removed, self, item))
                 for index, child_item in enumerate(getattr(item, self.__child_items_key)):
                     self.__child_item_inserted(item, self.__child_items_key, child_item, index)
 
@@ -959,8 +959,8 @@ class ListPropertyModel(Observable.Observable):
     def __init__(self, list_model):
         super().__init__()
         self.__list_model = list_model
-        self.__item_inserted_event_listener = list_model.item_inserted_event.listen(self.__item_inserted)
-        self.__item_removed_event_listener = list_model.item_removed_event.listen(self.__item_removed)
+        self.__item_inserted_event_listener = list_model.item_inserted_event.listen(weak_partial(ListPropertyModel.__item_inserted, self))
+        self.__item_removed_event_listener = list_model.item_removed_event.listen(weak_partial(ListPropertyModel.__item_removed, self))
 
     def close(self) -> None:
         self.__list_model = None

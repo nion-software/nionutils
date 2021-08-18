@@ -1,15 +1,18 @@
 """
     Binding classes.
 """
+from __future__ import annotations
 
 # standard libraries
-# none
+import functools
+import typing
+import weakref
 
 # third party libraries
 # none
 
 # local libraries
-# none
+from .ReferenceCounting import weak_partial
 
 
 class Binding:
@@ -39,15 +42,15 @@ class Binding:
     cases.
     """
 
-    def __init__(self, source, *, converter=None, validator=None, fallback=None):
+    def __init__(self, source: typing.Any, *, converter=None, validator=None, fallback=None):
         super().__init__()
         self.__converter = converter
         self.__validator = validator
         self.fallback = fallback
-        self.source_getter = None
-        self.source_setter = None
-        self.target_setter = None
-        self.__source = source
+        self.source_getter: typing.Optional[typing.Callable[[], typing.Any]] = None
+        self.source_setter: typing.Optional[typing.Callable[[typing.Any], None]] = None
+        self.target_setter: typing.Optional[typing.Callable[[typing.Any], None]] = None
+        self.__source_ref: typing.Optional[weakref.ReferenceType] = weakref.ref(source) if source else None
         self._closed = False
 
     # not thread safe
@@ -57,16 +60,16 @@ class Binding:
         Closes the binding. Subclasses can use this to perform any shutdown
         related actions. Not thread safe.
         """
-        self.__source = None
+        self.__source_ref = None
         self.source_getter = None
         self.source_setter = None
         self.target_setter = None
         self._closed = True
 
     @property
-    def source(self):
+    def source(self) -> typing.Optional[typing.Any]:
         """Return the source of the binding. Thread safe."""
-        return self.__source
+        return self.__source_ref() if self.__source_ref else None
 
     @property
     def converter(self):
@@ -106,7 +109,7 @@ class Binding:
 
         Thread safe.
         """
-        if self.source_setter:
+        if callable(self.source_setter):
             converted_value = self.__validated_value(self.__back_converted_value(target_value))
             self.source_setter(converted_value)
 
@@ -138,7 +141,7 @@ class Binding:
 
         Not thread safe.
         """
-        if self.target_setter:
+        if callable(self.target_setter):
             self.target_setter(converted_value)
 
     # thread safe
@@ -152,7 +155,7 @@ class Binding:
 
         Thread safe.
         """
-        if self.source_getter:
+        if callable(self.source_getter):
             source = self.source_getter()
             if source is not None:
                 return self.__converted_value(source)
@@ -183,29 +186,40 @@ class PropertyBinding(Binding):
         super().__init__(source, converter=converter, validator=validator, fallback=fallback)
         self.__property_name = property_name
 
-        # thread safe
-        def property_changed(property_name_: str) -> None:
-            assert not self._closed
-            if property_name_ == self.__property_name:
-                value = self.source_getter()
+        # thread safe. careful not to have reference to self, otherwise binding can't be garbage collected.
+        def property_changed(binding: PropertyBinding, property_name_: str) -> None:
+            assert not binding._closed
+            if property_name_ == binding.property_name:
+                assert callable(binding.source_getter)
+                value = binding.source_getter()
                 if value is not None:
-                    self.update_target(value)
+                    binding.update_target(value)
                 else:
-                    self.update_target_direct(self.fallback)
+                    binding.update_target_direct(binding.fallback)
 
-        self.__property_changed_listener = source.property_changed_event.listen(property_changed)
-        def set_property_value(value) -> None:
+        self.__property_changed_listener = source.property_changed_event.listen(weak_partial(property_changed, self))
+
+        def set_property_value(source: typing.Any, value: typing.Any) -> None:
             try:
-                setattr(self.source, self.__property_name, value)
+                setattr(source, property_name, value)
             except AttributeError as exc:
-                raise AttributeError(self.__property_name) from None
-        self.source_setter = set_property_value
-        self.source_getter = lambda: getattr(self.source, self.__property_name)
+                raise AttributeError(property_name) from None
+
+        def get_property_value(source: typing.Any) -> typing.Any:
+            return getattr(source, property_name) if source else None
+
+        # configure setting/getter, being careful not to hold references to self
+        self.source_setter = weak_partial(set_property_value, self.source)
+        self.source_getter = weak_partial(get_property_value, self.source)
 
     def close(self):
         self.__property_changed_listener.close()
         self.__property_changed_listener = None
         super().close()
+
+    @property
+    def property_name(self) -> str:
+        return self.__property_name
 
 
 class PropertyAttributeBinding(Binding):
@@ -232,31 +246,32 @@ class PropertyAttributeBinding(Binding):
         self.__attribute_name = attribute_name
 
         # thread safe
-        def property_changed(property_name_: str):
-            if property_name_ == self.__property_name:
+        def property_changed(binding: PropertyAttributeBinding, property_name_: str) -> None:
+            if property_name_ == property_name:
                 # perform on the main thread
                 value = getattr(source, property_name)
-                if value is not None and hasattr(value, self.__attribute_name):
-                    self.update_target(getattr(value, self.__attribute_name))
+                if value is not None and hasattr(value, attribute_name):
+                    binding.update_target(getattr(value, attribute_name))
                 else:
-                    self.update_target_direct(self.fallback)
+                    binding.update_target_direct(binding.fallback)
 
-        self.__property_changed_listener = source.property_changed_event.listen(property_changed)
+        self.__property_changed_listener = source.property_changed_event.listen(weak_partial(property_changed, self))
 
-        def source_setter(value):  # pylint: disable=missing-docstring
-            source_value = getattr(self.source, self.__property_name)
+        def source_setter(source: typing.Any, value: typing.Any) -> None:
+            source_value = getattr(source, property_name)
             if callable(update_attribute_fn):
-                source_value = update_attribute_fn(source_value, self.__attribute_name, value)
+                source_value = update_attribute_fn(source_value, attribute_name, value)
             else:
-                setattr(source_value, self.__attribute_name, value)
-            setattr(self.source, self.__property_name, source_value)
+                setattr(source_value, attribute_name, value)
+            setattr(source, property_name, source_value)
 
-        def source_getter():  # pylint: disable=missing-docstring
-            source_value = getattr(self.source, self.__property_name)
-            return getattr(source_value, self.__attribute_name) if source_value is not None and hasattr(source_value, self.__attribute_name) else None
+        def source_getter(source: typing.Any) -> typing.Any:
+            source_value = getattr(source, property_name)
+            return getattr(source_value, attribute_name) if source_value is not None and hasattr(source_value, attribute_name) else None
 
-        self.source_setter = source_setter
-        self.source_getter = source_getter
+        # configure setting/getter, being careful not to hold references to self
+        self.source_setter = weak_partial(source_setter, self.source)
+        self.source_getter = weak_partial(source_getter, self.source)
 
     def close(self):
         self.__property_changed_listener.close()
@@ -285,34 +300,33 @@ class TuplePropertyBinding(Binding):
     def __init__(self, source, property_name: str, tuple_index: int, converter=None, fallback=None):
         super().__init__(source, converter=converter, fallback=fallback)
         self.__property_name = property_name
-        self.__tuple_index = tuple_index
 
         # thread safe
-        def property_changed(property_name_: str):
-            if property_name_ == self.__property_name:
+        def property_changed(binding: TuplePropertyBinding, property_name_: str) -> None:
+            if property_name_ == property_name:
                 # perform on the main thread
                 value = getattr(source, property_name)
-                if value is not None and self.__tuple_index < len(value):
-                    self.update_target(value[self.__tuple_index])
+                if value is not None and tuple_index < len(value):
+                    binding.update_target(value[tuple_index])
                 else:
-                    self.update_target_direct(self.fallback)
+                    binding.update_target_direct(binding.fallback)
 
-        self.__property_changed_listener = source.property_changed_event.listen(property_changed)
+        self.__property_changed_listener = source.property_changed_event.listen(weak_partial(property_changed, self))
 
-        def source_setter(value):  # pylint: disable=missing-docstring
-            source_tuple = getattr(self.source, self.__property_name)
+        def source_setter(source: typing.Any, value: typing.Any) -> None:
+            source_tuple = getattr(source, property_name)
             tuple_as_list = list(source_tuple) if source_tuple is not None else list()
-            while len(tuple_as_list) <= self.__tuple_index:
+            while len(tuple_as_list) <= tuple_index:
                 tuple_as_list.append(None)
-            tuple_as_list[self.__tuple_index] = value
-            setattr(self.source, self.__property_name, tuple(tuple_as_list))
+            tuple_as_list[tuple_index] = value
+            setattr(source, property_name, tuple(tuple_as_list))
 
-        def source_getter():  # pylint: disable=missing-docstring
-            tuple_value = getattr(self.source, self.__property_name)
-            return tuple_value[self.__tuple_index] if tuple_value is not None and self.__tuple_index < len(tuple_value) else None
+        def source_getter(source: typing.Any) -> typing.Any:
+            tuple_value = getattr(source, property_name)
+            return tuple_value[tuple_index] if tuple_value is not None and tuple_index < len(tuple_value) else None
 
-        self.source_setter = source_setter
-        self.source_getter = source_getter
+        self.source_setter = weak_partial(source_setter, self.source)
+        self.source_getter = weak_partial(source_getter, self.source)
 
     def close(self):
         self.__property_changed_listener.close()

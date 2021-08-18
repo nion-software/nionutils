@@ -1,13 +1,18 @@
 # standard libraries
 import logging
+import typing
 import unittest
 
 # third party libraries
 # None
 
 # local libraries
+import weakref
+
 from nion.utils import Binding
 from nion.utils import Event
+from nion.utils import Geometry
+from nion.utils import Model
 
 
 class TupleModel:
@@ -33,6 +38,24 @@ class TestBindingClass(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_property_binding_refcount(self):
+        binding = Binding.PropertyBinding(Model.PropertyModel(0), "value")
+        binding_ref = weakref.ref(binding)
+        del binding
+        self.assertIsNone(binding_ref())
+
+    def test_property_attribute_binding_refcount(self):
+        binding = Binding.PropertyAttributeBinding(Model.PropertyModel(Geometry.FloatPoint()), "value", "x")
+        binding_ref = weakref.ref(binding)
+        del binding
+        self.assertIsNone(binding_ref())
+
+    def test_tuple_property_binding_refcount(self):
+        binding = Binding.TuplePropertyBinding(Model.PropertyModel((1, 2, 3)), "value", 1)
+        binding_ref = weakref.ref(binding)
+        del binding
+        self.assertIsNone(binding_ref())
 
     def test_tuple_binding_pads_to_index_if_necessary(self):
         # this allows the source to more easily go from None to a partialy tuple None -> (3, None) -> (3, 4)

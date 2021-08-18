@@ -1,6 +1,19 @@
 from __future__ import annotations
 
+import functools
 import threading
+import typing
+import weakref
+
+
+def weak_partial(fn: typing.Callable, o: typing.Any, *args, **kwargs) -> typing.Any:
+    def _call(o_ref: weakref.ReferenceType, *args, **kwargs):
+        o_deref = o_ref() if o_ref else None
+        if o_deref:
+            return fn(o_deref, *args, **kwargs)
+        return None
+
+    return functools.partial(_call, weakref.ref(o) if o else None, *args, **kwargs)
 
 
 class ReferenceCounted:

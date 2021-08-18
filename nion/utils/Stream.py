@@ -6,7 +6,6 @@ from __future__ import annotations
 # standard libraries
 import asyncio
 import enum
-import functools
 import operator
 import typing
 
@@ -17,6 +16,7 @@ import typing
 from . import Event
 from . import Observable
 from . import ReferenceCounting
+from .ReferenceCounting import weak_partial
 
 
 T = typing.TypeVar('T')
@@ -103,14 +103,14 @@ class MapStream(AbstractStream):
         self.__value = None
 
         # listen for display changes
-        def update_value(new_value):
+        def update_value(stream: MapStream, new_value: typing.Any) -> None:
             new_value = value_fn(new_value)
-            if new_value != self.__value:
-                self.__value = new_value
-                self.value_stream.fire(self.__value)
+            if new_value != stream.value:
+                stream.send_value(new_value)
 
-        self.__listener = stream.value_stream.listen(update_value)
-        update_value(stream.value)
+        # use weak_partial to avoid holding references to self.
+        self.__listener = stream.value_stream.listen(weak_partial(update_value, self))
+        update_value(self, stream.value)
 
     def about_to_delete(self) -> None:
         self.__listener.close()
@@ -123,6 +123,10 @@ class MapStream(AbstractStream):
     @property
     def value(self):
         return self.__value
+
+    def send_value(self, value: OptionalT) -> None:
+        self.__value = value
+        self.value_stream.fire(self.value)
 
 
 class CombineLatestStream(AbstractStream):
@@ -141,7 +145,11 @@ class CombineLatestStream(AbstractStream):
         # listen for display changes
         self.__listeners = dict()  # index
         for index, stream in enumerate(self.__stream_list):
-            self.__listeners[index] = stream.value_stream.listen(functools.partial(self.__handle_stream_value, index))
+            # define a stub and use weak_partial to avoid holding references to self.
+            def handle_stream_value(stream: CombineLatestStream, index: int, value: typing.Any) -> None:
+                stream.__handle_stream_value(index, value)
+
+            self.__listeners[index] = stream.value_stream.listen(weak_partial(handle_stream_value, self, index))
             self.__values[index] = stream.value
         self.__values_changed()
 
@@ -185,7 +193,12 @@ class DebounceStream(AbstractStream):
         self.__period = period
         self.__last_time = 0
         self.__value_holder = DebounceValue()
-        self.__listener = input_stream.value_stream.listen(self.__value_changed)
+
+        # define a stub and use weak_partial to avoid holding references to self.
+        def value_changed(stream: DebounceStream, value: typing.Any) -> None:
+            stream.__value_changed(value)
+
+        self.__listener = input_stream.value_stream.listen(weak_partial(value_changed, self))
         self.__debounce_task = StreamTask()
         self.__value_changed(input_stream.value)
 
@@ -232,7 +245,12 @@ class SampleStream(AbstractStream):
         self.value_stream = Event.Event()
         self.__input_stream = input_stream.add_ref()
         self.__sample_value = SampleValue()
-        self.__listener = input_stream.value_stream.listen(self.__value_changed)
+
+        # define a stub and use weak_partial to avoid holding references to self.
+        def value_changed(stream: SampleStream, value: typing.Any) -> None:
+            stream.__value_changed(value)
+
+        self.__listener = input_stream.value_stream.listen(weak_partial(value_changed, self))
         self.__sample_value.value = input_stream.value
 
         async def sample_loop(period: float, value_stream: Event.Event, sample_value: SampleValue) -> None:
@@ -295,23 +313,19 @@ class PropertyChangedEventStream(AbstractStream):
         if not isinstance(source_object, AbstractStream):
             source_object = ConstantStream(source_object)
         self.__source_stream = typing.cast(AbstractStream, source_object.add_ref())
-        self.__source_object = None
+        self.__source_object: typing.Optional[typing.Any] = None
         # initialize
         self.__property_name = property_name
         self.__value = None
         self.__cmp = cmp if cmp else operator.eq
         self.__property_changed_listener = None
-        # listen for stream changes
-        def source_object_changed(source_object: typing.Optional[Observable.Observable]) -> None:
-            if self.__property_changed_listener:
-                self.__property_changed_listener.close()
-                self.__property_changed_listener = None
-            self.__source_object = source_object
-            if self.__source_object:
-                self.__property_changed_listener = self.__source_object.property_changed_event.listen(self.__property_changed)
-            self.__property_changed(property_name)
-        self.__source_stream_listener = self.__source_stream.value_stream.listen(source_object_changed)
-        source_object_changed(self.__source_stream.value)
+
+        # define a stub and use weak_partial to avoid holding references to self.
+        def source_object_changed(stream: PropertyChangedEventStream, source_object: typing.Optional[Observable.Observable]) -> None:
+            stream.__source_object_changed(source_object)
+
+        self.__source_stream_listener = self.__source_stream.value_stream.listen(weak_partial(source_object_changed, self))
+        source_object_changed(self, self.__source_stream.value)
 
     def about_to_delete(self) -> None:
         if self.__property_changed_listener:
@@ -326,6 +340,19 @@ class PropertyChangedEventStream(AbstractStream):
     @property
     def value(self):
         return self.__value
+
+    def __source_object_changed(self, source_object: typing.Optional[Observable.Observable]) -> None:
+        if self.__property_changed_listener:
+            self.__property_changed_listener.close()
+            self.__property_changed_listener = None
+        self.__source_object = source_object
+        if self.__source_object:
+            # define a stub and use weak_partial to avoid holding references to self.
+            def property_changed(stream: PropertyChangedEventStream, key: str) -> None:
+                stream.__property_changed(key)
+
+            self.__property_changed_listener = self.__source_object.property_changed_event.listen(weak_partial(property_changed, self))
+        self.__property_changed(self.__property_name)
 
     def __property_changed(self, key):
         if key == self.__property_name:
@@ -349,8 +376,11 @@ class ConcatStream(AbstractStream):
         self.__value = None
         self.__out_stream = None
         self.__out_stream_listener = None
-        # listen for stream changes
-        self.__stream_listener = stream.value_stream.listen(self.__stream_changed)
+        # define a stub and use weak_partial to avoid holding references to self.
+        def stream_changed(stream: ConcatStream, value: typing.Any) -> None:
+            stream.__stream_changed(value)
+
+        self.__stream_listener = stream.value_stream.listen(weak_partial(stream_changed, self))
         self.__stream_changed(stream.value)
 
     def about_to_delete(self) -> None:
@@ -370,6 +400,10 @@ class ConcatStream(AbstractStream):
     def value(self):
         return self.__value
 
+    def send_value(self, value: OptionalT) -> None:
+        self.__value = value
+        self.value_stream.fire(self.value)
+
     def __stream_changed(self, item):
         if self.__out_stream:
             self.__out_stream_listener.close()
@@ -377,13 +411,14 @@ class ConcatStream(AbstractStream):
             self.__out_stream.remove_ref()
             self.__out_stream = None
         if item:
-            def out_stream_changed(new_value):
-                self.__value = new_value
-                self.value_stream.fire(new_value)
+            # define a stub and use weak_partial to avoid holding references to self.
+            def out_stream_changed(stream: ConcatStream, new_value: typing.Any) -> None:
+                stream.send_value(new_value)
+
             self.__out_stream = self.__concat_fn(item)
             self.__out_stream.add_ref()
-            self.__out_stream_listener = self.__out_stream.value_stream.listen(out_stream_changed)
-            out_stream_changed(self.__out_stream.value)
+            self.__out_stream_listener = self.__out_stream.value_stream.listen(weak_partial(out_stream_changed, self))
+            out_stream_changed(self, self.__out_stream.value)
         else:
             self.__value = None
             self.value_stream.fire(None)
@@ -396,7 +431,12 @@ class OptionalStream(AbstractStream):
         super().__init__()
         self.__stream = stream.add_ref()
         self.__pred = pred
-        self.__stream_listener = self.__stream.value_stream.listen(self.__value_changed)
+
+        # define a stub and use weak_partial to avoid holding references to self.
+        def value_changed(stream: OptionalStream, value: typing.Any) -> None:
+            stream.__value_changed(value)
+
+        self.__stream_listener = self.__stream.value_stream.listen(weak_partial(value_changed, self))
         self.value_stream = Event.Event()
         self.__value_changed(self.__stream.value)
 
@@ -424,7 +464,12 @@ class PrintStream(ReferenceCounting.ReferenceCounted):
     def __init__(self, stream: AbstractStream):
         super().__init__()
         self.__stream = stream.add_ref()
-        self.__stream_listener = self.__stream.value_stream.listen(self.__value_changed)
+
+        # define a stub and use weak_partial to avoid holding references to self.
+        def value_changed(stream: PrintStream, value: typing.Any) -> None:
+            stream.__value_changed(value)
+
+        self.__stream_listener = self.__stream.value_stream.listen(weak_partial(value_changed, self))
 
     def about_to_delete(self) -> None:
         self.__stream_listener.close()
@@ -443,7 +488,12 @@ class ValueStreamAction:
     def __init__(self, stream: AbstractStream, fn: typing.Callable[[typing.Any], None]):
         super().__init__()
         self.__stream = stream.add_ref()
-        self.__stream_listener = self.__stream.value_stream.listen(self.__value_changed)
+
+        # define a stub and use weak_partial to avoid holding references to self.
+        def value_changed(a: ValueStreamAction, value: typing.Any) -> None:
+            a.__value_changed(value)
+
+        self.__stream_listener = self.__stream.value_stream.listen(weak_partial(value_changed, self))
         self.__fn = fn
 
     def close(self) -> None:
@@ -481,7 +531,12 @@ class ValueChangeStream(ValueStream[ValueChange[T]]):
     def __init__(self, value_stream: AbstractStream[T]):
         super().__init__()
         self.__value_stream = value_stream.add_ref()
-        self.__value_stream_listener = self.__value_stream.value_stream.listen(self.__value_changed)
+
+        # define a stub and use weak_partial to avoid holding references to self.
+        def value_changed(a: ValueChangeStream, value: typing.Any) -> None:
+            a.__value_changed(value)
+
+        self.__value_stream_listener = self.__value_stream.value_stream.listen(weak_partial(value_changed, self))
         self.__is_active = False
 
     def about_to_delete(self) -> None:
@@ -511,7 +566,12 @@ class ValueChangeStream(ValueStream[ValueChange[T]]):
 class ValueChangeStreamReactor:
     def __init__(self, value_change_stream: ValueChangeStream):
         self.__value_change_stream = value_change_stream.add_ref()
-        self.__value_changed_listener = value_change_stream.value_stream.listen(self.__value_changed)
+
+        # define a stub and use weak_partial to avoid holding references to self.
+        def value_changed(reactor: ValueChangeStreamReactor, value: typing.Any) -> None:
+            reactor.__value_changed(value)
+
+        self.__value_changed_listener = value_change_stream.value_stream.listen(weak_partial(value_changed, self))
         self.__event_queue: asyncio.Queue = asyncio.Queue()
         self.__task: typing.Optional[asyncio.Task] = None
 

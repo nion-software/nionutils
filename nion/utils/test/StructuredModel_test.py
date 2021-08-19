@@ -3,6 +3,7 @@ import collections.abc
 import contextlib
 import copy
 import unittest
+import weakref
 
 # third party libraries
 
@@ -17,6 +18,23 @@ class TestStructuredModelClass(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_refcounts(self):
+        # create the model
+        x_field = StructuredModel.define_field("x", StructuredModel.INT)
+        y_field = StructuredModel.define_field("y", StructuredModel.INT)
+        record = StructuredModel.define_record("R", [x_field, y_field])
+        array = StructuredModel.define_array(record)
+        schema = StructuredModel.define_record("A", [StructuredModel.define_field("a", array)])
+        model = StructuredModel.build_model(schema, value={"a": [{"x": 1, "y": 2}, {"x": 3, "y": 4}]})
+        # change the model
+        model.a[1].x = 33
+        del model.a[0]
+        model.a.insert(1, StructuredModel.build_model(record, value={"x": -1, "y": -2}))
+        # check ref counts
+        model_ref = weakref.ref(model)
+        del model
+        self.assertIsNone(model_ref())
 
     def test_get_record_property(self):
         # test that a record gives access to a field value directly through a property on the record

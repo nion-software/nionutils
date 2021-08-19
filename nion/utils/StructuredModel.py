@@ -1,9 +1,9 @@
 """List and filtered list model."""
+from __future__ import annotations
 
 # standard libraries
 import collections
 import copy
-import functools
 import typing
 
 # third party libraries
@@ -14,6 +14,7 @@ from nion.utils import Event
 from nion.utils import Observable
 from nion.utils import Model
 from nion.utils import ListModel as ListModelModule
+from nion.utils.ReferenceCounting import weak_partial
 
 
 # TODO: logical types: datetime, timestamp, uuid, etc.
@@ -146,22 +147,22 @@ class RecordModel(Observable.Observable):
 
             self.__field_models[field_name] = field_model
 
-            def handle_property_changed(field_name, name):
+            def handle_property_changed(model: RecordModel, field_name: str, name: str) -> None:
                 if name == "value":
-                    self.property_changed_event.fire(field_name)
+                    model.property_changed_event.fire(field_name)
 
-            def handle_array_item_inserted(field_name, key, value, before_index):
+            def handle_array_item_inserted(model: RecordModel, field_name: str, key: str, value: typing.Any, before_index: int) -> None:
                 if key == "items":
-                    self.item_inserted_event.fire(field_name, value, before_index)
+                    model.item_inserted_event.fire(field_name, value, before_index)
 
-            def handle_array_item_removed(field_name, key, value, index):
+            def handle_array_item_removed(model: RecordModel, field_name: str, key: str, value: typing.Any, index: int) -> None:
                 if key == "items":
-                    self.item_removed_event.fire(field_name, value, index)
+                    model.item_removed_event.fire(field_name, value, index)
 
-            self.__field_model_property_changed_listeners[field_name] = field_model.field_value_changed_event.listen(functools.partial(handle_property_changed, field_name))
+            self.__field_model_property_changed_listeners[field_name] = field_model.field_value_changed_event.listen(weak_partial(handle_property_changed, self, field_name))
             self.__field_model_changed_listeners[field_name] = field_model.model_changed_event.listen(self.model_changed_event.fire)
-            self.__array_item_inserted_listeners[field_name] = field_model.array_item_inserted_event.listen(functools.partial(handle_array_item_inserted, field_name))
-            self.__array_item_removed_listeners[field_name] = field_model.array_item_removed_event.listen(functools.partial(handle_array_item_removed, field_name))
+            self.__array_item_inserted_listeners[field_name] = field_model.array_item_inserted_event.listen(weak_partial(handle_array_item_inserted, self, field_name))
+            self.__array_item_removed_listeners[field_name] = field_model.array_item_removed_event.listen(weak_partial(handle_array_item_removed, self, field_name))
         self.__initialized = True
 
     def close(self):
@@ -179,7 +180,7 @@ class RecordModel(Observable.Observable):
         values = self.to_dict_value()
         return RecordModel(copy.deepcopy(self.schema), values=values)
 
-    def copy_from(self, record: "RecordModel") -> None:
+    def copy_from(self, record: RecordModel) -> None:
         self.from_dict_value(record.to_dict_value())
 
     def from_dict_value(self, values):
@@ -273,7 +274,7 @@ class ArrayModel(ListModelModule.ListModel):
             self.__model_changed_listeners.append(trampoline)
 
     def close(self):
-        for index, item in enumerate(self.items()):
+        for index, item in enumerate(self.items):
             trampoline = self.__model_changed_listeners[index]
             if trampoline:
                 trampoline.close()
@@ -284,7 +285,7 @@ class ArrayModel(ListModelModule.ListModel):
         values = self.to_dict_value()
         return ArrayModel(copy.deepcopy(self.schema), values=values)
 
-    def copy_from(self, array: "ArrayModel") -> None:
+    def copy_from(self, array: ArrayModel) -> None:
         self.from_dict_value(array.to_dict_value())
 
     def from_dict_value(self, values):

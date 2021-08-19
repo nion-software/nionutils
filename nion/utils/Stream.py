@@ -19,7 +19,6 @@ import weakref
 
 from . import Event
 from . import Observable
-from . import ReferenceCounting
 from .ReferenceCounting import weak_partial
 
 T = typing.TypeVar('T')
@@ -129,7 +128,7 @@ class MapStream(AbstractStream[OT], typing.Generic[T, OT]):
         # outgoing messages
         self.value_stream = Event.Event()
         # references
-        self.__stream = stream.add_ref()
+        self.__stream = stream
         # initialize values
         self.__value: typing.Optional[OT] = None
 
@@ -161,7 +160,7 @@ class CombineLatestStream(AbstractStream[OT], typing.Generic[T, OT]):
         # outgoing messages
         self.value_stream = Event.Event()
         # references
-        self.__stream_list = [stream.add_ref() for stream in stream_list]
+        self.__stream_list = list(stream_list)
         self.__value_fn = value_fn or (lambda *x: typing.cast(OT, tuple(x)))
         # initialize values
         self.__values: typing.List[typing.Optional[T]] = [None] * len(stream_list)
@@ -201,7 +200,7 @@ class DebounceStream(AbstractStream[T], typing.Generic[T]):
     def __init__(self, input_stream: AbstractStream[T], period: float, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         super().__init__()
         self.value_stream = Event.Event()
-        self.__input_stream = input_stream.add_ref()
+        self.__input_stream = input_stream
         self.__period = period
         self.__value_holder = DebounceValue[T]()
 
@@ -250,7 +249,7 @@ class SampleStream(AbstractStream[T], typing.Generic[T]):
     def __init__(self, input_stream: AbstractStream[T], period: float, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         super().__init__()
         self.value_stream = Event.Event()
-        self.__input_stream = input_stream.add_ref()
+        self.__input_stream = input_stream
         self.__sample_value = SampleValue[T]()
 
         # define a stub and use weak_partial to avoid holding references to self.
@@ -311,7 +310,7 @@ class PropertyChangedEventStream(AbstractStream[T], typing.Generic[T]):
             source_stream = ConstantStream[Observable.Observable](source_object)
         else:
             source_stream = source_object
-        self.__source_stream = source_stream.add_ref()
+        self.__source_stream = source_stream
         self.__source_object: typing.Optional[Observable.Observable] = None
         # initialize
         self.__property_name = property_name
@@ -331,9 +330,7 @@ class PropertyChangedEventStream(AbstractStream[T], typing.Generic[T]):
         return self.__value
 
     def __source_object_changed(self, source_object: typing.Optional[Observable.Observable]) -> None:
-        if self.__property_changed_listener:
-            self.__property_changed_listener.close()
-            self.__property_changed_listener = None
+        self.__property_changed_listener = None
         self.__source_object = source_object
         if self.__source_object:
             # define a stub and use weak_partial to avoid holding references to self.
@@ -356,7 +353,7 @@ class OptionalStream(AbstractStream[T], typing.Generic[T]):
 
     def __init__(self, stream: AbstractStream[T], pred: typing.Callable[[typing.Optional[T]], bool]) -> None:
         super().__init__()
-        self.__stream = stream.add_ref()
+        self.__stream = stream
         self.__pred = pred
 
         # define a stub and use weak_partial to avoid holding references to self.
@@ -378,12 +375,12 @@ class OptionalStream(AbstractStream[T], typing.Generic[T]):
             self.value_stream.fire(None)
 
 
-class PrintStream(ReferenceCounting.ReferenceCounted):
+class PrintStream:
     """Prints value from input stream."""
 
     def __init__(self, stream: AbstractStream[typing.Any]) -> None:
         super().__init__()
-        self.__stream = stream.add_ref()
+        self.__stream = stream
 
         # define a stub and use weak_partial to avoid holding references to self.
         def value_changed(stream: PrintStream, value: typing.Any) -> None:
@@ -400,7 +397,7 @@ class ValueStreamAction(typing.Generic[T]):
 
     def __init__(self, stream: AbstractStream[T], fn: typing.Callable[[typing.Optional[T]], None]) -> None:
         super().__init__()
-        self.__stream = stream.add_ref()
+        self.__stream = stream
 
         # define a stub and use weak_partial to avoid holding references to self.
         def value_changed(a: ValueStreamAction[T], value: typing.Optional[T]) -> None:
@@ -439,7 +436,7 @@ class ValueChange(typing.Generic[T]):
 class ValueChangeStream(ValueStream[ValueChange[T]], typing.Generic[T]):
     def __init__(self, value_stream: AbstractStream[T]) -> None:
         super().__init__()
-        self.__value_stream = value_stream.add_ref()
+        self.__value_stream = value_stream
 
         # define a stub and use weak_partial to avoid holding references to self.
         def value_changed(a: ValueChangeStream[T], value: typing.Optional[T]) -> None:
@@ -470,13 +467,8 @@ class ValueChangeStream(ValueStream[ValueChange[T]], typing.Generic[T]):
 
 class ValueChangeStreamReactor(typing.Generic[T]):
     def __init__(self, value_change_stream: ValueChangeStream[T]) -> None:
-        self.__value_change_stream = value_change_stream.add_ref()
-
-        # define a stub and use weak_partial to avoid holding references to self.
-        def value_changed(reactor: ValueChangeStreamReactor[T], value: ValueChange[T]) -> None:
-            reactor.__value_changed(value)
-
-        self.__value_changed_listener = value_change_stream.value_stream.listen(weak_partial(value_changed, self))
+        self.__value_change_stream = value_change_stream
+        self.__value_changed_listener = value_change_stream.value_stream.listen(weak_partial(ValueChangeStreamReactor.__value_changed, self))
         self.__event_queue: asyncio.Queue[ValueChange[T]] = asyncio.Queue()
         self.__task: typing.Optional[asyncio.Task[None]] = None
 

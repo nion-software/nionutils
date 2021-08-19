@@ -187,15 +187,7 @@ class RecordModel(Observable.Observable):
         self.__initialized = True
 
     def close(self) -> None:
-        for field_name in self.__field_models.keys():
-            self.__field_model_property_changed_listeners[field_name].close()
-            del self.__field_model_property_changed_listeners[field_name]
-            self.__array_item_inserted_listeners[field_name].close()
-            del self.__array_item_inserted_listeners[field_name]
-            self.__array_item_removed_listeners[field_name].close()
-            del self.__array_item_removed_listeners[field_name]
-            self.__field_model_changed_listeners[field_name].close()
-            del self.__field_model_changed_listeners[field_name]
+        pass
 
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> RecordModel:
         values = self.to_dict_value()
@@ -299,14 +291,6 @@ class ArrayModel(ListModel.ListModel[typing.Any]):
                 trampoline = item.model_changed_event.listen(self.model_changed_event.fire)
             self.__model_changed_listeners.append(trampoline)
 
-    def close(self) -> None:
-        for index, item in enumerate(self.items):
-            trampoline = self.__model_changed_listeners[index]
-            if trampoline:
-                trampoline.close()
-        self.__model_changed_listeners = list()
-        super().close()
-
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> ArrayModel:
         values = typing.cast(typing.Sequence[typing.Any], self.to_dict_value())
         # assert isinstance(values, list) or isinstance(values, tuple)
@@ -348,8 +332,6 @@ class ArrayModel(ListModel.ListModel[typing.Any]):
 
     def notify_remove_item(self, key: str, value: typing.Any, index: int) -> None:
         super().notify_remove_item(key, value, index)
-        trampoline = self.__model_changed_listeners.pop(index)
-        if trampoline:
-            trampoline.close()
+        self.__model_changed_listeners.pop(index)
         self.array_item_removed_event.fire(key, value, index)
         self.model_changed_event.fire()

@@ -601,21 +601,11 @@ class FilteredListModel(Observable.Observable):
     @container.setter
     def container(self, container: typing.Optional[Observable.Observable]) -> None:
         if self.__container:
-            assert self.__item_inserted_event_listener
-            self.__item_inserted_event_listener.close()
             self.__item_inserted_event_listener = None
-            assert self.__item_removed_event_listener
-            self.__item_removed_event_listener.close()
             self.__item_removed_event_listener = None
-            if self.__begin_changes_event_listener:
-                self.__begin_changes_event_listener.close()
-                self.__begin_changes_event_listener = None
-            if self.__end_changes_event_listener:
-                self.__end_changes_event_listener.close()
-                self.__end_changes_event_listener = None
-            if self.__reset_list_event_listener:
-                self.__reset_list_event_listener.close()
-                self.__reset_list_event_listener = None
+            self.__begin_changes_event_listener = None
+            self.__end_changes_event_listener = None
+            self.__reset_list_event_listener = None
             for item in reversed(copy.copy(self._get_master_items())):
                 self.__item_removed(self.__master_items_key, item, len(self._get_master_items()) - 1)
         self.__container = container
@@ -688,8 +678,6 @@ class FilteredListModel(Observable.Observable):
         if key == self.__master_items_key:
             with self._update_mutex:
                 del self.__master_items[index]
-                if self.__item_changed_event_listeners[index]:
-                    self.__item_changed_event_listeners[index].close()
                 del self.__item_changed_event_listeners[index]
                 self.__removed_master_item(index, item)
 
@@ -783,18 +771,10 @@ class MappedListModel(Observable.Observable):
     def container(self, container: typing.Optional[Observable.Observable]) -> None:
         # remove old master items
         if self.__container:
-            assert self.__item_inserted_event_listener
-            self.__item_inserted_event_listener.close()
             self.__item_inserted_event_listener = None
-            assert self.__item_removed_event_listener
-            self.__item_removed_event_listener.close()
             self.__item_removed_event_listener = None
-            if self.__begin_changes_event_listener:
-                self.__begin_changes_event_listener.close()
-                self.__begin_changes_event_listener = None
-            if self.__end_changes_event_listener:
-                self.__end_changes_event_listener.close()
-                self.__end_changes_event_listener = None
+            self.__begin_changes_event_listener = None
+            self.__end_changes_event_listener = None
             for item in reversed(copy.copy(getattr(self.__container, self.__master_items_key))):
                 self.__master_item_removed(self.__master_items_key, item, len(self.__items) - 1)
         # add new master items
@@ -901,11 +881,7 @@ class FlattenedListModel(Observable.Observable):
     def container(self, container: typing.Optional[Observable.Observable]) -> None:
         # remove old master items
         if self.__container:
-            assert self.__item_inserted_event_listener
-            self.__item_inserted_event_listener.close()
             self.__item_inserted_event_listener = None
-            assert self.__item_removed_event_listener
-            self.__item_removed_event_listener.close()
             self.__item_removed_event_listener = None
             for item in reversed(copy.copy(getattr(self.__container, self.__master_items_key))):
                 self.__master_item_removed(self.__master_items_key, item, len(self.__master_items) - 1)

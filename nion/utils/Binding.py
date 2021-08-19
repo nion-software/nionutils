@@ -62,16 +62,7 @@ class Binding:
 
     # not thread safe
     def close(self) -> None:
-        """Close the binding.
-
-        Closes the binding. Subclasses can use this to perform any shutdown
-        related actions. Not thread safe.
-        """
-        self.__source_ref = None
-        self.source_getter = None
-        self.source_setter = None
-        self.target_setter = None
-        self._closed = True
+        pass
 
     @property
     def source(self) -> typing.Optional[typing.Any]:
@@ -222,11 +213,6 @@ class PropertyBinding(Binding):
         self.source_setter = weak_partial(set_property_value, self.source)
         self.source_getter = weak_partial(get_property_value, self.source)
 
-    def close(self) -> None:
-        self.__property_changed_listener.close()
-        self.__property_changed_listener = typing.cast(typing.Any, None)
-        super().close()
-
     @property
     def property_name(self) -> str:
         return self.__property_name
@@ -286,11 +272,6 @@ class PropertyAttributeBinding(Binding):
         self.source_setter = weak_partial(source_setter, self.source)
         self.source_getter = weak_partial(source_getter, self.source)
 
-    def close(self) -> None:
-        self.__property_changed_listener.close()
-        self.__property_changed_listener = typing.cast(typing.Any, None)
-        super().close()
-
 
 class TuplePropertyBinding(Binding):
     """Two way binding from an element within a source property tuple to a target.
@@ -342,8 +323,3 @@ class TuplePropertyBinding(Binding):
 
         self.source_setter = weak_partial(source_setter, self.source)
         self.source_getter = weak_partial(source_getter, self.source)
-
-    def close(self) -> None:
-        self.__property_changed_listener.close()
-        self.__property_changed_listener = typing.cast(typing.Any, None)
-        super().close()

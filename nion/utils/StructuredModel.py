@@ -130,12 +130,20 @@ class RecordModel(Observable.Observable):
         self.__array_item_inserted_listeners = dict()
         self.__array_item_removed_listeners = dict()
         self.schema = schema
+        self.item_names: typing.List[str] = list()
+        self.relationship_names: typing.List[str] = list()
         assert isinstance(schema, dict)
         for field_schema in schema["fields"]:
             field_name = field_schema["name"]
             field_type = field_schema["type"]
             field_default = field_schema.get("default")
             field_model = build_model(field_type, default_value=field_default, value=(values or dict()).get(field_name))
+
+            if isinstance(field_model, RecordModel):
+                self.item_names.append(field_name)
+            elif isinstance(field_model, ArrayModel):
+                self.relationship_names.append(field_name)
+
             self.__field_models[field_name] = field_model
 
             def handle_property_changed(field_name, name):
@@ -194,7 +202,7 @@ class RecordModel(Observable.Observable):
             return self.__field_models[name].field_value
         if name.endswith("_model") and name[:-6] in self.__field_models:
             return self.__field_models[name[:-6]]
-        raise AttributeError()
+        raise AttributeError(f"no attribute {name} on {self}")
 
     def __setattr__(self, name, value):
         if self.__initialized and name in self.__field_models and isinstance(self.__field_models[name], FieldPropertyModel):
@@ -206,6 +214,13 @@ class RecordModel(Observable.Observable):
     def field_value(self):
         return self
 
+    def insert_item(self, name: str, index: int, item: typing.Any) -> None:
+        items = getattr(self, name)
+        items.insert(index, item)
+
+    def remove_item(self, name: str, item: typing.Any) -> None:
+        items = getattr(self, name)
+        del items[items.index(item)]
 
 class ItemsSequence(collections.abc.MutableSequence):
 

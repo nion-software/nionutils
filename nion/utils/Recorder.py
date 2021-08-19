@@ -1,39 +1,110 @@
+import abc
 import collections
 import copy
-import functools
 import typing
+import weakref
+
+from . import Observable
+
+from .ReferenceCounting import weak_partial
 
 
 AccessorType = typing.Callable[[typing.Any], typing.Any]
 
 
+class Accessor(abc.ABC):
+    @abc.abstractmethod
+    def get(self, x) -> typing.Any: ...
+
+
+class DirectAccessor(Accessor):
+    def get(self, o: Observable.Observable) -> typing.Any:
+        return o
+
+
+class KeyAccessor(Accessor):
+    def __init__(self, accessor: Accessor, key: str):
+        self.accessor = accessor
+        self.key = key
+
+    def get(self, o: Observable.Observable) -> typing.Any:
+        return getattr(self.accessor.get(o), self.key)
+
+
+class IndexAccessor(Accessor):
+    def __init__(self, accessor: Accessor, index: int):
+        self.accessor = accessor
+        self.index = index
+
+    def get(self, o: Observable.Observable) -> typing.Any:
+        return self.accessor.get(o)[self.index]
+
+
+class RecorderEntry(abc.ABC):
+    @abc.abstractmethod
+    def apply(self, o: Observable.Observable) -> None: ...
+
+
+class KeyRecorderEntry(RecorderEntry):
+    def __init__(self, accessor: Accessor, key: str, item: typing.Any):
+        self.accessor = accessor
+        self.key = key
+        self.item = item
+
+    def apply(self, o: Observable.Observable) -> None:
+        setattr(self.accessor.get(o), self.key, self.item)
+
+
+class InsertRecorderEntry(RecorderEntry):
+    def __init__(self, accessor: Accessor, key: str, index: int, item: typing.Any):
+        self.accessor = accessor
+        self.key = key
+        self.index = index
+        self.item = item
+
+    def apply(self, o: Observable.Observable) -> None:
+        self.accessor.get(o).insert_item(self.key, self.index, self.item)
+
+
+class RemoveRecorderEntry(RecorderEntry):
+    def __init__(self, accessor: Accessor, key: str, index: int):
+        self.accessor = accessor
+        self.key = key
+        self.index = index
+
+    def apply(self, o: Observable.Observable) -> None:
+        self.accessor.get(o).remove_item(self.key, getattr(self.accessor.get(o), self.key)[self.index])
+
+
 class Recorder:
+    """Record changes to an observable object.
+
+    The Accessor describe how to access the object from a root object.
+
+    The RecorderEntry describes how to change the object.
+    """
+
     # TODO: make changes resilient... what happens if underlying object changes and recorder can't be applied?
     # TODO: thread safety
 
-    def __init__(self, object, accessor_fn: AccessorType=None, logger=None):
-        self.__object = object
-        self.__accessor_fn = accessor_fn if accessor_fn else lambda x: x  # type: AccessorType
-        self.__logger = logger if logger is not None else list()
-        self.__property_changed_event_listener = object.property_changed_event.listen(self.__property_changed)
-        self.__item_set_event_listener = object.item_set_event.listen(self.__item_set)
-        self.__item_cleared_event_listener = object.item_cleared_event.listen(self.__item_cleared)
-        self.__item_inserted_event_listener = object.item_inserted_event.listen(self.__item_inserted)
-        self.__item_removed_event_listener = object.item_removed_event.listen(self.__item_removed)
+    def __init__(self, object: typing.Any, accessor: typing.Optional[Accessor] = None, logger: typing.Optional[typing.List[RecorderEntry]] = None):
+        self.__accessor = accessor or DirectAccessor()
+        self.__logger: typing.List[RecorderEntry] = logger if logger is not None else list()
+        self.__property_changed_event_listener = object.property_changed_event.listen(weak_partial(Recorder.__property_changed, self, weakref.ref(object)))
+        self.__item_set_event_listener = object.item_set_event.listen(weak_partial(Recorder.__item_set, self))
+        self.__item_cleared_event_listener = object.item_cleared_event.listen(weak_partial(Recorder.__item_cleared, self))
+        self.__item_inserted_event_listener = object.item_inserted_event.listen(weak_partial(Recorder.__item_inserted, self))
+        self.__item_removed_event_listener = object.item_removed_event.listen(weak_partial(Recorder.__item_removed, self))
         self.__item_recorders = dict()
         self.__relationship_recorders = collections.defaultdict(list)
         for key in object.item_names:
             item = getattr(object, key)
             if item:
-                def item_accessor(key, x):
-                    return getattr(self.__accessor_fn(x), key)
-                self.__item_recorders[key] = Recorder(item, functools.partial(item_accessor, key), self.__logger)
+                self.__item_recorders[key] = Recorder(item, KeyAccessor(self.__accessor, key), self.__logger)
         for key in object.relationship_names:
             items = getattr(object, key)
             for index, item in enumerate(items):
-                def item_index_accessor(key: str, index: int, x):
-                    return getattr(self.__accessor_fn(x), key)[index]
-                self.__relationship_recorders[key].append(Recorder(item, functools.partial(item_index_accessor, key, index), self.__logger))
+                self.__relationship_recorders[key].append(Recorder(item, IndexAccessor(KeyAccessor(self.__accessor, key), index), self.__logger))
 
     def close(self):
         self.__property_changed_event_listener.close()
@@ -56,48 +127,43 @@ class Recorder:
 
     def apply(self, object):
         for logger_item in self.__logger:
-            logger_item(object)
+            logger_item.apply(object)
 
     @property
-    def _accessor_fn(self) -> AccessorType:
-        return self._accessor_fn
+    def _accessor(self) -> Accessor:
+        return self.__accessor
 
-    @_accessor_fn.setter
-    def _accessor_fn(self, value: AccessorType) -> None:
-        self._accessor_fn = value
+    @_accessor.setter
+    def _accessor(self, value: Accessor) -> None:
+        self.__accessor = value
 
-    def __property_changed(self, key):
-        if self.__object._is_persistent_property_recordable(key):
-            def property_setter(x):
-                setattr(self.__accessor_fn(x), key, getattr(self.__object, key))
-            # print("set property {} {}".format(key, value))
-            self.__logger.append(property_setter)
+    def __property_changed(self, o_ref: weakref.ReferenceType, key: str) -> None:
+        object = o_ref()
+        if object:
+            if not hasattr(object, "_is_persistent_property_recordable") or object._is_persistent_property_recordable(key):
+                self.__logger.append(KeyRecorderEntry(self.__accessor, key, getattr(object, key)))
 
-    def __item_set(self, key, item):
+    def __item_set(self, key: str, item: typing.Any) -> None:
         item_recorder = self.__item_recorders.pop(key)
         if item_recorder:
             item_recorder.close()
-        item = getattr(self.__accessor_fn(), key)
         if item:
-            self.__item_recorders[key] = Recorder(item, lambda x: getattr(self.__accessor_fn(x), key), self.__logger)
-        # print("set {} {}".format(key, item))
-        self.__logger.append(lambda x: setattr(self.__accessor_fn(x), key, item))
+            self.__item_recorders[key] = Recorder(item, KeyAccessor(self.__accessor, key), self.__logger)
+        self.__logger.append(KeyRecorderEntry(self.__accessor, key, copy.deepcopy(item)))
 
-    def __item_cleared(self, key):
+    def __item_cleared(self, key: str) -> None:
         self.__item_set(key, None)
 
-    def __item_inserted(self, key, value, before_index):
+    def __item_inserted(self, key: str, value: typing.Any, before_index: int) -> None:
         for index, relationship_recorder in enumerate(self.__relationship_recorders[key]):
             if index >= before_index:
-                relationship_recorder._accessor_fn = lambda x: getattr(self.__accessor_fn(x), key)[index + 1]
-        self.__relationship_recorders[key].insert(before_index, Recorder(value, lambda x: getattr(self.__accessor_fn(x), key)[before_index], self.__logger))
-        # print("append {} {} {}".format(key, value, before_index))
-        self.__logger.append(lambda x: self.__accessor_fn(x).insert_item(key, before_index, copy.deepcopy(value)))
+                relationship_recorder._accessor = IndexAccessor(KeyAccessor(self.__accessor, key), index + 1)
+        self.__relationship_recorders[key].insert(before_index, Recorder(value, IndexAccessor(KeyAccessor(self.__accessor, key), before_index), self.__logger))
+        self.__logger.append(InsertRecorderEntry(self.__accessor, key, before_index, copy.deepcopy(value)))
 
-    def __item_removed(self, key, value, item_index):
+    def __item_removed(self, key: str, value: typing.Any, item_index: int) -> None:
         for index, relationship_recorder in enumerate(self.__relationship_recorders[key]):
             if index > item_index:
-                relationship_recorder._accessor_fn = lambda x: getattr(self.__accessor_fn(x), key)[index - 1]
+                relationship_recorder._accessor = IndexAccessor(KeyAccessor(self.__accessor, key), index - 1)
         self.__relationship_recorders[key].pop(item_index).close()
-        # print("remove {} {} {}".format(key, value, item_index))
-        self.__logger.append(lambda x: self.__accessor_fn(x).remove_item(key, getattr(self.__accessor_fn(x), key)[item_index]))
+        self.__logger.append(RemoveRecorderEntry(self.__accessor, key, item_index))

@@ -87,8 +87,6 @@ class Event:
             self.__weak_listeners.append(weak_listener)
         if owner:
             def owner_gone(weak_owner: typing.Any) -> None:
-                listener = self.__listeners[id(weak_owner)][0]
-                listener.close()
                 del self.__listeners[id(weak_owner)]
 
             weak_owner = weakref.ref(owner, owner_gone)

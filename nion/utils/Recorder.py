@@ -119,23 +119,7 @@ class Recorder:
                 self.__relationship_recorders[key].append(Recorder(item, IndexAccessor(KeyAccessor(self.__accessor, key), index), self.__logger))
 
     def close(self) -> None:
-        self.__property_changed_event_listener.close()
-        self.__property_changed_event_listener = None
-        self.__item_set_event_listener.close()
-        self.__item_set_event_listener = None
-        self.__item_cleared_event_listener.close()
-        self.__item_cleared_event_listener = None
-        self.__item_inserted_event_listener.close()
-        self.__item_inserted_event_listener = None
-        self.__item_removed_event_listener.close()
-        self.__item_removed_event_listener = None
-        for key, item_recorder in self.__item_recorders.items():
-            item_recorder.close()
-        self.__item_recorders = typing.cast(typing.Any, None)
-        for key, relationship_recorder_list in self.__relationship_recorders.items():
-            for relationship_recorder in self.__relationship_recorders[key]:
-                relationship_recorder.close()
-        self.__relationship_recorders = typing.cast(typing.Any, None)
+        pass
 
     def apply(self, object: Observable.Observable) -> None:
         self.__logger.apply(object)
@@ -156,9 +140,7 @@ class Recorder:
                 self._append_recorder_entry(KeyRecorderEntry(self.__accessor, key, getattr(object, key)))
 
     def __item_set(self, key: str, item: typing.Any) -> None:
-        item_recorder = self.__item_recorders.pop(key)
-        if item_recorder:
-            item_recorder.close()
+        self.__item_recorders.pop(key)
         if item:
             self.__item_recorders[key] = Recorder(item, KeyAccessor(self.__accessor, key), self.__logger)
         self._append_recorder_entry(KeyRecorderEntry(self.__accessor, key, copy.deepcopy(item)))
@@ -177,7 +159,7 @@ class Recorder:
         for index, relationship_recorder in enumerate(self.__relationship_recorders[key]):
             if index > item_index:
                 relationship_recorder._accessor = IndexAccessor(KeyAccessor(self.__accessor, key), index - 1)
-        self.__relationship_recorders[key].pop(item_index).close()
+        self.__relationship_recorders[key].pop(item_index)
         self._append_recorder_entry(RemoveRecorderEntry(self.__accessor, key, item_index))
 
     def _append_recorder_entry(self, recorder_entry: RecorderEntry) -> None:

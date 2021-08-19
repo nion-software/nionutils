@@ -70,7 +70,7 @@ class FuncStreamValueModel(PropertyModel[T], typing.Generic[T]):
                  event_loop: asyncio.AbstractEventLoop, value: typing.Optional[T] = None,
                  cmp: typing.Optional[EqualityOperator] = None):
         super().__init__(value=value, cmp=cmp)
-        self.__value_func_stream = value_func_stream.add_ref()
+        self.__value_func_stream = value_func_stream
         self.__event_loop = event_loop
         self.__pending_task = Stream.StreamTask()
         self.__value_fn_ref: typing.List[typing.Callable[[], typing.Any]] = [lambda: None]
@@ -101,8 +101,8 @@ class FuncStreamValueModel(PropertyModel[T], typing.Generic[T]):
         self.__pending_task.create_task(update_value(self.__event, self.__evaluating, weakref.ref(self), self.__value_fn_ref))
         self.__stream_listener = value_func_stream.value_stream.listen(weak_partial(FuncStreamValueModel.__handle_value_func, self))
         value_func = self.__value_func_stream.value
-        assert value_func
-        self.__handle_value_func(value_func)
+        if value_func:
+            self.__handle_value_func(value_func)
 
         def finalize(pending_task: Stream.StreamTask) -> None:
             pending_task.clear()
@@ -132,7 +132,7 @@ class StreamValueModel(PropertyModel[T], typing.Generic[T]):
     def __init__(self, value_stream: Stream.AbstractStream[T], value: typing.Optional[T] = None,
                  cmp: typing.Optional[EqualityOperator] = None) -> None:
         super().__init__(value=value, cmp=cmp)
-        self.__value_stream = value_stream.add_ref()
+        self.__value_stream = value_stream
 
         def handle_value(model: StreamValueModel[T], value: typing.Any) -> None:
             model.value = value

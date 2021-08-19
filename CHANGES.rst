@@ -3,7 +3,8 @@ Changelog (nionutils)
 
 0.3.27 (UNRELEASED)
 -------------------
-- Fix issue in single SingleItemDispatcher so it actually delays
+- Change ThreadPool to be no-close.
+- Fix issue in single SingleItemDispatcher so it actually delays.
 - Change SingleItemDispatcher to be no-close.
 - Extend sync processes function to cancel outstanding async functions.
 - Add experimental stream, value change, and reactor functions.

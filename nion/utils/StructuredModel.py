@@ -188,7 +188,7 @@ class RecordModel(Observable.Observable):
             if k in values:
                 self.__field_models[k].from_dict_value(values[k])
 
-    def to_dict_value(self) -> typing.Optional[typing.Any]:
+    def to_dict_value(self) -> typing.Mapping[str, typing.Any]:
         d = dict()
         assert isinstance(self.schema, dict)
         for field_schema in self.schema["fields"]:

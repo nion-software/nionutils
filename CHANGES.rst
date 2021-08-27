@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.3.27 (UNRELEASED)
 -------------------
+- Change Recorder to allow customer logger.
 - Change ThreadPool to be no-close.
 - Fix issue in single SingleItemDispatcher so it actually delays.
 - Change SingleItemDispatcher to be no-close.

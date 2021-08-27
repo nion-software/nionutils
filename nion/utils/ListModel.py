@@ -275,7 +275,30 @@ class FilteredListModel(Observable.Observable):
         self.container = container
 
     def close(self):
-        self.container = None
+        if self.__container:
+            self.__item_inserted_event_listener.close()
+            self.__item_inserted_event_listener = None
+            self.__item_removed_event_listener.close()
+            self.__item_removed_event_listener = None
+            if self.__begin_changes_event_listener:
+                self.__begin_changes_event_listener.close()
+                self.__begin_changes_event_listener = None
+            if self.__end_changes_event_listener:
+                self.__end_changes_event_listener.close()
+                self.__end_changes_event_listener = None
+            if self.__reset_list_event_listener:
+                self.__reset_list_event_listener.close()
+                self.__reset_list_event_listener = None
+            for item in reversed(copy.copy(self._get_master_items())):
+                index = len(self._get_master_items()) - 1
+                del self.__master_items[index]
+                if self.__item_changed_event_listeners[index]:
+                    self.__item_changed_event_listeners[index].close()
+                del self.__item_changed_event_listeners[index]
+                if item in self.__items:
+                    item_index = self.__items.index(item)
+                    del self.__items[item_index]
+        self.__container = None
         self.__item_changed_event_listeners = None
         self.__master_items = None
         self.__items = None

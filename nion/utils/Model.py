@@ -52,10 +52,13 @@ class PropertyModel(Observable.Observable, typing.Generic[T]):
         else:
             not_equal = not self.__cmp(value, self.__value)
         if not_equal:
-            self.__value = value
-            self.notify_property_changed("value")
+            self._set_value(value)
             if self.on_value_changed:
                 self.on_value_changed(value)
+
+    def _set_value(self, value: OptionalT) -> None:
+        self.__value = value
+        self.notify_property_changed("value")
 
 
 class FuncStreamValueModel(PropertyModel):

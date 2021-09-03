@@ -142,3 +142,35 @@ class StreamValueModel(PropertyModel):
         self.__value_stream.remove_ref()
         self.__value_stream = None
         super().close()
+
+
+class PropertyChangedPropertyModel(PropertyModel[T], typing.Generic[T]):
+    """Observes a property on another item and makes it a standard property model.
+
+    When the observed property changes, update this value.
+
+    When this value changes, update the observed property.
+    """
+
+    def __init__(self, observable: Observable.Observable, property_name: str):
+        super().__init__(getattr(observable, property_name, None))
+        self.__observable = observable
+        self.__property_name = property_name
+
+        def property_changed(property_model: PropertyChangedPropertyModel, observable: Observable.Observable, property_name: str, property_name_: str) -> None:
+            # check if changed property matches property name for this object
+            if property_name_ == property_name:
+                property_model.value = getattr(observable, property_name)
+
+        self.__listener = self.__observable.property_changed_event.listen(weak_partial(property_changed, self, observable, property_name))
+
+    def close(self) -> None:
+        self.__listener.close()
+        self.__listener = None
+        super().close()
+
+    def _set_value(self, value: OptionalT) -> None:
+        super()._set_value(value)
+        # set the property on the observed object. this will trigger a property changed, but will be ignored since
+        # the value doesn't change.
+        setattr(self.__observable, self.__property_name, value)

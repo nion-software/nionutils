@@ -749,7 +749,7 @@ class FloatPoint:
         dividend = float(dividend)
         return FloatPoint(y=self.__y / dividend, x=self.__x / dividend)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> float:
         return (self.__y, self.__x)[index]
 
     def __iter__(self):
@@ -844,7 +844,7 @@ class FloatSize:
         dividend = float(dividend)
         return FloatSize(self.__height / dividend, self.__width / dividend)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> float:
         return (self.__height, self.__width)[index]
 
     def __iter__(self):

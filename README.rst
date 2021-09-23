@@ -57,7 +57,7 @@ code is available under the Apache License, Version 2.0.
 Requirements
 ------------
 
-Requires Python 3.7 or later.
+Requires Python 3.8 or later.
 
 Getting Help and Contributing
 -----------------------------

@@ -20,17 +20,17 @@ import weakref
 
 _ThreadPoolTask = typing.Callable[[], None]
 _OptionalThreadPoolTask = typing.Optional[_ThreadPoolTask]
-
+_QueueParam = typing.Any  # Python 3.9: queue.Queue[_OptionalThreadPoolTask]
 
 class ThreadPool:
     """Queue as set of callbacks on a thread. Allow cancel. Allow manual iteration."""
 
     def __init__(self) -> None:
         self.__cancel_event = threading.Event()
-        self.__queue = queue.Queue[_OptionalThreadPoolTask]()
+        self.__queue = queue.Queue()  # type: ignore
         self.__threads: typing.List[threading.Thread] = list()
 
-        def finalize(q: queue.Queue[_OptionalThreadPoolTask], threads: typing.List[threading.Thread], cancel_event: threading.Event) -> None:
+        def finalize(q: _QueueParam, threads: typing.List[threading.Thread], cancel_event: threading.Event) -> None:
             cancel_event.set()
             for _ in threads:
                 q.put(None)
@@ -43,7 +43,7 @@ class ThreadPool:
         pass
 
     def start(self, thread_count: int = 16) -> None:
-        def run(q: queue.Queue[_OptionalThreadPoolTask], cancel: threading.Event) -> None:
+        def run(q: _QueueParam, cancel: threading.Event) -> None:
             while True:
                 task = q.get()
                 if task and not cancel.is_set():

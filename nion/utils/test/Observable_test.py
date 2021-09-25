@@ -6,25 +6,19 @@ import unittest
 # None
 
 # local libraries
-from nion.utils import Persistence
-
-
-class Archivable(Persistence.PersistentObject):
-    def __init__(self):
-        super(Archivable, self).__init__()
-        self.define_property("abc")
+from nion.utils import Observable
 
 
 class TestObservableClass(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         pass
 
-    def test_archivable_can_read_when_missing_property_keys(self):
-        Archivable().read_from_dict(dict())
+    def test_observable(self) -> None:
+        Observable.Observable()
 
 
 if __name__ == '__main__':

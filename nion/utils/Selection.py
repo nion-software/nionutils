@@ -2,6 +2,8 @@
 A collection of useful classes for handling selections.
 """
 
+from __future__ import annotations
+
 # standard libraries
 import copy
 import enum
@@ -35,7 +37,7 @@ class IndexedSelection:
     compatibility. New uses of the class should always set that attribute and it is expected
     to be default behavior in 0.4.0.
     """
-    def __init__(self, selection_style: Style = None, expanded_changed_event: bool = False):
+    def __init__(self, selection_style: typing.Optional[Style] = None, expanded_changed_event: bool = False) -> None:
         super().__init__()
         self.__changed_event = Event.Event()
         self.expanded_changed_event = expanded_changed_event  # whether to fire when updating indexes
@@ -43,19 +45,19 @@ class IndexedSelection:
         self.__anchor_index : typing.Optional[int] = None
         self.selection_style = selection_style if selection_style else Style.multiple
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         return isinstance(other, IndexedSelection) and self.indexes == other.indexes and self.anchor_index == other.anchor_index
 
-    def __ne__(self, other) -> bool:
+    def __ne__(self, other: typing.Any) -> bool:
         return not isinstance(other, IndexedSelection) or self.indexes != other.indexes or self.anchor_index != other.anchor_index
 
-    def __copy__(self):
+    def __copy__(self) -> IndexedSelection:
         selection = self.__class__(self.selection_style)
         selection.set_multiple(set(self.__indexes))
         selection.anchor_index = self.__anchor_index
         return selection
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> IndexedSelection:
         selection = self.__class__(self.selection_style)
         selection.set_multiple(set(self.__indexes))
         selection.anchor_index = self.__anchor_index
@@ -110,7 +112,7 @@ class IndexedSelection:
         if old_index != self.__indexes:
             self.__fire_changed_event()
 
-    def __fire_changed_event(self):
+    def __fire_changed_event(self) -> None:
         self.__changed_event.fire()
 
     def __update_anchor_index(self) -> None:

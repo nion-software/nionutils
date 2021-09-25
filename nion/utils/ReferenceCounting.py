@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import contextlib
 import functools
 import threading
+import types
 import typing
 import weakref
 
 
-def weak_partial(fn: typing.Callable, o: typing.Any, *args, **kwargs) -> typing.Any:
-    def _call(o_ref: weakref.ReferenceType, *args, **kwargs):
+def weak_partial(fn: typing.Callable[..., typing.Any], o: typing.Any, *args: typing.Any, **kwargs: typing.Any) -> typing.Any:
+    # o_ref should be weakref.ReferenceType for Python 3.9+
+    def _call(o_ref: typing.Any, *args: typing.Any, **kwargs: typing.Any) -> typing.Any:
         o_deref = o_ref() if o_ref else None
         if o_deref:
             return fn(o_deref, *args, **kwargs)
@@ -31,16 +34,21 @@ class ReferenceCounted:
     def about_to_delete(self) -> None:
         ReferenceCounted.count -= 1
 
-    def ref(self):
-        class RefContextManager(object):
-            def __init__(self, item):
-                self.__item = item
-            def __enter__(self):
-                self.__item.add_ref()
-                return self.__item
-            def __exit__(self, type, value, traceback):
-                self.__item.remove_ref()
-        return RefContextManager(self)
+    class RefContextManager:
+        def __init__(self, item: ReferenceCounted):
+            self.__item = item
+
+        def __enter__(self) -> ReferenceCounted:
+            self.__item.add_ref()
+            return self.__item
+
+        def __exit__(self, exception_type: typing.Optional[typing.Type[BaseException]],
+                     value: typing.Optional[BaseException], traceback: typing.Optional[types.TracebackType]) -> typing.Optional[bool]:
+            self.__item.remove_ref()
+            return None
+
+    def ref(self) -> contextlib.AbstractContextManager[ReferenceCounted]:
+        return ReferenceCounted.RefContextManager(self)
 
     # Anytime you store a reference to this item, call add_ref.
     # This allows the class to disconnect from its own sources
@@ -63,5 +71,5 @@ class ReferenceCounted:
     # Return the reference count, which should represent the number
     # of places that this DataItem is stored by a caller.
     @property
-    def ref_count(self):
+    def ref_count(self) -> int:
         return self.__ref_count

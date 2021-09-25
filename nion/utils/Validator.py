@@ -10,12 +10,13 @@ Validator classes. Useful for bindings.
 
 # local libraries
 # none
+import typing
 
 
 class IntegerRangeValidator:
     """Validate an integer to a specific range."""
 
-    def __init__(self, mn: int=None, mx: int=None):
+    def __init__(self, mn: typing.Optional[int] = None, mx: typing.Optional[int] = None) -> None:
         self.__min = mn
         self.__max = mx
 

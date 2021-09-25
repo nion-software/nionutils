@@ -14,6 +14,7 @@ import typing
 # local libraries
 import weakref
 
+from . import Event
 from . import Observable
 from . import Stream
 from .ReferenceCounting import weak_partial
@@ -166,7 +167,7 @@ class PropertyChangedPropertyModel(PropertyModel[T], typing.Generic[T]):
 
     def close(self) -> None:
         self.__listener.close()
-        self.__listener = None
+        self.__listener = typing.cast(Event.EventListener, None)
         super().close()
 
     def _set_value(self, value: OptionalT) -> None:

@@ -18,15 +18,19 @@ import weakref
 # None
 
 
+_ThreadPoolTask = typing.Callable[[], None]
+_OptionalThreadPoolTask = typing.Optional[_ThreadPoolTask]
+
+
 class ThreadPool:
     """Queue as set of callbacks on a thread. Allow cancel. Allow manual iteration."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.__cancel_event = threading.Event()
-        self.__queue = queue.Queue()
-        self.__threads = list()
+        self.__queue = queue.Queue[_OptionalThreadPoolTask]()
+        self.__threads: typing.List[threading.Thread] = list()
 
-        def finalize(q: queue.Queue, threads: typing.List[threading.Thread], cancel_event: threading.Event) -> None:
+        def finalize(q: queue.Queue[_OptionalThreadPoolTask], threads: typing.List[threading.Thread], cancel_event: threading.Event) -> None:
             cancel_event.set()
             for _ in threads:
                 q.put(None)
@@ -39,7 +43,7 @@ class ThreadPool:
         pass
 
     def start(self, thread_count: int = 16) -> None:
-        def run(q: queue.Queue, cancel: threading.Event) -> None:
+        def run(q: queue.Queue[_OptionalThreadPoolTask], cancel: threading.Event) -> None:
             while True:
                 task = q.get()
                 if task and not cancel.is_set():
@@ -53,7 +57,7 @@ class ThreadPool:
             thread.start()
             self.__threads.append(thread)
 
-    def queue_fn(self, fn, description: str = None) -> None:
+    def queue_fn(self, fn: _OptionalThreadPoolTask, description: typing.Optional[str] = None) -> None:
         if not self.__cancel_event.is_set():
             self.__queue.put(fn)
 
@@ -71,7 +75,7 @@ class ThreadPool:
 class DispatcherInfo:
     is_dispatching_lock: threading.RLock
     is_dispatch_pending: bool
-    dispatch_future: typing.Optional[concurrent.futures.Future]
+    dispatch_future: typing.Optional[concurrent.futures.Future[typing.Any]]
     dispatch_thread_cancel: threading.Event
     cached_value_time: float
 
@@ -94,7 +98,7 @@ class SingleItemDispatcher:
     def close(self) -> None:
         pass
 
-    def dispatch(self, fn: typing.Callable[[], None]) -> concurrent.futures.Future:
+    def dispatch(self, fn: _ThreadPoolTask) -> concurrent.futures.Future[typing.Any]:
         # dispatch the function on a thread.
         # if already executing, ensure the thread dispatch again.
         # may be called on the main thread or a thread - must return quickly in both cases.
@@ -105,7 +109,7 @@ class SingleItemDispatcher:
             self.__dispatcher_info.is_dispatch_pending = True
             if not self.__dispatcher_info.dispatch_future:
 
-                def dispatch_task(fn: typing.Callable[[], None], minimum_time: float, dispatcher_info: DispatcherInfo) -> None:
+                def dispatch_task(fn: _ThreadPoolTask, minimum_time: float, dispatcher_info: DispatcherInfo) -> None:
                     while True:
                         try:
                             if dispatcher_info.dispatch_thread_cancel.wait(0.05):  # gather changes and helps tests run faster

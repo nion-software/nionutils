@@ -1,9 +1,13 @@
 """List and filtered list model."""
 
+from __future__ import annotations
+
 # standard libraries
+import contextlib
 import copy
 import operator
 import threading
+import types
 import typing
 
 # third party libraries
@@ -18,9 +22,20 @@ from .ReferenceCounting import weak_partial
 T = typing.TypeVar('T')
 
 
+class ListModelLike(typing.Protocol):
+    @property
+    def item_inserted_event(self) -> Event.Event: return typing.cast(Event.Event, None)
+
+    @property
+    def item_removed_event(self) -> Event.Event: return typing.cast(Event.Event, None)
+
+    @property
+    def items(self) -> typing.Sequence[typing.Any]: return list()
+
+
 class ListModel(Observable.Observable, typing.Generic[T]):
 
-    def __init__(self, key: str = None, items: typing.Sequence[T] = None):
+    def __init__(self, key: typing.Optional[str] = None, items: typing.Optional[typing.Sequence[T]] = None) -> None:
         super().__init__()
         self.__key = key
         self.__items : typing.List[T] = list(items) if items else list()
@@ -61,152 +76,153 @@ class ListModel(Observable.Observable, typing.Generic[T]):
 
 
 class Filter:
-    def __init__(self, default: bool=False):
+    def __init__(self, default: bool = False) -> None:
         self.__default = default
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> Filter:
         cls = self.__class__
-        result = cls.__new__(cls)
+        result = typing.cast(Filter, cls.__new__(cls))
         memo[id(self)] = result
         result.__default = self.__default
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         return self.__default
 
 
 class AndFilter(Filter):
-    def __init__(self, filters: typing.Sequence[Filter]=None):
+    def __init__(self, filters: typing.Optional[typing.Sequence[Filter]] = None) -> None:
         super().__init__()
         self.__filters = copy.copy(filters) if filters else list()
 
-    def __deepcopy__(self, memo):
-        result = super().__deepcopy__(memo)
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> AndFilter:
+        result = typing.cast(AndFilter, super().__deepcopy__(memo))
         result.__filters = copy.deepcopy(self.__filters, memo)
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         return all(map(operator.methodcaller('matches', d), self.__filters))
 
 
 class OrFilter(Filter):
-    def __init__(self, filters: typing.Sequence[Filter]=None):
+    def __init__(self, filters: typing.Optional[typing.Sequence[Filter]] = None) -> None:
         super().__init__()
         self.__filters = copy.copy(filters) if filters else list()
 
-    def __deepcopy__(self, memo):
-        result = super().__deepcopy__(memo)
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> OrFilter:
+        result = typing.cast(OrFilter, super().__deepcopy__(memo))
         result.__filters = copy.deepcopy(self.__filters, memo)
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         return any(map(operator.methodcaller('matches', d), self.__filters))
 
 
 class NotFilter(Filter):
-    def __init__(self, filter: Filter):
+    def __init__(self, filter: Filter) -> None:
         super().__init__()
         self.__filter = filter
 
-    def __deepcopy__(self, memo):
-        result = super().__deepcopy__(memo)
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> NotFilter:
+        result = typing.cast(NotFilter, super().__deepcopy__(memo))
         result.__filter = copy.deepcopy(self.__filter, memo)
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         return not self.__filter.matches(d)
 
 
 class EqFilter(Filter):
-    def __init__(self, key: str, value, cmp=None):
+    def __init__(self, key: str, value: typing.Any, cmp: typing.Optional[EqualityOperator] = None) -> None:
         super().__init__()
         self.__key = key
         self.__value = value
-        self.__cmp = cmp if cmp else operator.eq
+        self.__cmp = cmp if cmp else typing.cast(EqualityOperator, operator.eq)
 
-    def __deepcopy__(self, memo):
-        result = super().__deepcopy__(memo)
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> EqFilter:
+        result = typing.cast(EqFilter, super().__deepcopy__(memo))
         result.__key = self.__key
         result.__value = self.__value
         result.__cmp = self.__cmp
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         d_value = getattr(d, self.__key)
         return self.__cmp(d_value, self.__value)
 
 
 class NotEqFilter(Filter):
-    def __init__(self, key: str, value, cmp=None):
+    def __init__(self, key: str, value: typing.Any, cmp: typing.Optional[EqualityOperator] = None) -> None:
         super().__init__()
         self.__key = key
         self.__value = value
         self.__cmp = cmp if cmp else operator.eq
 
-    def __deepcopy__(self, memo):
-        result = super().__deepcopy__(memo)
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> NotEqFilter:
+        result = typing.cast(NotEqFilter, super().__deepcopy__(memo))
         result.__key = self.__key
         result.__value = self.__value
         result.__cmp = self.__cmp
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         d_value = getattr(d, self.__key)
         return not self.__cmp(d_value, self.__value)
 
 
 class StartsWithFilter(Filter):
-    def __init__(self, key: str, value: str):
+    def __init__(self, key: str, value: str) -> None:
         super().__init__()
         self.__key = key
         self.__value = value
 
-    def __deepcopy__(self, memo):
-        result = super().__deepcopy__(memo)
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> StartsWithFilter:
+        result = typing.cast(StartsWithFilter, super().__deepcopy__(memo))
         result.__key = self.__key
         result.__value = self.__value
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         d_value = getattr(d, self.__key)
-        return d_value.startswith(self.__value)
+        return bool(d_value.startswith(self.__value))
 
 
 class TextFilter(Filter):
-    def __init__(self, key: str, text: str):
+    def __init__(self, key: str, text: str) -> None:
         super().__init__()
         self.__key = key
         self.__text = text
         self.__lower_text = text.lower()
 
-    def __deepcopy__(self, memo):
-        result = super().__deepcopy__(memo)
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> TextFilter:
+        result = typing.cast(TextFilter, super().__deepcopy__(memo))
         result.__key = self.__key
         result.__text = self.__text
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         d_value = str(getattr(d, self.__key)).lower()
         return d_value.find(self.__lower_text) >= 0
 
 
 class PartialDateFilter(Filter):
-    def __init__(self, key: str, year: int=None, month: int=None, day: int=None):
+    def __init__(self, key: str, year: typing.Optional[int] = None, month: typing.Optional[int] = None,
+                 day: typing.Optional[int] = None) -> None:
         super().__init__()
         self.__key = key
         self.__year = year
         self.__month = month
         self.__day = day
 
-    def __deepcopy__(self, memo):
-        result = super().__deepcopy__(memo)
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> PartialDateFilter:
+        result = typing.cast(PartialDateFilter, super().__deepcopy__(memo))
         result.__key = self.__key
         result.__year = self.__year
         result.__month = self.__month
         result.__day = self.__day
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         d_value = getattr(d, self.__key)
         if self.__year and d_value.year != self.__year:
             return False
@@ -219,20 +235,23 @@ class PartialDateFilter(Filter):
 
 class PredicateFilter(Filter):
     # used for testing, not serializable
-    def __init__(self, predicate):
+    def __init__(self, predicate: typing.Callable[[typing.Any], bool]) -> None:
         super().__init__()
         self.__predicate = predicate
 
-    def __deepcopy__(self, memo):
-        result = super().__deepcopy__(memo)
+    def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> PredicateFilter:
+        result = typing.cast(PredicateFilter, super().__deepcopy__(memo))
         result.__predicate = self.__predicate
         return result
 
-    def matches(self, d) -> bool:
+    def matches(self, d: typing.Any) -> bool:
         return self.__predicate(d)
 
 
-SortKeyCallable = typing.Optional[typing.Callable]
+SortKeyCallable = typing.Callable[[typing.Any], typing.Any]
+OptionalSortKeyCallable = typing.Optional[SortKeyCallable]
+SortOperator = typing.Callable[[typing.Any, typing.Any], typing.Any]
+EqualityOperator = typing.Callable[[typing.Any, typing.Any], bool]
 
 
 class FilteredListModel(Observable.Observable):
@@ -246,40 +265,45 @@ class FilteredListModel(Observable.Observable):
     calling begin_change and end_change around the changes, or by using a context manager
     available via the changes method.
     """
-    def __init__(self, *, container=None, master_items_key=None, items_key=None, selection=None):
+
+    def __init__(self, *, container: typing.Optional[Observable.Observable] = None,
+                 master_items_key: typing.Optional[str] = None, items_key: typing.Optional[str] = None,
+                 selection: typing.Optional[Selection.IndexedSelection] = None) -> None:
         super().__init__()
         self.__container = None
-        self.__master_items_key = master_items_key or items_key
-        self.__items_key = items_key
-        self.__master_items = list()  # a list of source items (to be filtered)
-        self.__items = list()  # a list of filtered items
+        self.__master_items_key = master_items_key or items_key or "items"
+        self.__items_key = items_key or "items"
+        self.__master_items: typing.List[typing.Any] = list()  # a list of source items (to be filtered)
+        self.__items: typing.List[typing.Any] = list()  # a list of filtered items
         self.__items_sorted = False
         self._update_mutex = threading.RLock()
         self.__filter = Filter(True)
-        self.__sort_key: SortKeyCallable = None
+        self.__sort_key: OptionalSortKeyCallable = None
         self.__sort_reverse = False
         self.__change_level = 0
         self.reset_list_event = Event.Event()
         self.begin_changes_event = Event.Event()
         self.end_changes_event = Event.Event()
-        self.__item_changed_event_listeners = list()
-        self.__item_inserted_event_listener = None
-        self.__item_removed_event_listener = None
-        self.__reset_list_event_listener = None
-        self.__begin_changes_event_listener = None
-        self.__end_changes_event_listener = None
+        self.__item_changed_event_listeners: typing.List[Event.EventListener] = list()
+        self.__item_inserted_event_listener: typing.Optional[Event.EventListener] = None
+        self.__item_removed_event_listener: typing.Optional[Event.EventListener] = None
+        self.__reset_list_event_listener: typing.Optional[Event.EventListener] = None
+        self.__begin_changes_event_listener: typing.Optional[Event.EventListener] = None
+        self.__end_changes_event_listener: typing.Optional[Event.EventListener] = None
         self.__selection_changes: typing.List[typing.Tuple[bool, int]] = list()
         self.__selections = list()
         if selection:
             self.__selections.append(selection)
         self.container = container
 
-    def close(self):
+    def close(self) -> None:
         if self.__container:
-            self.__item_inserted_event_listener.close()
-            self.__item_inserted_event_listener = None
-            self.__item_removed_event_listener.close()
-            self.__item_removed_event_listener = None
+            if self.__item_inserted_event_listener:
+                self.__item_inserted_event_listener.close()
+                self.__item_inserted_event_listener = None
+            if self.__item_removed_event_listener:
+                self.__item_removed_event_listener.close()
+                self.__item_removed_event_listener = None
             if self.__begin_changes_event_listener:
                 self.__begin_changes_event_listener.close()
                 self.__begin_changes_event_listener = None
@@ -299,48 +323,49 @@ class FilteredListModel(Observable.Observable):
                     item_index = self.__items.index(item)
                     del self.__items[item_index]
         self.__container = None
-        self.__item_changed_event_listeners = None
-        self.__master_items = None
-        self.__items = None
+        self.__item_changed_event_listeners = list()
+        self.__master_items = list()
+        self.__items = list()
 
-    def begin_change(self):
+    def begin_change(self) -> None:
         """ Begin a set of changes. Balance with end_changes. """
         self.__change_level += 1
 
-    def end_change(self):
+    def end_change(self) -> None:
         """ End a set of changes and update items if finished. """
         with self._update_mutex:
             self.__change_level -= 1
             if self.__change_level == 0:
                 self.__update_items()
 
-    def changes(self):
+    class ChangeTracker:
+        def __init__(self, list_model: FilteredListModel) -> None:
+            self.list_model = list_model
+
+        def __enter__(self) -> FilteredListModel.ChangeTracker:
+            self.list_model.begin_change()
+            return self
+
+        def __exit__(self, exception_type: typing.Optional[typing.Type[BaseException]],
+                     value: typing.Optional[BaseException], traceback: typing.Optional[types.TracebackType]) -> typing.Optional[bool]:
+            self.list_model.end_change()
+            return None
+
+    def changes(self) -> contextlib.AbstractContextManager[FilteredListModel.ChangeTracker]:
         """ Acquire this while setting filter or sort so that changes get made simultaneously. """
-
-        class ChangeTracker:
-            def __init__(self, list_model: FilteredListModel):
-                self.list_model = list_model
-
-            def __enter__(self):
-                self.list_model.begin_change()
-                return self
-
-            def __exit__(self, type_, value, traceback):
-                self.list_model.end_change()
-
-        return ChangeTracker(self)
+        return FilteredListModel.ChangeTracker(self)
 
     def mark_changed(self) -> None:
         with self.changes(): pass
 
     # thread safe.
     @property
-    def sort_key(self) -> SortKeyCallable:
+    def sort_key(self) -> OptionalSortKeyCallable:
         """ Return the sort key function (for item). """
         return self.__sort_key
 
     @sort_key.setter
-    def sort_key(self, value: SortKeyCallable) -> None:
+    def sort_key(self, value: OptionalSortKeyCallable) -> None:
         """ Set the sort key function. """
         with self._update_mutex:
             self.__sort_key = value
@@ -377,22 +402,22 @@ class FilteredListModel(Observable.Observable):
         self.__update_items()
 
     @property
-    def items(self) -> typing.Sequence:
+    def items(self) -> typing.Sequence[typing.Any]:
         """ Return the items. """
         with self._update_mutex:
             return copy.copy(self.__items)
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> typing.Any:
         if item == self.__items_key:
             return self.items
         raise AttributeError()
 
     # thread safe
-    def _get_master_items(self):
+    def _get_master_items(self) -> typing.List[typing.Any]:
         with self._update_mutex:
             return copy.copy(self.__master_items)
 
-    def __find_sorted_index_for_item(self, item, items, sort_key, sort_operator):
+    def __find_sorted_index_for_item(self, item: typing.Any, items: typing.Sequence[typing.Any], sort_key: SortKeyCallable, sort_operator: SortOperator) -> int:
         item_sort_key = sort_key(item)
         low = 0
         high = len(items)
@@ -404,7 +429,7 @@ class FilteredListModel(Observable.Observable):
                 high = mid
         return low
 
-    def __find_unsorted_index_for_item(self, item, master_items, filter):
+    def __find_unsorted_index_for_item(self, item: typing.Any, master_items: typing.Sequence[typing.Any], filter: Filter) -> int:
         index = 0
         for item_ in master_items:
             if item_ == item:
@@ -414,7 +439,7 @@ class FilteredListModel(Observable.Observable):
         return index
 
     # thread safe
-    def __inserted_master_item(self, before_index, item):
+    def __inserted_master_item(self, before_index: int, item: typing.Any) -> None:
         """
             Subclasses can call this to notify this object that a item in
             the master item list has been inserted.
@@ -425,7 +450,7 @@ class FilteredListModel(Observable.Observable):
             if self.filter.matches(item):
                 self.__insert_item(item, self.sort_key)
 
-    def __insert_item(self, item, sort_key) -> None:
+    def __insert_item(self, item: typing.Any, sort_key: OptionalSortKeyCallable) -> None:
         items = self.__items
         if sort_key is not None:
             sort_operator = operator.gt if self.sort_reverse else operator.lt
@@ -443,7 +468,7 @@ class FilteredListModel(Observable.Observable):
             for selection in self.__selections:
                 selection.insert_index(before_index)
 
-    def __remove_item(self, item):
+    def __remove_item(self, item: typing.Any) -> None:
         item_index = self.__items.index(item)
         del self.__items[item_index]
         self.begin_changes_event.fire(self.__items_key)
@@ -457,7 +482,7 @@ class FilteredListModel(Observable.Observable):
                 selection.remove_index(item_index)
 
     # thread safe
-    def __removed_master_item(self, index, item):
+    def __removed_master_item(self, index: int, item: typing.Any) -> None:
         """
             Subclasses can call this to notify this object that a item in
             the master item list has been removed.
@@ -469,7 +494,7 @@ class FilteredListModel(Observable.Observable):
                 self.__remove_item(item)
 
     # thread safe
-    def __updated_master_item(self, item):
+    def __updated_master_item(self, item: typing.Any) -> None:
         """
             Subclasses can call this to notify this object that a item in
             the master item list has been updated.
@@ -510,7 +535,7 @@ class FilteredListModel(Observable.Observable):
                     self.__removed_master_item(index, item)
 
     # thread safe.
-    def __build_items(self):
+    def __build_items(self) -> typing.List[typing.Any]:
         """Build the items from the master items list.
 
         This method is thread safe.
@@ -525,7 +550,7 @@ class FilteredListModel(Observable.Observable):
             master_items.sort(key=self.sort_key, reverse=self.sort_reverse)
         # construct the items list by expanding each master item to
         # include its children
-        items = list()
+        items: typing.List[typing.Any] = list()
         for item in master_items:
             # apply filter
             if self.filter.matches(item):
@@ -534,7 +559,7 @@ class FilteredListModel(Observable.Observable):
         return items
 
     # thread safe.
-    def __update_items(self):
+    def __update_items(self) -> None:
         """Build the items and generate change messages.
 
         Builds the items from the master item list, then generates a sequence of
@@ -593,15 +618,17 @@ class FilteredListModel(Observable.Observable):
 
     # thread safe.
     @property
-    def container(self):
+    def container(self) -> typing.Optional[Observable.Observable]:
         return self.__container
 
     # thread safe.
     @container.setter
-    def container(self, container):
+    def container(self, container: typing.Optional[Observable.Observable]) -> None:
         if self.__container:
+            assert self.__item_inserted_event_listener
             self.__item_inserted_event_listener.close()
             self.__item_inserted_event_listener = None
+            assert self.__item_removed_event_listener
             self.__item_removed_event_listener.close()
             self.__item_removed_event_listener = None
             if self.__begin_changes_event_listener:
@@ -659,11 +686,11 @@ class FilteredListModel(Observable.Observable):
         self.__selections.append(selection)
         return selection
 
-    def release_selection(self, selection):
+    def release_selection(self, selection: Selection.IndexedSelection) -> None:
         self.__selections.remove(selection)
 
     # thread safe.
-    def __item_inserted(self, key, item, before_index):
+    def __item_inserted(self, key: str, item: typing.Any, before_index: int) -> None:
         """ Insert the master item. Called from the container. """
         if key == self.__master_items_key:
             with self._update_mutex:
@@ -680,7 +707,7 @@ class FilteredListModel(Observable.Observable):
                 self.__inserted_master_item(before_index, item)
 
     # thread safe.
-    def __item_removed(self, key, item, index):
+    def __item_removed(self, key: str, item: typing.Any, index: int) -> None:
         """ Remove the master item. Called from the container. """
         if key == self.__master_items_key:
             with self._update_mutex:
@@ -692,15 +719,20 @@ class FilteredListModel(Observable.Observable):
 
 
 class MappedListModel(Observable.Observable):
+    _MapFunctionType = typing.Callable[[typing.Any], typing.Any]
 
-    def __init__(self, *, container=None, master_items_key: str=None, items_key: str=None, map_fn: typing.Callable=None, unmap_fn: typing.Callable=None, selection: Selection.IndexedSelection=None):
+    def __init__(self, *, container: typing.Optional[Observable.Observable] = None,
+                 master_items_key: typing.Optional[str] = None, items_key: typing.Optional[str] = None,
+                 map_fn: typing.Optional[MappedListModel._MapFunctionType] = None,
+                 unmap_fn: typing.Optional[MappedListModel._MapFunctionType] = None,
+                 selection: typing.Optional[Selection.IndexedSelection] = None) -> None:
         super().__init__()
         self.__container = None
-        self.__master_items_key = master_items_key
-        self.__items_key = items_key
+        self.__master_items_key = master_items_key or "items"
+        self.__items_key = items_key or self.__master_items_key
         self.__map_fn = map_fn or (lambda x: x)
         self.__unmap_fn = unmap_fn or (lambda x: x)
-        self.__items : typing.List = list()  # a list of transformed items
+        self.__items: typing.List[typing.Any] = list()  # a list of transformed items
         self._update_mutex = threading.RLock()
         self.__change_level = 0
         self.begin_changes_event = Event.Event()
@@ -714,70 +746,73 @@ class MappedListModel(Observable.Observable):
             self.__selections.append(selection)
         self.container = container
 
-    def close(self):
+    def close(self) -> None:
         self.container = None
-        self.__map_fn = None
-        self.__unmap_fn = None
+        self.__map_fn = typing.cast(MappedListModel._MapFunctionType, None)
+        self.__unmap_fn = typing.cast(MappedListModel._MapFunctionType, None)
 
-    def begin_change(self):
+    def begin_change(self) -> None:
         """ Begin a set of changes. Balance with end_changes. """
         if self.__change_level == 0:
             self.begin_changes_event.fire(self.__items_key)
         self.__change_level += 1
 
-    def end_change(self):
+    def end_change(self) -> None:
         """ End a set of changes and update items if finished. """
         with self._update_mutex:
             self.__change_level -= 1
             if self.__change_level == 0:
                 self.end_changes_event.fire(self.__items_key)
 
-    def changes(self):
+    class ChangeTracker:
+        def __init__(self, list_model: MappedListModel):
+            self.list_model = list_model
+
+        def __enter__(self) -> MappedListModel.ChangeTracker:
+            self.list_model.begin_change()
+            return self
+
+        def __exit__(self, exception_type: typing.Optional[typing.Type[BaseException]],
+                     value: typing.Optional[BaseException], traceback: typing.Optional[types.TracebackType]) -> typing.Optional[bool]:
+            self.list_model.end_change()
+            return None
+
+    def changes(self) -> contextlib.AbstractContextManager[MappedListModel.ChangeTracker]:
         """ Acquire this while setting filter or sort so that changes get made simultaneously. """
-
-        class ChangeTracker:
-            def __init__(self, list_model: MappedListModel):
-                self.list_model = list_model
-
-            def __enter__(self):
-                self.list_model.begin_change()
-                return self
-
-            def __exit__(self, type_, value, traceback):
-                self.list_model.end_change()
-
-        return ChangeTracker(self)
+        return MappedListModel.ChangeTracker(self)
 
     def mark_changed(self) -> None:
         with self.changes(): pass
 
     @property
-    def items(self) -> typing.Sequence:
+    def items(self) -> typing.Sequence[typing.Any]:
         """ Return the items. """
         with self._update_mutex:
             return copy.copy(self.__items)
 
     @property
-    def items_key(self):
+    def items_key(self) -> str:
         return self.__items_key
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> typing.Any:
         if item == self.__items_key:
             return self.items
         raise AttributeError()
 
     # thread safe.
     @property
-    def container(self):
+    def container(self) -> typing.Optional[Observable.Observable]:
         return self.__container
 
     # thread safe.
     @container.setter
-    def container(self, container):
+    def container(self, container: typing.Optional[Observable.Observable]) -> None:
         # remove old master items
         if self.__container:
+            assert self.__item_inserted_event_listener
             self.__item_inserted_event_listener.close()
             self.__item_inserted_event_listener = None
+            assert self.__item_removed_event_listener
             self.__item_removed_event_listener.close()
             self.__item_removed_event_listener = None
             if self.__begin_changes_event_listener:
@@ -808,16 +843,16 @@ class MappedListModel(Observable.Observable):
             for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
                 self.__master_item_inserted(self.__master_items_key, item, index)
 
-    def make_selection(self):
+    def make_selection(self) -> Selection.IndexedSelection:
         selection = Selection.IndexedSelection()
         self.__selections.append(selection)
         return selection
 
-    def release_selection(self, selection):
+    def release_selection(self, selection: Selection.IndexedSelection) -> None:
         self.__selections.remove(selection)
 
     # thread safe.
-    def __master_item_inserted(self, key, item, before_index):
+    def __master_item_inserted(self, key: str, item: typing.Any, before_index: int) -> None:
         """ Insert the item. Called from the container. """
         if key == self.__master_items_key:
             with self._update_mutex:
@@ -828,7 +863,7 @@ class MappedListModel(Observable.Observable):
                     selection.insert_index(before_index)
 
     # thread safe.
-    def __master_item_removed(self, key, item, index):
+    def __master_item_removed(self, key: str, item: typing.Any, index: int) -> None:
         """ Remove the item. Called from the container. """
         if key == self.__master_items_key:
             with self._update_mutex:
@@ -847,51 +882,55 @@ class FlattenedListModel(Observable.Observable):
     Watches child items in the master items in the container and flattens them into a list.
     """
 
-    def __init__(self, *, container=None, master_items_key: str=None, child_items_key: str=None, items_key: str=None, selection: Selection.IndexedSelection=None):
+    def __init__(self, *, master_items_key: str, container: typing.Optional[Observable.Observable] = None,
+                 child_items_key: typing.Optional[str] = None, items_key: typing.Optional[str] = None,
+                 selection: typing.Optional[Selection.IndexedSelection] = None) -> None:
         super().__init__()
         self.__container = None
         self.__master_items_key = master_items_key
-        self.__child_items_key = child_items_key
-        self.__items_key = items_key if items_key else child_items_key
-        self.__master_items : typing.List = list()  # a list of master items (to be transformed)
-        self.__items : typing.List = list()  # a list of flattened items
-        self.__children : typing.Dict[typing.Any, typing.List] = dict()  # map master item to children
+        self.__child_items_key = child_items_key or "items"
+        self.__items_key = items_key or self.__child_items_key
+        self.__master_items : typing.List[typing.Any] = list()  # a list of master items (to be transformed)
+        self.__items : typing.List[typing.Any] = list()  # a list of flattened items
+        self.__children: typing.Dict[typing.Any, typing.List[typing.Any]] = dict()  # map master item to children
         self._update_mutex = threading.RLock()
         self.__item_inserted_event_listener = None
         self.__item_removed_event_listener = None
-        self.__child_item_inserted_event_listener : typing.Dict = dict()
-        self.__child_item_removed_event_listener : typing.Dict = dict()
+        self.__child_item_inserted_event_listener: typing.Dict[typing.Any, Event.EventListener] = dict()
+        self.__child_item_removed_event_listener: typing.Dict[typing.Any, Event.EventListener] = dict()
         self.__selections = list()
         if selection:
             self.__selections.append(selection)
         self.container = container
 
-    def close(self):
+    def close(self) -> None:
         self.container = None
 
     @property
-    def items(self) -> typing.Sequence:
+    def items(self) -> typing.Sequence[typing.Any]:
         """ Return the items. """
         with self._update_mutex:
             return copy.copy(self.__items)
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> typing.Any:
         if item == self.__items_key:
             return self.items
         raise AttributeError()
 
     # thread safe.
     @property
-    def container(self):
+    def container(self) -> typing.Optional[Observable.Observable]:
         return self.__container
 
     # thread safe.
     @container.setter
-    def container(self, container):
+    def container(self, container: typing.Optional[Observable.Observable]) -> None:
         # remove old master items
         if self.__container:
+            assert self.__item_inserted_event_listener
             self.__item_inserted_event_listener.close()
             self.__item_inserted_event_listener = None
+            assert self.__item_removed_event_listener
             self.__item_removed_event_listener.close()
             self.__item_removed_event_listener = None
             for item in reversed(copy.copy(getattr(self.__container, self.__master_items_key))):
@@ -904,16 +943,16 @@ class FlattenedListModel(Observable.Observable):
             for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
                 self.__master_item_inserted(self.__master_items_key, item, index)
 
-    def make_selection(self):
+    def make_selection(self) -> Selection.IndexedSelection:
         selection = Selection.IndexedSelection()
         self.__selections.append(selection)
         return selection
 
-    def release_selection(self, selection):
+    def release_selection(self, selection: Selection.IndexedSelection) -> None:
         self.__selections.remove(selection)
 
     # almost thread safe. assumes child items will not change duing this call.
-    def __master_item_inserted(self, key, item, before_index):
+    def __master_item_inserted(self, key: str, item: typing.Any, before_index: int) -> None:
         # insert a master item.
         # set up listeners for child item changes.
         # add any existing child item.
@@ -928,7 +967,7 @@ class FlattenedListModel(Observable.Observable):
                     self.__child_item_inserted(item, self.__child_items_key, child_item, index)
 
     # thread safe.
-    def __master_item_removed(self, key, item, index):
+    def __master_item_removed(self, key: str, item: typing.Any, index: int) -> None:
         # remove a master item.
         # remove any existing child items.
         # remove listeners for child items.
@@ -942,7 +981,7 @@ class FlattenedListModel(Observable.Observable):
                 del self.__child_item_removed_event_listener[item]
                 assert not item in self.__master_items, "master item still in " + str(self.__master_items_key) + " (" + str(self.__items_key) + " / " + str(self.__child_items_key) + ")"
 
-    def __child_item_inserted(self, master_item, key, item, before_index):
+    def __child_item_inserted(self, master_item: typing.Any, key: str, item: typing.Any, before_index: int) -> None:
         if key == self.__child_items_key:
             master_index = 0
             for master_item_ in self.__master_items:
@@ -956,7 +995,7 @@ class FlattenedListModel(Observable.Observable):
             for selection in self.__selections:
                 selection.insert_index(before_index)
 
-    def __child_item_removed(self, master_item, key, item, index):
+    def __child_item_removed(self, master_item: typing.Any, key: str, item: typing.Any, index: int) -> None:
         if key == self.__child_items_key:
             master_index = 0
             for master_item_ in self.__master_items:
@@ -979,23 +1018,23 @@ class ListPropertyModel(Observable.Observable):
     Does not currently handle item content changes.
     """
 
-    def __init__(self, list_model):
+    def __init__(self, list_model: ListModelLike) -> None:
         super().__init__()
         self.__list_model = list_model
         self.__item_inserted_event_listener = list_model.item_inserted_event.listen(weak_partial(ListPropertyModel.__item_inserted, self))
         self.__item_removed_event_listener = list_model.item_removed_event.listen(weak_partial(ListPropertyModel.__item_removed, self))
 
     def close(self) -> None:
-        self.__list_model = None
-        self.__item_inserted_event_listener = None
-        self.__item_removed_event_listener = None
+        self.__list_model = typing.cast(ListModelLike, None)
+        self.__item_inserted_event_listener = typing.cast(Event.EventListener, None)
+        self.__item_removed_event_listener = typing.cast(Event.EventListener, None)
 
-    def __item_inserted(self, key: str, item, before_index: int) -> None:
+    def __item_inserted(self, key: str, item: typing.Any, before_index: int) -> None:
         self.notify_property_changed("value")
 
-    def __item_removed(self, key: str, item, index: int) -> None:
+    def __item_removed(self, key: str, item: typing.Any, index: int) -> None:
         self.notify_property_changed("value")
 
     @property
-    def value(self):
-        return self.__list_model.items
+    def value(self) -> typing.List[typing.Any]:
+        return list(self.__list_model.items)

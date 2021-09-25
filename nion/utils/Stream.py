@@ -318,7 +318,7 @@ class PropertyChangedEventStream(AbstractStream):
         self.__property_name = property_name
         self.__value = None
         self.__cmp = cmp if cmp else operator.eq
-        self.__property_changed_listener = None
+        self.__property_changed_listener: typing.Optional[Event.EventListener] = None
 
         # define a stub and use weak_partial to avoid holding references to self.
         def source_object_changed(stream: PropertyChangedEventStream, source_object: typing.Optional[Observable.Observable]) -> None:

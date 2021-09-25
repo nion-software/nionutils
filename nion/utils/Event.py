@@ -19,7 +19,7 @@ import weakref
 # None
 
 
-WeakListenerType = weakref.ReferenceType["EventListener"]
+WeakListenerType = typing.Any  # should be weakref.ReferenceType[EventListener] after Python 3.9
 EventListenerCallableType = typing.Callable[..., typing.Any]
 
 

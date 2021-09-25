@@ -19,7 +19,7 @@ def weak_partial(fn: typing.Callable, o: typing.Any, *args, **kwargs) -> typing.
 class ReferenceCounted:
     count = 0  # useful for detecting leaks in tests
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.__ref_count = 0
         self.__ref_count_mutex = threading.RLock()  # access to the image
@@ -45,13 +45,14 @@ class ReferenceCounted:
     # Anytime you store a reference to this item, call add_ref.
     # This allows the class to disconnect from its own sources
     # automatically when the reference count goes to zero.
-    def add_ref(self):
+    # required type of typing.Any loses type information. callers should use typing.cast.
+    def add_ref(self) -> ReferenceCounted:
         with self.__ref_count_mutex:
             self.__ref_count += 1
         return self
 
     # Anytime you give up a reference to this item, call remove_ref.
-    def remove_ref(self, check=True):
+    def remove_ref(self, check: bool = True) -> None:
         with self.__ref_count_mutex:
             assert self.__ref_count > 0, 'Reference counted object has no references'
             self.__ref_count -= 1

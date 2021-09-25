@@ -19,8 +19,9 @@ from . import Observable
 from . import Stream
 from .ReferenceCounting import weak_partial
 
+EqualityOperator = typing.Callable[[typing.Any, typing.Any], bool]
+
 T = typing.TypeVar('T')
-OptionalT = typing.Optional[T]
 
 
 class PropertyModel(Observable.Observable, typing.Generic[T]):
@@ -31,21 +32,21 @@ class PropertyModel(Observable.Observable, typing.Generic[T]):
     An optional on_value_changed method gets called when the value changes.
     """
 
-    def __init__(self, value: OptionalT = None, cmp: typing.Optional[typing.Callable[[OptionalT, OptionalT], bool]] = None):
+    def __init__(self, value: typing.Optional[T] = None, cmp: typing.Optional[typing.Callable[[typing.Optional[T], typing.Optional[T]], bool]] = None):
         super().__init__()
         self.__value = value
         self.__cmp = cmp if cmp else operator.eq
-        self.on_value_changed : typing.Optional[typing.Callable[[OptionalT], None]] = None
+        self.on_value_changed : typing.Optional[typing.Callable[[typing.Optional[T]], None]] = None
 
     def close(self) -> None:
         self.on_value_changed = None
 
     @property
-    def value(self) -> OptionalT:
+    def value(self) -> typing.Optional[T]:
         return self.__value
 
     @value.setter
-    def value(self, value: OptionalT) -> None:
+    def value(self, value: typing.Optional[T]) -> None:
         if self.__value is None:
             not_equal = value is not None
         elif value is None:
@@ -57,31 +58,34 @@ class PropertyModel(Observable.Observable, typing.Generic[T]):
             if self.on_value_changed:
                 self.on_value_changed(value)
 
-    def _set_value(self, value: OptionalT) -> None:
+    def _set_value(self, value: typing.Optional[T]) -> None:
         self.__value = value
         self.notify_property_changed("value")
 
 
-class FuncStreamValueModel(PropertyModel):
+class FuncStreamValueModel(PropertyModel[T], typing.Generic[T]):
     """Converts a stream of functions to a property model, evaluated asynchronously, on a thread."""
 
-    def __init__(self, value_func_stream: Stream.AbstractStream, event_loop: asyncio.AbstractEventLoop, value=None, cmp=None):
+    def __init__(self, value_func_stream: Stream.AbstractStream[typing.Callable[[], T]],
+                 event_loop: asyncio.AbstractEventLoop, value: typing.Optional[T] = None,
+                 cmp: typing.Optional[EqualityOperator] = None):
         super().__init__(value=value, cmp=cmp)
         self.__value_func_stream = value_func_stream.add_ref()
         self.__event_loop = event_loop
         self.__pending_task = Stream.StreamTask()
-        self.__value_fn_ref = [lambda: None]
+        self.__value_fn_ref: typing.List[typing.Callable[[], typing.Any]] = [lambda: None]
         self.__event = asyncio.Event()
         self.__evaluating = [False]
 
-        async def update_value(event: asyncio.Event, evaluating: typing.List[bool], model_ref, value_fn_ref: typing.List) -> None:
+        # Python 3.9: use ReferenceType[FuncStreamValueModel] for model_ref
+        async def update_value(event: asyncio.Event, evaluating: typing.List[bool], model_ref: typing.Any, value_fn_ref: typing.List[typing.Callable[[], typing.Any]]) -> None:
             while True:
                 await event.wait()
                 evaluating[0] = True
                 event.clear()
                 value = None
 
-                def eval():
+                def eval() -> None:
                     nonlocal value
                     try:
                         value = value_fn_ref[0]()
@@ -96,52 +100,57 @@ class FuncStreamValueModel(PropertyModel):
 
         self.__pending_task.create_task(update_value(self.__event, self.__evaluating, weakref.ref(self), self.__value_fn_ref))
         self.__stream_listener = value_func_stream.value_stream.listen(weak_partial(FuncStreamValueModel.__handle_value_func, self))
-        self.__handle_value_func(self.__value_func_stream.value)
+        value_func = self.__value_func_stream.value
+        assert value_func
+        self.__handle_value_func(value_func)
 
-    def close(self):
+    def close(self) -> None:
         self.__pending_task.clear()
-        self.__pending_task = None
+        self.__pending_task = typing.cast(Stream.StreamTask, None)
         self.__stream_listener.close()
-        self.__stream_listener = None
+        self.__stream_listener = typing.cast(Event.EventListener, None)
         self.__value_func_stream.remove_ref()
-        self.__value_func_stream = None
-        self.__event_loop = None
+        self.__value_func_stream = typing.cast(typing.Any, None)
+        self.__event_loop = typing.cast(asyncio.AbstractEventLoop, None)
         super().close()
 
-    def _run_until_complete(self):
+    def _run_until_complete(self) -> None:
         while True:
             self.__event_loop.stop()
             self.__event_loop.run_forever()
             if not self.__evaluating[0]:
                 break
 
-    def _evaluate_immediate(self):
-        return self.__value_func_stream.value()
+    def _evaluate_immediate(self) -> typing.Optional[T]:
+        value_func = self.__value_func_stream.value
+        assert value_func
+        return value_func()
 
     def __handle_value_func(self, value_func: typing.Callable[[], typing.Any]) -> None:
         self.__value_fn_ref[0] = value_func
         self.__event.set()
 
 
-class StreamValueModel(PropertyModel):
+class StreamValueModel(PropertyModel[T], typing.Generic[T]):
     """Converts a stream to a property model."""
 
-    def __init__(self, value_stream: Stream.AbstractStream, value=None, cmp=None):
+    def __init__(self, value_stream: Stream.AbstractStream[T], value: typing.Optional[T] = None,
+                 cmp: typing.Optional[EqualityOperator] = None) -> None:
         super().__init__(value=value, cmp=cmp)
         self.__value_stream = value_stream.add_ref()
 
-        def handle_value(model: StreamValueModel, value: typing.Any) -> None:
+        def handle_value(model: StreamValueModel[T], value: typing.Any) -> None:
             model.value = value
 
         self.__stream_listener = value_stream.value_stream.listen(weak_partial(handle_value, self))
 
         handle_value(self, value_stream.value)
 
-    def close(self):
+    def close(self) -> None:
         self.__stream_listener.close()
-        self.__stream_listener = None
+        self.__stream_listener = typing.cast(Event.EventListener, None)
         self.__value_stream.remove_ref()
-        self.__value_stream = None
+        self.__value_stream = typing.cast(Stream.AbstractStream[T], None)
         super().close()
 
 
@@ -153,12 +162,12 @@ class PropertyChangedPropertyModel(PropertyModel[T], typing.Generic[T]):
     When this value changes, update the observed property.
     """
 
-    def __init__(self, observable: Observable.Observable, property_name: str):
+    def __init__(self, observable: Observable.Observable, property_name: str) -> None:
         super().__init__(getattr(observable, property_name, None))
         self.__observable = observable
         self.__property_name = property_name
 
-        def property_changed(property_model: PropertyChangedPropertyModel, observable: Observable.Observable, property_name: str, property_name_: str) -> None:
+        def property_changed(property_model: PropertyChangedPropertyModel[T], observable: Observable.Observable, property_name: str, property_name_: str) -> None:
             # check if changed property matches property name for this object
             if property_name_ == property_name:
                 property_model.value = getattr(observable, property_name)
@@ -170,7 +179,7 @@ class PropertyChangedPropertyModel(PropertyModel[T], typing.Generic[T]):
         self.__listener = typing.cast(Event.EventListener, None)
         super().close()
 
-    def _set_value(self, value: OptionalT) -> None:
+    def _set_value(self, value: typing.Optional[T]) -> None:
         super()._set_value(value)
         # set the property on the observed object. this will trigger a property changed, but will be ignored since
         # the value doesn't change.

@@ -45,13 +45,6 @@ class TestStreamClass(unittest.TestCase):
         stream_ref = weakref.ref(stream)
         del stream
         self.assertIsNone(stream_ref())
-        # concat stream
-        src_stream = Stream.ValueStream(0)
-        stream = Stream.ConcatStream(src_stream, lambda x: Stream.ValueStream(x))
-        src_stream.send_value(1)
-        stream_ref = weakref.ref(stream)
-        del stream
-        self.assertIsNone(stream_ref())
         # optional stream
         stream = Stream.OptionalStream(Stream.ValueStream(0), lambda x: True)
         stream_ref = weakref.ref(stream)

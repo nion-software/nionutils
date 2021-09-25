@@ -75,7 +75,7 @@ class ThreadPool:
 class DispatcherInfo:
     is_dispatching_lock: threading.RLock
     is_dispatch_pending: bool
-    dispatch_future: typing.Optional[concurrent.futures.Future[typing.Any]]
+    dispatch_future: typing.Optional[typing.Any]  # Python 3.9: Optional[concurrent.futures.Future[Any]]
     dispatch_thread_cancel: threading.Event
     cached_value_time: float
 
@@ -98,7 +98,7 @@ class SingleItemDispatcher:
     def close(self) -> None:
         pass
 
-    def dispatch(self, fn: _ThreadPoolTask) -> concurrent.futures.Future[typing.Any]:
+    def dispatch(self, fn: _ThreadPoolTask) -> typing.Any:  # Python 3.9: return type is concurrent.futures.Future[Any]
         # dispatch the function on a thread.
         # if already executing, ensure the thread dispatch again.
         # may be called on the main thread or a thread - must return quickly in both cases.

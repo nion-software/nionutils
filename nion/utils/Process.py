@@ -16,38 +16,44 @@ import typing
 # None
 
 
-class TaskQueue(queue.Queue[typing.Callable[[], None]]):
+class TaskQueue:
+    def __init__(self) -> None:
+        # Python 3.9+: use queue.Queue[typing.Callable[[], None]]
+        self.__queue: typing.Any = queue.Queue()
+
+    def put(self, task: typing.Callable[[], None]) -> None:
+        self.__queue.put(task)
 
     def perform_tasks(self) -> None:
         # perform any pending operations
-        qsize = self.qsize()
-        while not self.empty() and qsize > 0:
+        qsize = self.__queue.qsize()
+        while not self.__queue.empty() and qsize > 0:
             try:
-                task = self.get(False)
+                task = self.__queue.get(False)
             except queue.Empty:
                 pass
             else:
                 task()
-                self.task_done()
+                self.__queue.task_done()
             qsize -= 1
 
     def clear_tasks(self) -> None:
         # perform any pending operations
-        qsize = self.qsize()
-        while not self.empty() and qsize > 0:
+        qsize = self.__queue.qsize()
+        while not self.__queue.empty() and qsize > 0:
             try:
-                task = self.get(False)
+                task = self.__queue.get(False)
             except queue.Empty:
                 pass
             else:
-                self.task_done()
+                self.__queue.task_done()
             qsize -= 1
 
 
 # keeps a set of tasks to do when perform_tasks is called.
 # each task is associated with a key. overwriting a key
 # will discard any task currently associated with that key.
-class TaskSet(object):
+class TaskSet:
     def __init__(self) -> None:
         self.__task_dict: typing.Dict[str, typing.Callable[[], None]] = dict()
         self.__task_dict_mutex = threading.RLock()

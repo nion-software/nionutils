@@ -8,20 +8,20 @@ from nion.utils import Converter
 
 class TestConverter(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         pass
 
-    def test_float_to_scaled_integer_with_negative_min(self):
+    def test_float_to_scaled_integer_with_negative_min(self) -> None:
         converter = Converter.FloatToScaledIntegerConverter(1000, -100, 100)
-        self.assertAlmostEqual(converter.convert(0), 500)
-        self.assertAlmostEqual(converter.convert(-100), 0)
-        self.assertAlmostEqual(converter.convert(100), 1000)
-        self.assertAlmostEqual(converter.convert_back(converter.convert(0)), 0)
-        self.assertAlmostEqual(converter.convert_back(converter.convert(-100)), -100)
-        self.assertAlmostEqual(converter.convert_back(converter.convert(100)), 100)
+        self.assertAlmostEqual(converter.convert(0) or 0, 500)
+        self.assertAlmostEqual(converter.convert(-100) or 0, 0)
+        self.assertAlmostEqual(converter.convert(100) or 0, 1000)
+        self.assertAlmostEqual(converter.convert_back(converter.convert(0)) or 0.0, 0)
+        self.assertAlmostEqual(converter.convert_back(converter.convert(-100)) or 0.0, -100)
+        self.assertAlmostEqual(converter.convert_back(converter.convert(100)) or 0.0, 100)
 
 
 

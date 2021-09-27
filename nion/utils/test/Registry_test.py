@@ -8,13 +8,13 @@ from nion.utils import Registry
 
 class TestConverter(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         pass
 
-    def test_registering_same_component_with_different_types_succeeds(self):
+    def test_registering_same_component_with_different_types_succeeds(self) -> None:
         o = object()
         Registry.register_component(o, {"one", "two"})
         Registry.register_component(o, {"three"})

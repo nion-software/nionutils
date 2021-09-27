@@ -48,7 +48,7 @@ def define_float() -> MDescription:
     return "double"
 
 
-def define_field(name: str, type: str, *, default: typing.Optional[typing.Any] = None) -> MDescription:
+def define_field(name: str, type: MDescription, *, default: typing.Optional[typing.Any] = None) -> MDescription:
     d: typing.Dict[str, typing.Any] = {"name": name, "type": type}
     if default is not None:
         d["default"] = default
@@ -63,7 +63,7 @@ def define_array(items: MDescription) -> MDescription:
     return {"type": "array", "items": items}
 
 
-class ModelLike(typing.Protocol):
+class ModelLike(Observable.ObservableLike, typing.Protocol):
     field_value_changed_event: Event.Event
     array_item_inserted_event: Event.Event
     array_item_removed_event: Event.Event

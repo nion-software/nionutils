@@ -1,6 +1,7 @@
 # standard libraries
 import copy
 import logging
+import typing
 import unittest
 import weakref
 
@@ -14,13 +15,13 @@ from nion.utils import Recorder
 
 class TestRecorderClass(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         pass
 
-    def test_refcounts(self):
+    def test_refcounts(self) -> None:
         # create the model
         x_field = StructuredModel.define_field("x", StructuredModel.INT)
         y_field = StructuredModel.define_field("y", StructuredModel.INT)
@@ -35,7 +36,8 @@ class TestRecorderClass(unittest.TestCase):
         del r
         self.assertIsNone(r_ref())
 
-    def test_refcounts_after_record_and_apply(self):
+    @typing.no_type_check
+    def test_refcounts_after_record_and_apply(self) -> None:
         # create the model
         x_field = StructuredModel.define_field("x", StructuredModel.INT)
         y_field = StructuredModel.define_field("y", StructuredModel.INT)

@@ -17,49 +17,49 @@ from nion.utils import Model
 
 class TupleModel:
 
-    def __init__(self):
-        self.__tuple = None
+    def __init__(self) -> None:
+        self.__tuple: typing.Optional[typing.Tuple[typing.Any]] = None
         self.property_changed_event = Event.Event()
 
     @property
-    def tuple(self):
+    def tuple(self) -> typing.Optional[typing.Tuple[typing.Any]]:
         return self.__tuple
 
     @tuple.setter
-    def tuple(self, value):
+    def tuple(self, value: typing.Optional[typing.Tuple[typing.Any]]) -> None:
         self.__tuple = value
         self.property_changed_event.fire("tuple")
 
 
 class TestBindingClass(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         pass
 
-    def test_property_binding_refcount(self):
+    def test_property_binding_refcount(self) -> None:
         binding = Binding.PropertyBinding(Model.PropertyModel(0), "value")
         binding_ref = weakref.ref(binding)
         del binding
         self.assertIsNone(binding_ref())
 
-    def test_property_attribute_binding_refcount(self):
+    def test_property_attribute_binding_refcount(self) -> None:
         binding = Binding.PropertyAttributeBinding(Model.PropertyModel(Geometry.FloatPoint()), "value", "x")
         binding_ref = weakref.ref(binding)
         del binding
         self.assertIsNone(binding_ref())
 
-    def test_tuple_property_binding_refcount(self):
+    def test_tuple_property_binding_refcount(self) -> None:
         binding = Binding.TuplePropertyBinding(Model.PropertyModel((1, 2, 3)), "value", 1)
         binding_ref = weakref.ref(binding)
         del binding
         self.assertIsNone(binding_ref())
 
-    def test_tuple_binding_pads_to_index_if_necessary(self):
+    def test_tuple_binding_pads_to_index_if_necessary(self) -> None:
         # this allows the source to more easily go from None to a partialy tuple None -> (3, None) -> (3, 4)
-        source = TupleModel()
+        source = typing.cast(typing.Any, TupleModel())
         self.assertEqual(None, source.tuple)
         binding0 = Binding.TuplePropertyBinding(source, "tuple", 0)
         binding2 = Binding.TuplePropertyBinding(source, "tuple", 2)

@@ -14,28 +14,28 @@ from nion.utils import Stream
 
 class TestModelClass(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         pass
 
-    def test_refcounts(self):
+    def test_refcounts(self) -> None:
         # property model
-        model = Model.PropertyModel(0)
+        model = Model.PropertyModel[int](0)
         model_ref = weakref.ref(model)
         del model
         self.assertIsNone(model_ref())
         # func stream model (ugh)
-        model = Model.FuncStreamValueModel(Stream.ValueStream(lambda: None), asyncio.get_event_loop())
-        model_ref = weakref.ref(model)
-        del model
-        self.assertIsNone(model_ref())
+        model2 = Model.FuncStreamValueModel(Stream.ValueStream(lambda: None), asyncio.get_event_loop())
+        model_ref2 = weakref.ref(model2)
+        del model2
+        self.assertIsNone(model_ref2())
         # stream value model
-        model = Model.StreamValueModel(Stream.ValueStream(0))
-        model_ref = weakref.ref(model)
-        del model
-        self.assertIsNone(model_ref())
+        model3 = Model.StreamValueModel(Stream.ValueStream(0))
+        model_ref3 = weakref.ref(model3)
+        del model3
+        self.assertIsNone(model_ref3())
 
 
 if __name__ == '__main__':

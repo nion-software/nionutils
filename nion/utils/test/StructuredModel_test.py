@@ -2,6 +2,7 @@
 import collections.abc
 import contextlib
 import copy
+import typing
 import unittest
 import weakref
 
@@ -13,13 +14,14 @@ from nion.utils import StructuredModel
 
 class TestStructuredModelClass(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         pass
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         pass
 
-    def test_refcounts(self):
+    @typing.no_type_check
+    def test_refcounts(self) -> None:
         # create the model
         x_field = StructuredModel.define_field("x", StructuredModel.INT)
         y_field = StructuredModel.define_field("y", StructuredModel.INT)
@@ -36,14 +38,16 @@ class TestStructuredModelClass(unittest.TestCase):
         del model
         self.assertIsNone(model_ref())
 
-    def test_get_record_property(self):
+    @typing.no_type_check
+    def test_get_record_property(self) -> None:
         # test that a record gives access to a field value directly through a property on the record
         str_field = StructuredModel.define_field("s", StructuredModel.STRING, default="ss")
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         self.assertEqual("ss", model.s)
 
-    def test_set_record_property(self):
+    @typing.no_type_check
+    def test_set_record_property(self) -> None:
         # test that a record gives can set a field value directly through a property on the record
         str_field = StructuredModel.define_field("s", StructuredModel.STRING, default="ss")
         schema = StructuredModel.define_record("R", [str_field])
@@ -52,13 +56,14 @@ class TestStructuredModelClass(unittest.TestCase):
         model.s = "tt"
         self.assertEqual("tt", model.s)
 
-    def test_set_record_property_fires_property_changed_event(self):
+    @typing.no_type_check
+    def test_set_record_property_fires_property_changed_event(self) -> None:
         str_field = StructuredModel.define_field("s", StructuredModel.STRING, default="ss")
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         was_property_changed_ref = [False]
 
-        def handle_property_changed(name):
+        def handle_property_changed(name: str) -> None:
             self.assertEqual("s", name)
             was_property_changed_ref[0] = True
 
@@ -67,7 +72,8 @@ class TestStructuredModelClass(unittest.TestCase):
             model.s = "tt"
             self.assertTrue(was_property_changed_ref[0])
 
-    def test_get_record_array_property(self):
+    @typing.no_type_check
+    def test_get_record_array_property(self) -> None:
         # test that a record gives access to a array value directly through a property on the record
         array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field)
@@ -75,7 +81,8 @@ class TestStructuredModelClass(unittest.TestCase):
         model = StructuredModel.build_model(schema)
         self.assertIsInstance(model.a, collections.abc.Sequence)
 
-    def test_str_array_defaults(self):
+    @typing.no_type_check
+    def test_str_array_defaults(self) -> None:
         # test that an array of simple fields (str) can be initialized with default values
         array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
@@ -83,7 +90,8 @@ class TestStructuredModelClass(unittest.TestCase):
         model = StructuredModel.build_model(schema)
         self.assertSequenceEqual(["a", "b", "c"],  model.a)
 
-    def test_array_of_records_defaults(self):
+    @typing.no_type_check
+    def test_array_of_records_defaults(self) -> None:
         # test that an array of record fields can be initialized with default values
         x_field = StructuredModel.define_field("x", StructuredModel.INT)
         y_field = StructuredModel.define_field("y", StructuredModel.INT)
@@ -96,7 +104,8 @@ class TestStructuredModelClass(unittest.TestCase):
         self.assertEqual(1, model.a[0].x)
         self.assertEqual(4, model.a[1].y)
 
-    def test_record_with_array_defaults(self):
+    @typing.no_type_check
+    def test_record_with_array_defaults(self) -> None:
         # test that a record with an array field can be initialized with default values
         array_field = StructuredModel.define_field("a", StructuredModel.define_array(StructuredModel.INT))
         record = StructuredModel.define_record("R", [array_field])
@@ -107,7 +116,8 @@ class TestStructuredModelClass(unittest.TestCase):
         self.assertEqual(4, model.r.a[1])
         self.assertEqual(5, model.r.a[2])
 
-    def test_array_of_records_defaults_for_new_records(self):
+    @typing.no_type_check
+    def test_array_of_records_defaults_for_new_records(self) -> None:
         # test that building a model with defaults properly populates the defaults
         x_field = StructuredModel.define_field("x", StructuredModel.INT, default=1)
         y_field = StructuredModel.define_field("y", StructuredModel.INT, default=2)
@@ -116,7 +126,8 @@ class TestStructuredModelClass(unittest.TestCase):
         self.assertEqual(1, model.x)
         self.assertEqual(2, model.y)
 
-    def test_get_record_array_model(self):
+    @typing.no_type_check
+    def test_get_record_array_model(self) -> None:
         # test that a record gives access to a array model through a property on the record with _model suffix
         array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
@@ -124,14 +135,15 @@ class TestStructuredModelClass(unittest.TestCase):
         model = StructuredModel.build_model(schema)
         self.assertIsInstance(model.a_model, StructuredModel.ArrayModel)
 
-    def test_inserting_item_in_array_field_of_record_fires_item_inserted_event(self):
+    @typing.no_type_check
+    def test_inserting_item_in_array_field_of_record_fires_item_inserted_event(self) -> None:
         array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         was_item_inserted_ref = [False]
 
-        def handle_item_inserted(key, value, before_index):
+        def handle_item_inserted(key: str, value: typing.Any, before_index: int) -> None:
             self.assertEqual("a", key)
             self.assertEqual("bb", value)
             self.assertEqual(1, before_index)
@@ -142,14 +154,15 @@ class TestStructuredModelClass(unittest.TestCase):
             model.a_model.insert_item(1, "bb")
             self.assertTrue(was_item_inserted_ref[0])
 
-    def test_inserting_item_in_array_field_of_record_using_insert_fires_item_inserted_event(self):
+    @typing.no_type_check
+    def test_inserting_item_in_array_field_of_record_using_insert_fires_item_inserted_event(self) -> None:
         array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         was_item_inserted_ref = [False]
 
-        def handle_item_inserted(key, value, before_index):
+        def handle_item_inserted(key: str, value: typing.Any, before_index: int) -> None:
             self.assertEqual("a", key)
             self.assertEqual("bb", value)
             self.assertEqual(1, before_index)
@@ -160,14 +173,15 @@ class TestStructuredModelClass(unittest.TestCase):
             model.a.insert(1, "bb")
             self.assertTrue(was_item_inserted_ref[0])
 
-    def test_removing_item_in_array_field_of_record_fires_item_removed_event(self):
+    @typing.no_type_check
+    def test_removing_item_in_array_field_of_record_fires_item_removed_event(self) -> None:
         array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         was_item_removed_ref = [False]
 
-        def handle_item_removed(key, value, before_index):
+        def handle_item_removed(key: str, value: typing.Any, before_index: int) -> None:
             self.assertEqual("a", key)
             self.assertEqual("b", value)
             self.assertEqual(1, before_index)
@@ -178,14 +192,15 @@ class TestStructuredModelClass(unittest.TestCase):
             model.a_model.remove_item(1)
             self.assertTrue(was_item_removed_ref[0])
 
-    def test_removing_item_in_array_field_of_record_using_del_fires_item_removed_event(self):
+    @typing.no_type_check
+    def test_removing_item_in_array_field_of_record_using_del_fires_item_removed_event(self) -> None:
         array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
         model = StructuredModel.build_model(schema)
         was_item_removed_ref = [False]
 
-        def handle_item_removed(key, value, before_index):
+        def handle_item_removed(key: str, value: typing.Any, before_index: int) -> None:
             self.assertEqual("a", key)
             self.assertEqual("b", value)
             self.assertEqual(1, before_index)
@@ -196,7 +211,8 @@ class TestStructuredModelClass(unittest.TestCase):
             del model.a[1]
             self.assertTrue(was_item_removed_ref[0])
 
-    def test_setting_value_in_array_raises_exception(self):
+    @typing.no_type_check
+    def test_setting_value_in_array_raises_exception(self) -> None:
         array_field = StructuredModel.define_array(StructuredModel.STRING)
         str_field = StructuredModel.define_field("a", array_field, default=["a", "b", "c"])
         schema = StructuredModel.define_record("R", [str_field])
@@ -204,7 +220,8 @@ class TestStructuredModelClass(unittest.TestCase):
         with self.assertRaises(IndexError):
             model.a[0] = "A"
 
-    def test_copy_record_produces_copy(self):
+    @typing.no_type_check
+    def test_copy_record_produces_copy(self) -> None:
         x_field = StructuredModel.define_field("x", StructuredModel.INT)
         y_field = StructuredModel.define_field("y", StructuredModel.INT)
         schema = StructuredModel.define_record("A", [x_field, y_field])
@@ -219,7 +236,8 @@ class TestStructuredModelClass(unittest.TestCase):
         self.assertEqual(model.x, model_copy.x)
         self.assertEqual(model.y, model_copy.y)
 
-    def test_copy_array_produces_copy(self):
+    @typing.no_type_check
+    def test_copy_array_produces_copy(self) -> None:
         x_field = StructuredModel.define_field("x", StructuredModel.INT)
         y_field = StructuredModel.define_field("y", StructuredModel.INT)
         record = StructuredModel.define_record("A", [x_field, y_field])
@@ -237,12 +255,13 @@ class TestStructuredModelClass(unittest.TestCase):
         self.assertEqual(model.items[1].x, model_copy.items[1].x)
         self.assertEqual(model.items[1].y, model_copy.items[1].y)
 
-    def test_change_array_basic_value_generates_model_changed(self):
+    @typing.no_type_check
+    def test_change_array_basic_value_generates_model_changed(self) -> None:
         schema = StructuredModel.define_array(StructuredModel.STRING)
         model = StructuredModel.build_model(schema, value=["a", "b", "c"])
         changed_ref = [0]
 
-        def property_changed():
+        def property_changed() -> None:
             changed_ref[0] += 1
 
         with contextlib.closing(model.model_changed_event.listen(property_changed)):
@@ -252,7 +271,8 @@ class TestStructuredModelClass(unittest.TestCase):
             model.remove_item(1)
             self.assertEqual(2, changed_ref[0])
 
-    def test_change_array_records_value_generates_model_changed(self):
+    @typing.no_type_check
+    def test_change_array_records_value_generates_model_changed(self) -> None:
         x_field = StructuredModel.define_field("x", StructuredModel.INT)
         y_field = StructuredModel.define_field("y", StructuredModel.INT)
         record = StructuredModel.define_record("A", [x_field, y_field])
@@ -260,7 +280,7 @@ class TestStructuredModelClass(unittest.TestCase):
         model = StructuredModel.build_model(schema, value=[{"x": 1, "y": 2}, {"x": 3, "y": 4}])
         changed_ref = [0]
 
-        def property_changed():
+        def property_changed() -> None:
             changed_ref[0] += 1
 
         with contextlib.closing(model.model_changed_event.listen(property_changed)):
@@ -270,7 +290,8 @@ class TestStructuredModelClass(unittest.TestCase):
             model.items[1].x = 55
             self.assertEqual(2, changed_ref[0])
 
-    def test_change_record_record_value_generates_model_changed(self):
+    @typing.no_type_check
+    def test_change_record_record_value_generates_model_changed(self) -> None:
         x_field = StructuredModel.define_field("x", StructuredModel.INT)
         y_field = StructuredModel.define_field("y", StructuredModel.INT)
         sub_record = StructuredModel.define_record("A", [x_field, y_field])
@@ -279,7 +300,7 @@ class TestStructuredModelClass(unittest.TestCase):
         model = StructuredModel.build_model(schema, value={"a": {"x": 1, "y": 2}})
         changed_ref = [0]
 
-        def property_changed():
+        def property_changed() -> None:
             changed_ref[0] += 1
 
         with contextlib.closing(model.model_changed_event.listen(property_changed)):

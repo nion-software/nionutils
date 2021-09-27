@@ -8,6 +8,17 @@ import typing
 from . import Event
 
 
+class ObservableLike(typing.Protocol):
+    property_changed_event: Event.Event
+    item_set_event: Event.Event
+    item_cleared_event: Event.Event
+    item_inserted_event: Event.Event
+    item_removed_event: Event.Event
+    item_added_event: Event.Event
+    item_discarded_event: Event.Event
+    item_content_changed_event: Event.Event
+
+
 class Observable:
 
     """

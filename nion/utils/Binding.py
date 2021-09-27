@@ -12,6 +12,9 @@ import weakref
 # none
 
 # local libraries
+from . import Converter
+from . import Observable
+from . import Validator
 from .ReferenceCounting import weak_partial
 
 
@@ -42,7 +45,10 @@ class Binding:
     cases.
     """
 
-    def __init__(self, source: typing.Any, *, converter=None, validator=None, fallback=None):
+    def __init__(self, source: typing.Optional[Observable.Observable], *,
+                 converter: typing.Optional[Converter.ConverterLike[typing.Any, typing.Any]] = None,
+                 validator: typing.Optional[Validator.ValidatorLike[typing.Any]] = None,
+                 fallback: typing.Optional[typing.Any] = None) -> None:
         super().__init__()
         self.__converter = converter
         self.__validator = validator
@@ -50,11 +56,12 @@ class Binding:
         self.source_getter: typing.Optional[typing.Callable[[], typing.Any]] = None
         self.source_setter: typing.Optional[typing.Callable[[typing.Any], None]] = None
         self.target_setter: typing.Optional[typing.Callable[[typing.Any], None]] = None
-        self.__source_ref: typing.Optional[weakref.ReferenceType] = weakref.ref(source) if source else None
+        # Python 3.9+: should weakref.ReferenceType
+        self.__source_ref: typing.Optional[typing.Any] = weakref.ref(source) if source else None
         self._closed = False
 
     # not thread safe
-    def close(self):
+    def close(self) -> None:
         """Close the binding.
 
         Closes the binding. Subclasses can use this to perform any shutdown
@@ -72,34 +79,34 @@ class Binding:
         return self.__source_ref() if self.__source_ref else None
 
     @property
-    def converter(self):
+    def converter(self) -> typing.Optional[Converter.ConverterLike[typing.Any, typing.Any]]:
         """Return the converter (from source to target). Thread safe."""
         return self.__converter
 
     @property
-    def validator(self):
+    def validator(self) -> typing.Optional[Validator.ValidatorLike[typing.Any]]:
         """Return the validator (of converted value). Thread safe."""
         return self.__validator
 
     # thread safe
-    def __back_converted_value(self, target_value):
+    def __back_converted_value(self, target_value: typing.Optional[typing.Any]) -> typing.Optional[typing.Any]:
         """Return the back converted value (from target to source). Thread safe."""
         return self.__converter.convert_back(target_value) if self.__converter else target_value
 
     # thread safe
-    def __converted_value(self, source_value):
+    def __converted_value(self, source_value: typing.Optional[typing.Any]) -> typing.Optional[typing.Any]:
         """Return the converted value (from source to target). Thread safe."""
         return self.__converter.convert(source_value) if self.__converter else source_value
 
     # thread safe
-    def __validated_value(self, source_value):
+    def __validated_value(self, source_value: typing.Optional[typing.Any]) -> typing.Optional[typing.Any]:
         """Return the converted value (from source to target). Thread safe."""
         return self.__validator.validate(source_value) if self.__validator else source_value
 
     # public methods. subclasses must make sure these methods work as expected.
 
     # thread safe
-    def update_source(self, target_value):
+    def update_source(self, target_value: typing.Optional[typing.Any]) -> None:
         """Update source with back converted target value.
 
         Update the source from the target value. The target value will be back converted.
@@ -114,7 +121,7 @@ class Binding:
             self.source_setter(converted_value)
 
     # not thread safe
-    def update_target(self, source_value):
+    def update_target(self, source_value: typing.Optional[typing.Any]) -> None:
         """Update target with converted source value.
 
         Call the target setter with the unconverted value from the source.
@@ -129,7 +136,7 @@ class Binding:
         self.update_target_direct(self.__converted_value(source_value))
 
     # not thread safe
-    def update_target_direct(self, converted_value):
+    def update_target_direct(self, converted_value: typing.Optional[typing.Any]) -> None:
         """Update target directly with converted value.
 
         Call the target setter with the already converted value.
@@ -145,7 +152,7 @@ class Binding:
             self.target_setter(converted_value)
 
     # thread safe
-    def get_target_value(self):
+    def get_target_value(self) -> typing.Optional[typing.Any]:
         """Return target value by converting source.
 
         Get the value from the source that will be set on the target.
@@ -182,7 +189,10 @@ class PropertyBinding(Binding):
     # TODO: generalize to 'getter binding'
     # TODO: generalize to 'two way getter connection'
 
-    def __init__(self, source, property_name: str, *, converter=None, validator=None, fallback=None):
+    def __init__(self, source: Observable.Observable, property_name: str, *,
+                 converter: typing.Optional[Converter.ConverterLike[typing.Any, typing.Any]] = None,
+                 validator: typing.Optional[Validator.ValidatorLike[typing.Any]] = None,
+                 fallback: typing.Optional[typing.Any] = None) -> None:
         super().__init__(source, converter=converter, validator=validator, fallback=fallback)
         self.__property_name = property_name
 
@@ -212,9 +222,9 @@ class PropertyBinding(Binding):
         self.source_setter = weak_partial(set_property_value, self.source)
         self.source_getter = weak_partial(get_property_value, self.source)
 
-    def close(self):
+    def close(self) -> None:
         self.__property_changed_listener.close()
-        self.__property_changed_listener = None
+        self.__property_changed_listener = typing.cast(typing.Any, None)
         super().close()
 
     @property
@@ -240,7 +250,10 @@ class PropertyAttributeBinding(Binding):
     The owner should call close on this object.
     """
 
-    def __init__(self, source, property_name: str, attribute_name: str, converter=None, fallback=None, update_attribute_fn=None):
+    def __init__(self, source: Observable.Observable, property_name: str, attribute_name: str, *,
+                 converter: typing.Optional[Converter.ConverterLike[typing.Any, typing.Any]] = None,
+                 fallback: typing.Optional[typing.Any] = None,
+                 update_attribute_fn: typing.Optional[typing.Callable[[typing.Any, str, typing.Any], typing.Any]] = None) -> None:
         super().__init__(source, converter=converter, fallback=fallback)
         self.__property_name = property_name
         self.__attribute_name = attribute_name
@@ -273,9 +286,9 @@ class PropertyAttributeBinding(Binding):
         self.source_setter = weak_partial(source_setter, self.source)
         self.source_getter = weak_partial(source_getter, self.source)
 
-    def close(self):
+    def close(self) -> None:
         self.__property_changed_listener.close()
-        self.__property_changed_listener = None
+        self.__property_changed_listener = typing.cast(typing.Any, None)
         super().close()
 
 
@@ -297,7 +310,9 @@ class TuplePropertyBinding(Binding):
     The owner should call close on this object.
     """
 
-    def __init__(self, source, property_name: str, tuple_index: int, converter=None, fallback=None):
+    def __init__(self, source: Observable.Observable, property_name: str, tuple_index: int, *,
+                 converter: typing.Optional[Converter.ConverterLike[typing.Any, typing.Any]] = None,
+                 fallback: typing.Optional[typing.Any] = None) -> None:
         super().__init__(source, converter=converter, fallback=fallback)
         self.__property_name = property_name
 
@@ -328,7 +343,7 @@ class TuplePropertyBinding(Binding):
         self.source_setter = weak_partial(source_setter, self.source)
         self.source_getter = weak_partial(source_getter, self.source)
 
-    def close(self):
+    def close(self) -> None:
         self.__property_changed_listener.close()
-        self.__property_changed_listener = None
+        self.__property_changed_listener = typing.cast(typing.Any, None)
         super().close()

@@ -12,8 +12,15 @@ Validator classes. Useful for bindings.
 # none
 import typing
 
+T = typing.TypeVar('T')
 
-class IntegerRangeValidator:
+
+class ValidatorLike(typing.Protocol, typing.Generic[T]):
+
+    def validate(self, value: T) -> T: ...
+
+
+class IntegerRangeValidator(ValidatorLike[int]):
     """Validate an integer to a specific range."""
 
     def __init__(self, mn: typing.Optional[int] = None, mx: typing.Optional[int] = None) -> None:

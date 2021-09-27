@@ -557,6 +557,10 @@ class ValueChangeStream(ValueStream[ValueChange[T]], typing.Generic[T]):
         self.__value_stream = typing.cast(AbstractStream[T], None)
         super().about_to_delete()
 
+    def add_ref(self) -> ValueChangeStream[T]:
+        super().add_ref()
+        return self
+
     def _send_value(self) -> None:
         if self.__is_active:
             assert self.value is not None

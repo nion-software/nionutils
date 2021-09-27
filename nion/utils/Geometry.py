@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 # standard libraries
+import dataclasses
 import collections
 import math
 import typing
@@ -17,8 +18,23 @@ import typing
 # None
 
 
-def make_pretty(val, rounding):
-    """ Make a pretty number, using algorithm from Paul Heckbert, extended to handle negative numbers. """
+RectIntTuple = typing.Tuple[typing.Tuple[int, int], typing.Tuple[int, int]]
+PointIntTuple = typing.Tuple[int, int]
+SizeIntTuple = typing.Tuple[int, int]
+IntRectTuple = typing.Union["IntRect", RectIntTuple]
+IntPointTuple = typing.Union["IntPoint", PointIntTuple]
+IntSizeTuple = typing.Union["IntSize", SizeIntTuple]
+
+RectFloatTuple = typing.Tuple[typing.Tuple[float, float], typing.Tuple[float, float]]
+PointFloatTuple = typing.Tuple[float, float]
+SizeFloatTuple = typing.Tuple[float, float]
+FloatRectTuple = typing.Union["FloatRect", RectFloatTuple]
+FloatPointTuple = typing.Union["FloatPoint", PointFloatTuple]
+FloatSizeTuple = typing.Union["FloatSize", SizeFloatTuple]
+
+
+def make_pretty(val: float, rounding: bool) -> typing.Tuple[float, float]:
+    """Make a pretty number, using algorithm from Paul Heckbert, extended to handle negative numbers."""
     val = float(val)
     if not val > 0.0 and not val < 0.0:
         return 0.0, 0  # make sense of values that are neither greater or less than 0.0
@@ -51,26 +67,29 @@ def make_pretty(val, rounding):
     return math.copysign(val_norm * factor10, val), factor10
 
 
-def make_pretty2(val, rounding):
-    """ Make a pretty number, using algorithm from Paul Heckbert, extended to handle negative numbers. """
+def make_pretty2(val: float, rounding: bool) -> float:
+    """Make a pretty number, using algorithm from Paul Heckbert, extended to handle negative numbers."""
     return make_pretty(val, rounding)[0]
 
 
-def make_pretty_range2(value_low, value_high, ticks=5, logarithmic=False) -> typing.Tuple[float, float, typing.Sequence[float], float, int, float]:
-    """
-        Returns minimum, maximum, list of tick values, division, and precision.
+def arange(start: float, stop: float, step: float) -> typing.List[float]:
+    return [start + x * step for x in range(math.ceil((stop - start) / step))]
 
-        Value high and value low specify the data range.
 
-        Tight indicates whether the pretty range should extend to the data (tight)
-            or beyond the data (loose).
+def make_pretty_range2(value_low: float, value_high: float, ticks: int = 5, logarithmic: bool = False) -> typing.Tuple[float, float, typing.Sequence[float], float, int, float]:
+    """Returns minimum, maximum, list of tick values, division, and precision.
 
-        Ticks is the approximate number of ticks desired, including the ends (if loose).
+    Value high and value low specify the data range.
 
-        Useful links:
-            http://tog.acm.org/resources/GraphicsGems/gems/Label.c
-            https://svn.r-project.org/R/trunk/src/appl/pretty.c
-            http://www.mathworks.com/help/matlab/ref/axes_props.html
+    Tight indicates whether the pretty range should extend to the data (tight)
+        or beyond the data (loose).
+
+    Ticks is the approximate number of ticks desired, including the ends (if loose).
+
+    Useful links:
+        http://tog.acm.org/resources/GraphicsGems/gems/Label.c
+        https://svn.r-project.org/R/trunk/src/appl/pretty.c
+        http://www.mathworks.com/help/matlab/ref/axes_props.html
     """
 
     # adjust value_low, value_high to be floats in increasing order
@@ -106,22 +125,19 @@ def make_pretty_range2(value_low, value_high, ticks=5, logarithmic=False) -> typ
     # make the tick marks
     tick_values = []
 
-    def arange(start, stop, step):
-        return [start + x * step for x in range(math.ceil((stop - start) / step))]
-
     for x in arange(graph_minimum, graph_maximum + 0.5 * division, division):
         tick_values.append(x)
 
     return graph_minimum, graph_maximum, tick_values, division, precision, factor10
 
 
-def make_pretty_range(value_low, value_high, tight=False, ticks=5):
+def make_pretty_range(value_low: float, value_high: float, tight: bool = False, ticks: int = 5) -> typing.Tuple[float, float, typing.Sequence[float], float, int]:
     return make_pretty_range2(value_low, value_high, ticks)[:-1]
 
 
 class Ticker:
 
-    def __init__(self, value_low: float, value_high: float, *, ticks: int=5):
+    def __init__(self, value_low: float, value_high: float, *, ticks: int = 5) -> None:
         self._value_low = value_low
         self._value_high = value_high
         self._ticks = ticks
@@ -201,9 +217,6 @@ class LogTicker(Ticker):
             self._tick_labels = ["0e+00"]
             return
 
-        def arange(start, stop, step):
-            return [start + x * step for x in range(math.ceil((stop - start) / step))]
-
         val_range = abs(self._value_high - self._value_low)
         self._factor_b = math.pow(self.base, math.floor(math.log(val_range, self.base))) if (self._ticks-2)/self._base > val_range > 0 else 1.0
         self._minimum = math.floor(self._value_low / self._factor_b)
@@ -222,6 +235,7 @@ class LogTicker(Ticker):
         # We will get len(decades) * subs ticks, so calculate the number of subs we need
         num_subs = self._ticks / (val_range / self._division) if val_range > 0 else 0.0
 
+        subs: typing.List[float]
         if self._factor_b != 1.0:
            subs = []
         elif num_subs >= (self.base - 2):
@@ -261,9 +275,9 @@ class LogTicker(Ticker):
         return self._base
 
 
-def fit_to_aspect_ratio(rect, aspect_ratio):
+def fit_to_aspect_ratio(rect_: typing.Union[FloatRectTuple, IntRectTuple], aspect_ratio: float) -> "FloatRect":
     """ Return rectangle fit to aspect ratio. Returned rectangle will have float coordinates. """
-    rect = FloatRect.make(rect)
+    rect = FloatRect.make(((rect_[0][0], rect_[0][1]), (rect_[1][0], rect_[1][1])))
     aspect_ratio = float(aspect_ratio)
     if rect.aspect_ratio > aspect_ratio:
         # height will fill entire frame
@@ -276,83 +290,92 @@ def fit_to_aspect_ratio(rect, aspect_ratio):
         return FloatRect(origin=new_origin, size=new_size)
 
 
-def fit_to_size(rect, fit_size):
+def fit_to_size(rect: typing.Union[FloatRectTuple, IntRectTuple], fit_size: typing.Union[FloatSizeTuple, IntSizeTuple]) -> "FloatRect":
     """ Return rectangle fit to size (aspect ratio). """
-    return fit_to_aspect_ratio(rect, float(fit_size[1])/float(fit_size[0]))
+    return fit_to_aspect_ratio(rect, float(fit_size[1]) / float(fit_size[0]))
 
 
-def inset_rect(rect, amount):
+def inset_rect(rect: FloatRectTuple, amount: float) -> RectFloatTuple:
     """ Return rectangle inset by given amount. """
-    return ((rect[0][0] + amount, rect[0][1] + amount), (rect[1][0] - 2*amount, rect[1][1] - 2*amount))
+    return ((rect[0][0] + amount, rect[0][1] + amount), (rect[1][0] - 2 * amount, rect[1][1] - 2 * amount))
 
 
-def distance(pt1, pt2):
+def distance(pt1: FloatPointTuple, pt2: FloatPointTuple) -> float:
     """ Return distance between points as float. """
     return math.sqrt(pow(pt2[0] - pt1[0], 2) + pow(pt2[1] - pt1[1], 2))
 
 
-def midpoint(pt1, pt2):
+def midpoint(pt1: FloatPointTuple, pt2: FloatPointTuple) -> PointFloatTuple:
     """ Return midpoint between points. """
     return (0.5 * (pt1[0] + pt2[0]), 0.5 * (pt1[1] + pt2[1]))
 
 
-Margins = collections.namedtuple("Margins", ["top", "left", "bottom", "right"])
-"""
-    Margins for a canvas item, specified by top, left, bottom, and right.
-"""
+@dataclasses.dataclass
+class Margins:
+    """Margins for a canvas item, specified by top, left, bottom, and right."""
+    top: int
+    left: int
+    bottom: int
+    right: int
 
 
 class IntPoint:
+    """A class representing an integer point (x, y)."""
 
-    """ A class representing an integer point (x, y). """
-
-    def __init__(self, y=0, x=0):
+    def __init__(self, y: int = 0, x: int = 0) -> None:
         self.__y = int(y)
         self.__x = int(x)
 
     @classmethod
-    def make(cls, value):
+    def make(cls, value: IntPointTuple) -> IntPoint:
         """ Make an IntPoint from a y, x tuple. """
-        return IntPoint(y=value[0], x=value[1])
+        value_tuple = tuple(value)
+        return IntPoint(y=value_tuple[0], x=value_tuple[1])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "(x={}, y={})".format(self.__x, self.__y)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{2} (x={0}, y={1})".format(self.__x, self.__y, super(IntPoint, self).__repr__())
 
     def to_float_point(self) -> FloatPoint:
         return FloatPoint(y=self.y, x=self.x)
 
-    def __get_x(self):
-        """ Return the x coordinate. """
+    @property
+    def x(self) -> int:
         return self.__x
-    x = property(__get_x)
 
-    def __get_y(self):
-        """ Return the y coordinate. """
+    @property
+    def y(self) -> int:
         return self.__y
-    y = property(__get_y)
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         if other is not None:
             other = IntPoint.make(other)
-            return self.__x == other.x and self.__y == other.y
+            return bool((self.__x == other.x) and (self.__y == other.y))
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: typing.Any) -> bool:
         if other is not None:
             other = IntPoint.make(other)
-            return self.__x != other.x or self.__y != other.y
+            return bool((self.__x != other.x) or (self.__y != other.y))
         return True
 
-    def __neg__(self):
+    def __neg__(self) -> IntPoint:
         return IntPoint(y=-self.__y, x=-self.__x)
 
-    def __abs__(self):
+    def __abs__(self) -> float:
         return math.sqrt(pow(self.__x, 2) + pow(self.__y, 2))
 
-    def __add__(self, other):
+    @typing.overload
+    def __add__(self, other: typing.Union[IntPoint, IntSize]) -> IntPoint:
+        ...
+
+    @typing.overload
+    def __add__(self, other: IntRect) -> IntRect:
+        ...
+
+    def __add__(self, other: typing.Union[IntPoint, IntSize, IntRect]) -> typing.Union[IntPoint, IntRect]:
         if isinstance(other, IntPoint):
             return IntPoint(y=self.__y + other.y, x=self.__x + other.x)
         elif isinstance(other, IntSize):
@@ -362,7 +385,15 @@ class IntPoint:
         else:
             raise NotImplementedError()
 
-    def __sub__(self, other):
+    @typing.overload
+    def __sub__(self, other: typing.Union[IntPoint, IntSize]) -> IntPoint:
+        ...
+
+    @typing.overload
+    def __sub__(self, other: IntRect) -> IntRect:
+        ...
+
+    def __sub__(self, other: typing.Union[IntPoint, IntSize, IntRect]) -> typing.Union[IntPoint, IntRect]:
         if isinstance(other, IntPoint):
             return IntPoint(y=self.__y - other.y, x=self.__x - other.x)
         elif isinstance(other, IntSize):
@@ -372,10 +403,13 @@ class IntPoint:
         else:
             raise NotImplementedError()
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> int:
         return (self.__y, self.__x)[index]
 
-    def __iter__(self):
+    def __len__(self) -> int:
+        return 2
+
+    def __iter__(self) -> typing.Iterator[int]:
         yield self.__y
         yield self.__x
 
@@ -384,7 +418,8 @@ class IntSize:
 
     """ A class representing an integer size (width, height). """
 
-    def __init__(self, height=None, width=None, h=None, w=None):
+    def __init__(self, height: typing.Optional[int] = None, width: typing.Optional[int] = None,
+                 h: typing.Optional[int] = None, w: typing.Optional[int] = None) -> None:
         if height is not None:
             self.__height = int(height)
         elif h is not None:
@@ -399,77 +434,78 @@ class IntSize:
             self.__width = 0
 
     @classmethod
-    def make(cls, value):
+    def make(cls, value: IntSizeTuple) -> IntSize:
         """ Make an IntSize from a height, width tuple. """
-        return IntSize(value[0], value[1])
+        value_tuple = tuple(value)
+        return IntSize(value_tuple[0], value_tuple[1])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "(w={}, h={})".format(self.__width, self.__height)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{2} (w={0}, h={1})".format(self.__width, self.__height, super(IntSize, self).__repr__())
 
     def to_float_size(self) -> FloatSize:
         return FloatSize(h=self.height, w=self.width)
 
-    def __get_width(self):
-        """ Return the width. """
+    @property
+    def width(self) -> int:
         return self.__width
-    width = property(__get_width)
 
-    def __get_height(self):
-        """ Return the height. """
+    @property
+    def height(self) -> int:
         return self.__height
-    height = property(__get_height)
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         if other is not None:
             other = IntSize.make(other)
-            return self.__width == other.width and self.__height == other.height
+            return bool((self.__width == other.width) and (self.__height == other.height))
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: typing.Any) -> bool:
         if other is not None:
             other = IntSize.make(other)
-            return self.__width != other.width or self.__height != other.height
+            return bool((self.__width != other.width) or (self.__height != other.height))
         return True
 
-    def __neg__(self):
+    def __neg__(self) -> IntSize:
         return IntSize(-self.__height, -self.__width)
 
-    def __abs__(self):
+    def __abs__(self) -> float:
         return math.sqrt(pow(self.__width, 2) + pow(self.__height, 2))
 
-    def __add__(self, other):
-        other = IntSize.make(other)
+    def __add__(self, other: typing.Union[IntSizeTuple, IntPointTuple]) -> IntSize:
+        other = IntSize.make((other[0], other[1]))
         return IntSize(self.__height + other.height, self.__width + other.width)
 
-    def __sub__(self, other):
-        other = IntSize.make(other)
+    def __sub__(self, other: typing.Union[IntSizeTuple, IntPointTuple]) -> IntSize:
+        other = IntSize.make((other[0], other[1]))
         return IntSize(self.__height - other.height, self.__width - other.width)
 
-    def __mul__(self, multiplicand):
+    def __mul__(self, multiplicand: float) -> IntSize:
         multiplicand = float(multiplicand)
-        return IntSize(self.__height * multiplicand, self.__width * multiplicand)
+        return IntSize(int(self.__height * multiplicand), int(self.__width * multiplicand))
 
-    def __rmul__(self, multiplicand):
+    def __rmul__(self, multiplicand: float) -> IntSize:
         multiplicand = float(multiplicand)
-        return IntSize(self.__height * multiplicand, self.__width * multiplicand)
+        return IntSize(int(self.__height * multiplicand), int(self.__width * multiplicand))
 
-    def __floordiv__(self, other):
-        return IntSize(self.__height / other, self.__width / other)
+    def __floordiv__(self, other: float) -> IntSize:
+        return IntSize(int(self.__height / other), int(self.__width / other))
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> int:
         return (self.__height, self.__width)[index]
 
-    def __iter__(self):
+    def __len__(self) -> int:
+        return 2
+
+    def __iter__(self) -> typing.Iterator[int]:
         yield self.__height
         yield self.__width
 
-    def __get_aspect_ratio(self):
-        """ Return the aspect ratio as a float. """
+    @property
+    def aspect_ratio(self) -> float:
         return float(self.__width) / float(self.__height) if self.__height != 0 else 1.0
-    aspect_ratio = property(__get_aspect_ratio)
 
 
 class IntRect:
@@ -480,150 +516,147 @@ class IntRect:
         Increasing size goes down and to the right from origin.
     """
 
-    def __init__(self, origin, size):
+    def __init__(self, origin: IntPointTuple, size: IntSizeTuple) -> None:
         self.__origin = IntPoint.make(origin)
         self.__size = IntSize.make(size)
 
     @classmethod
-    def make(cls, value):
+    def make(cls, value: IntRectTuple) -> IntRect:
         """ Make an IntRect from a origin, size tuple. """
-        return IntRect(value[0], value[1])
+        value_tuple = tuple(value)
+        return IntRect(typing.cast(IntPoint, value_tuple[0]), typing.cast(IntSize, value_tuple[1]))
 
     @classmethod
-    def from_center_and_size(cls, center, size):
+    def from_center_and_size(cls, center: IntPointTuple, size: IntSizeTuple) -> IntRect:
         """ Make an IntRect from a center, size. """
         center = IntPoint.make(center)
         size = IntSize.make(size)
-        origin = center - IntSize(height=size.height * 0.5, width=size.width * 0.5)
+        origin = center - IntSize(height=size.height // 2, width=size.width // 2)
         return IntRect(origin, size)
 
     @classmethod
-    def from_tlbr(cls, top, left, bottom, right):
+    def from_tlbr(cls, top: int, left: int, bottom: int, right: int) -> IntRect:
         """ Make an IntRect from a center, size. """
         origin = IntPoint(y=top, x=left)
         size = IntSize(height=bottom - top, width=right - left)
         return IntRect(origin, size)
 
     @classmethod
-    def from_tlhw(cls, top, left, height, width):
+    def from_tlhw(cls, top: int, left: int, height: int, width: int) -> IntRect:
         """ Make an IntRect from a center, size. """
         origin = IntPoint(y=top, x=left)
         size = IntSize(height=height, width=width)
         return IntRect(origin, size)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "(o={}, s={})".format(self.__origin, self.__size)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{2} (o={0}, s={1})".format(self.__origin, self.__size, super(IntRect, self).__repr__())
 
     def to_float_rect(self) -> FloatRect:
         return FloatRect.from_tlbr(self.top, self.left, self.bottom, self.right)
 
-    def __get_origin(self):
-        """ Return the origin as IntPoint. """
+    @property
+    def origin(self) -> IntPoint:
         return self.__origin
-    origin = property(__get_origin)
 
-    def __get_size(self):
-        """ Return the size as IntSize. """
+    @property
+    def size(self) -> IntSize:
         return self.__size
-    size = property(__get_size)
 
-    def __get_width(self):
-        """ Return the width. """
-        return self.__size.width
-    width = property(__get_width)
+    @property
+    def width(self) -> int:
+        return self.size.width
 
-    def __get_height(self):
-        """ Return the height. """
-        return self.__size.height
-    height = property(__get_height)
+    @property
+    def height(self) -> int:
+        return self.size.height
 
-    def __get_left(self):
-        """ Return the left coordinate. """
-        return self.__origin.x
-    left = property(__get_left)
+    @property
+    def left(self) -> int:
+        return self.origin.x
 
-    def __get_top(self):
-        """ Return the top coordinate. """
-        return self.__origin.y
-    top = property(__get_top)
+    @property
+    def top(self) -> int:
+        return self.origin.y
 
-    def __get_right(self):
-        """ Return the right coordinate. """
-        return self.__origin.x + self.__size.width
-    right = property(__get_right)
+    @property
+    def right(self) -> int:
+        return self.origin.x + self.size.width
 
-    def __get_bottom(self):
-        """ Return the bottom coordinate. """
-        return self.__origin.y + self.__size.height
-    bottom = property(__get_bottom)
+    @property
+    def bottom(self) -> int:
+        return self.origin.y + self.size.height
 
-    def __get_top_left(self):
-        """ Return the top left point. """
+    @property
+    def top_left(self) -> IntPoint:
         return IntPoint(y=self.top, x=self.left)
-    top_left = property(__get_top_left)
 
-    def __get_top_right(self):
-        """ Return the top right point. """
+    @property
+    def top_right(self) -> IntPoint:
         return IntPoint(y=self.top, x=self.right)
-    top_right = property(__get_top_right)
 
-    def __get_bottom_left(self):
-        """ Return the bottom left point. """
+    @property
+    def bottom_left(self) -> IntPoint:
         return IntPoint(y=self.bottom, x=self.left)
-    bottom_left = property(__get_bottom_left)
 
-    def __get_bottom_right(self):
-        """ Return the bottom right point. """
+    @property
+    def bottom_right(self) -> IntPoint:
         return IntPoint(y=self.bottom, x=self.right)
-    bottom_right = property(__get_bottom_right)
 
-    def __get_center(self):
-        """ Return the center point. """
+    @property
+    def center(self) -> IntPoint:
         return IntPoint(y=(self.top + self.bottom) // 2, x=(self.left + self.right) // 2)
-    center = property(__get_center)
 
     @property
     def slice(self) -> typing.Tuple[slice, slice]:
         return slice(self.top, self.bottom), slice(self.left, self.right)
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         if other is not None:
             other = IntRect.make(other)
-            return self.__origin == other.origin and self.__size == other.size
+            return bool((self.__origin == other.origin) and (self.__size == other.size))
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: typing.Any) -> bool:
         if other is not None:
             other = IntRect.make(other)
-            return self.__origin != other.origin or self.__size != other.size
+            return bool((self.__origin != other.origin) or (self.__size != other.size))
         return True
 
-    def __getitem__(self, index):
-        return (tuple(self.__origin), tuple(self.__size))[index]
+    @typing.overload
+    def __getitem__(self, index: typing.Literal[0]) -> PointIntTuple: ...
 
-    def __iter__(self):
-        yield tuple(self.__origin)
-        yield tuple(self.__size)
+    @typing.overload
+    def __getitem__(self, index: typing.Literal[1]) -> SizeIntTuple: ...
 
-    def __get_aspect_ratio(self):
-        """ Return the aspect ratio as a float. """
+    def __getitem__(self, index: int) -> typing.Union[PointIntTuple, SizeIntTuple]:
+        origin_tuple = typing.cast(PointIntTuple, tuple(self.__origin))
+        size_tuple = typing.cast(SizeIntTuple, tuple(self.__size))
+        return (origin_tuple, size_tuple)[index]
+
+    def __len__(self) -> int:
+        return 2
+
+    def __iter__(self) -> typing.Iterator[typing.Union[PointIntTuple, SizeIntTuple]]:
+        yield self.__getitem__(0)
+        yield self.__getitem__(1)
+
+    @property
+    def aspect_ratio(self) -> float:
         return float(self.width) / float(self.height) if self.height != 0 else 1.0
-    aspect_ratio = property(__get_aspect_ratio)
 
-    def contains_point(self, point):
-        """
-            Return whether the point is contained in this rectangle.
+    def contains_point(self, point: IntPointTuple) -> bool:
+        """Return whether the point is contained in this rectangle.
 
-            Left/top sides are inclusive, right/bottom sides are not.
+        Left/top sides are inclusive, right/bottom sides are not.
         """
         point = IntPoint.make(point)
         return point.x >= self.left and point.x < self.right and point.y >= self.top and point.y < self.bottom
 
-    def intersects_rect(self, rect):
-        """ Return whether the rectangle intersects this rectangle. """
+    def intersects_rect(self, rect: IntRect) -> bool:
+        """Return whether the rectangle intersects this rectangle."""
         # if one rectangle is on left side of the other
         if self.left > rect.right or rect.left > self.right:
             return False
@@ -632,11 +665,11 @@ class IntRect:
             return False
         return True
 
-    def translated(self, point):
+    def translated(self, point: IntPointTuple) -> IntRect:
         """ Return the rectangle translated by the point or size. """
         return IntRect(self.origin + IntPoint.make(point), self.size)
 
-    def inset(self, dx, dy=None):
+    def inset(self, dx: int, dy: typing.Optional[int] = None) -> IntRect:
         """ Returns the rectangle inset by the specified amount. """
         dy = dy if dy is not None else dx
         origin = IntPoint(y=self.top + dy, x=self.left + dx)
@@ -657,13 +690,13 @@ class IntRect:
         right = max(self.right, rect.right)
         return IntRect.from_tlbr(top, left, bottom, right)
 
-    def __add__(self, other) -> IntRect:
+    def __add__(self, other: IntPoint) -> IntRect:
         if isinstance(other, IntPoint):
             return IntRect.from_center_and_size(self.center + other, self.size)
         else:
             raise NotImplementedError()
 
-    def __sub__(self, other) -> IntRect:
+    def __sub__(self, other: IntPoint) -> IntRect:
         if isinstance(other, IntPoint):
             return IntRect.from_center_and_size(self.center - other, self.size)
         else:
@@ -674,50 +707,57 @@ class FloatPoint:
 
     """ A class representing an float point (x, y). """
 
-    def __init__(self, y=0.0, x=0.0):
+    def __init__(self, y: float = 0.0, x: float = 0.0) -> None:
         self.__y = float(y)
         self.__x = float(x)
 
     @classmethod
-    def make(cls, value):
+    def make(cls, value: FloatPointTuple) -> FloatPoint:
         """ Make an FloatPoint from a y, x tuple. """
-        return FloatPoint(y=value[0], x=value[1])
+        value_tuple = tuple(value)
+        return FloatPoint(y=value_tuple[0], x=value_tuple[1])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "(x={}, y={})".format(self.__x, self.__y)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{2} (x={0}, y={1})".format(self.__x, self.__y, super(FloatPoint, self).__repr__())
 
-    def __get_x(self):
-        """ Return the x coordinate. """
+    @property
+    def x(self) -> float:
         return self.__x
-    x = property(__get_x)
 
-    def __get_y(self):
-        """ Return the y coordinate. """
+    @property
+    def y(self) -> float:
         return self.__y
-    y = property(__get_y)
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         if other is not None:
             other = FloatPoint.make(other)
-            return self.__x == other.x and self.__y == other.y
+            return bool((self.__x == other.x) and (self.__y == other.y))
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: typing.Any) -> bool:
         if other is not None:
             other = FloatPoint.make(other)
-            return self.__x != other.x or self.__y != other.y
+            return bool((self.__x != other.x) or (self.__y != other.y))
         return True
 
-    def __neg__(self):
+    def __neg__(self) -> FloatPoint:
         return FloatPoint(y=-self.__y, x=-self.__x)
 
-    def __abs__(self):
+    def __abs__(self) -> float:
         return math.sqrt(pow(self.__x, 2) + pow(self.__y, 2))
 
-    def __add__(self, other):
+    @typing.overload
+    def __add__(self, other: typing.Union[FloatPoint, FloatSize]) -> FloatPoint:
+        ...
+
+    @typing.overload
+    def __add__(self, other: FloatRect) -> FloatRect:
+        ...
+
+    def __add__(self, other: typing.Union[FloatPoint, FloatSize, FloatRect]) -> typing.Union[FloatPoint, FloatRect]:
         if isinstance(other, FloatPoint):
             return FloatPoint(y=self.__y + other.y, x=self.__x + other.x)
         elif isinstance(other, FloatSize):
@@ -727,7 +767,15 @@ class FloatPoint:
         else:
             raise NotImplementedError()
 
-    def __sub__(self, other):
+    @typing.overload
+    def __sub__(self, other: typing.Union[FloatPoint, FloatSize]) -> FloatPoint:
+        ...
+
+    @typing.overload
+    def __sub__(self, other: FloatRect) -> FloatRect:
+        ...
+
+    def __sub__(self, other: typing.Union[FloatPoint, FloatSize, FloatRect]) -> typing.Union[FloatPoint, FloatRect]:
         if isinstance(other, FloatPoint):
             return FloatPoint(y=self.__y - other.y, x=self.__x - other.x)
         elif isinstance(other, FloatSize):
@@ -737,22 +785,25 @@ class FloatPoint:
         else:
             raise NotImplementedError()
 
-    def __mul__(self, multiplicand) -> FloatPoint:
+    def __mul__(self, multiplicand: float) -> FloatPoint:
         multiplicand = float(multiplicand)
         return FloatPoint(y=self.__y * multiplicand, x=self.__x * multiplicand)
 
-    def __rmul__(self, multiplicand) -> FloatPoint:
+    def __rmul__(self, multiplicand: float) -> FloatPoint:
         multiplicand = float(multiplicand)
         return FloatPoint(y=self.__y * multiplicand, x=self.__x * multiplicand)
 
-    def __truediv__(self, dividend) -> FloatPoint:
+    def __truediv__(self, dividend: float) -> FloatPoint:
         dividend = float(dividend)
         return FloatPoint(y=self.__y / dividend, x=self.__x / dividend)
 
     def __getitem__(self, index: int) -> float:
         return (self.__y, self.__x)[index]
 
-    def __iter__(self):
+    def __len__(self) -> int:
+        return 2
+
+    def __iter__(self) -> typing.Iterator[float]:
         yield self.__y
         yield self.__x
 
@@ -771,7 +822,8 @@ class FloatSize:
 
     """ A class representing an float size (width, height). """
 
-    def __init__(self, height=None, width=None, h=None, w=None):
+    def __init__(self, height: typing.Optional[float] = None, width: typing.Optional[float] = None,
+                 h: typing.Optional[float] = None, w: typing.Optional[float] = None) -> None:
         if height is not None:
             self.__height = float(height)
         elif h is not None:
@@ -786,75 +838,76 @@ class FloatSize:
             self.__width = 0.0
 
     @classmethod
-    def make(cls, value):
+    def make(cls, value: FloatSizeTuple) -> FloatSize:
         """ Make an FloatSize from a height, width tuple. """
-        return FloatSize(value[0], value[1])
+        value_tuple = tuple(value)
+        return FloatSize(value_tuple[0], value_tuple[1])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "(w={}, h={})".format(self.__width, self.__height)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{2} (w={0}, h={1})".format(self.__width, self.__height, super(FloatSize, self).__repr__())
 
-    def __get_width(self):
-        """ Return the width. """
+    @property
+    def width(self) -> float:
         return self.__width
-    width = property(__get_width)
 
-    def __get_height(self):
-        """ Return the height. """
+    @property
+    def height(self) -> float:
         return self.__height
-    height = property(__get_height)
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         if other is not None:
             other = FloatSize.make(other)
-            return self.__width == other.width and self.__height == other.height
+            return bool((self.__width == other.width) and (self.__height == other.height))
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: typing.Any) -> bool:
         if other is not None:
             other = FloatSize.make(other)
-            return self.__width != other.width or self.__height != other.height
+            return bool((self.__width != other.width) or (self.__height != other.height))
         return True
 
-    def __neg__(self):
+    def __neg__(self) -> FloatSize:
         return FloatSize(-self.__height, -self.__width)
 
-    def __abs__(self):
+    def __abs__(self) -> float:
         return math.sqrt(pow(self.__width, 2) + pow(self.__height, 2))
 
-    def __add__(self, other):
-        other = FloatSize.make(other)
+    def __add__(self, other: typing.Union[FloatSizeTuple, FloatPointTuple]) -> FloatSize:
+        other = FloatSize.make((other[0], other[1]))
         return FloatSize(self.__height + other.height, self.__width + other.width)
 
-    def __sub__(self, other):
-        other = FloatSize.make(other)
+    def __sub__(self, other: typing.Union[FloatSizeTuple, FloatPointTuple]) -> FloatSize:
+        other = FloatSize.make((other[0], other[1]))
         return FloatSize(self.__height - other.height, self.__width - other.width)
 
-    def __mul__(self, multiplicand):
+    def __mul__(self, multiplicand: float) -> FloatSize:
         multiplicand = float(multiplicand)
         return FloatSize(self.__height * multiplicand, self.__width * multiplicand)
 
-    def __rmul__(self, multiplicand):
+    def __rmul__(self, multiplicand: float) -> FloatSize:
         multiplicand = float(multiplicand)
         return FloatSize(self.__height * multiplicand, self.__width * multiplicand)
 
-    def __truediv__(self, dividend) -> FloatSize:
+    def __truediv__(self, dividend: float) -> FloatSize:
         dividend = float(dividend)
         return FloatSize(self.__height / dividend, self.__width / dividend)
 
     def __getitem__(self, index: int) -> float:
         return (self.__height, self.__width)[index]
 
-    def __iter__(self):
+    def __len__(self) -> int:
+        return 2
+
+    def __iter__(self) -> typing.Iterator[float]:
         yield self.__height
         yield self.__width
 
-    def __get_aspect_ratio(self):
-        """ Return the aspect ratio as a float. """
+    @property
+    def aspect_ratio(self) -> float:
         return float(self.__width) / float(self.__height) if self.__height != 0 else 1.0
-    aspect_ratio = property(__get_aspect_ratio)
 
     def rotate(self, radians: float) -> FloatSize:
         dx = self.width
@@ -874,17 +927,18 @@ class FloatRect:
         Increasing size goes down and to the right from origin.
     """
 
-    def __init__(self, origin, size):
+    def __init__(self, origin: FloatPointTuple, size: FloatSizeTuple) -> None:
         self.__origin = FloatPoint.make(origin)
         self.__size = FloatSize.make(size)
 
     @classmethod
-    def make(cls, value):
+    def make(cls, value: FloatRectTuple) -> FloatRect:
         """ Make a FloatRect from a origin, size tuple. """
-        return FloatRect(value[0], value[1])
+        value_tuple = tuple(value)
+        return FloatRect(typing.cast(FloatPoint, value_tuple[0]), typing.cast(FloatSize, value_tuple[1]))
 
     @classmethod
-    def from_center_and_size(cls, center, size):
+    def from_center_and_size(cls, center: FloatPointTuple, size: FloatSizeTuple) -> FloatRect:
         """ Make a FloatRect from a center, size. """
         center = FloatPoint.make(center)
         size = FloatSize.make(size)
@@ -892,14 +946,14 @@ class FloatRect:
         return FloatRect(origin, size)
 
     @classmethod
-    def from_tlbr(cls, top, left, bottom, right):
+    def from_tlbr(cls, top: float, left: float, bottom: float, right: float) -> FloatRect:
         """ Make an FloatRect from a center, size. """
         origin = FloatPoint(y=top, x=left)
         size = FloatSize(height=bottom - top, width=right - left)
         return FloatRect(origin, size)
 
     @classmethod
-    def from_tlhw(cls, top, left, height, width):
+    def from_tlhw(cls, top: float, left: float, height: float, width: float) -> FloatRect:
         """ Make an FloatRect from a center, size. """
         origin = FloatPoint(y=top, x=left)
         size = FloatSize(height=height, width=width)
@@ -909,112 +963,108 @@ class FloatRect:
     def unit_rect(cls) -> FloatRect:
         return cls.from_tlhw(0, 0, 1, 1)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "(o={}, s={})".format(self.__origin, self.__size)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{2} (o={0}, s={1})".format(self.__origin, self.__size, super(FloatRect, self).__repr__())
 
-    def __get_origin(self):
-        """ Return the origin as FloatPoint. """
+    @property
+    def origin(self) -> FloatPoint:
         return self.__origin
-    origin = property(__get_origin)
 
-    def __get_size(self):
-        """ Return the size as FloatSize. """
+    @property
+    def size(self) -> FloatSize:
         return self.__size
-    size = property(__get_size)
 
-    def __get_width(self):
-        """ Return the width. """
-        return self.__size.width
-    width = property(__get_width)
+    @property
+    def width(self) -> float:
+        return self.size.width
 
-    def __get_height(self):
-        """ Return the height. """
-        return self.__size.height
-    height = property(__get_height)
+    @property
+    def height(self) -> float:
+        return self.size.height
 
-    def __get_left(self):
-        """ Return the left coordinate. """
-        return self.__origin.x
-    left = property(__get_left)
+    @property
+    def left(self) -> float:
+        return self.origin.x
 
-    def __get_top(self):
-        """ Return the top coordinate. """
-        return self.__origin.y
-    top = property(__get_top)
+    @property
+    def top(self) -> float:
+        return self.origin.y
 
-    def __get_right(self):
-        """ Return the right coordinate. """
-        return self.__origin.x + self.__size.width
-    right = property(__get_right)
+    @property
+    def right(self) -> float:
+        return self.origin.x + self.size.width
 
-    def __get_bottom(self):
-        """ Return the bottom coordinate. """
-        return self.__origin.y + self.__size.height
-    bottom = property(__get_bottom)
+    @property
+    def bottom(self) -> float:
+        return self.origin.y + self.size.height
 
-    def __get_top_left(self):
-        """ Return the top left point. """
+    @property
+    def top_left(self) -> FloatPoint:
         return FloatPoint(y=self.top, x=self.left)
-    top_left = property(__get_top_left)
 
-    def __get_top_right(self):
-        """ Return the top right point. """
+    @property
+    def top_right(self) -> FloatPoint:
         return FloatPoint(y=self.top, x=self.right)
-    top_right = property(__get_top_right)
 
-    def __get_bottom_left(self):
-        """ Return the bottom left point. """
+    @property
+    def bottom_left(self) -> FloatPoint:
         return FloatPoint(y=self.bottom, x=self.left)
-    bottom_left = property(__get_bottom_left)
 
-    def __get_bottom_right(self):
-        """ Return the bottom right point. """
+    @property
+    def bottom_right(self) -> FloatPoint:
         return FloatPoint(y=self.bottom, x=self.right)
-    bottom_right = property(__get_bottom_right)
 
-    def __get_center(self):
-        """ Return the center point. """
-        return FloatPoint(y=(self.top + self.bottom) * 0.5, x=(self.left + self.right) * 0.5)
-    center = property(__get_center)
+    @property
+    def center(self) -> FloatPoint:
+        return FloatPoint(y=(self.top + self.bottom) / 2, x=(self.left + self.right) / 2)
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         if other is not None:
             other = FloatRect.make(other)
-            return self.__origin == other.origin and self.__size == other.size
+            return bool((self.__origin == other.origin) and (self.__size == other.size))
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: typing.Any) -> bool:
         if other is not None:
             other = FloatRect.make(other)
-            return self.__origin != other.origin or self.__size != other.size
+            return bool((self.__origin != other.origin) or (self.__size != other.size))
         return True
 
-    def __getitem__(self, index):
-        return (tuple(self.__origin), tuple(self.__size))[index]
+    @typing.overload
+    def __getitem__(self, index: typing.Literal[0]) -> PointFloatTuple: ...
 
-    def __iter__(self):
-        yield tuple(self.__origin)
-        yield tuple(self.__size)
+    @typing.overload
+    def __getitem__(self, index: typing.Literal[1]) -> SizeFloatTuple: ...
 
-    def __get_aspect_ratio(self):
-        """ Return the aspect ratio as a float. """
+    def __getitem__(self, index: int) -> typing.Union[PointFloatTuple, SizeFloatTuple]:
+        origin_tuple = typing.cast(PointFloatTuple, tuple(self.__origin))
+        size_tuple = typing.cast(SizeFloatTuple, tuple(self.__size))
+        return (origin_tuple, size_tuple)[index]
+
+    def __len__(self) -> int:
+        return 2
+
+    def __iter__(self) -> typing.Iterator[typing.Union[PointFloatTuple, SizeFloatTuple]]:
+        yield self.__getitem__(0)
+        yield self.__getitem__(1)
+
+    @property
+    def aspect_ratio(self) -> float:
         return float(self.width) / float(self.height) if self.height != 0 else 1.0
-    aspect_ratio = property(__get_aspect_ratio)
 
-    def contains_point(self, point):
-        """
-            Return whether the point is contained in this rectangle.
+    def contains_point(self, point: FloatPointTuple) -> bool:
+        """Return whether the point is contained in this rectangle.
 
-            Left/top sides are inclusive, right/bottom sides are not.
+        Left/top sides are inclusive, right/bottom sides are not.
         """
         point = FloatPoint.make(point)
         return point.x >= self.left and point.x < self.right and point.y >= self.top and point.y < self.bottom
 
-    def intersects_rect(self, rect):
-        """ Return whether the rectangle intersects this rectangle. """
+    def intersects_rect(self, rect: FloatRect) -> bool:
+        """Return whether the rectangle intersects this rectangle."""
         # if one rectangle is on left side of the other
         if self.left > rect.right or rect.left > self.right:
             return False
@@ -1023,11 +1073,11 @@ class FloatRect:
             return False
         return True
 
-    def translated(self, point):
+    def translated(self, point: FloatPointTuple) -> FloatRect:
         """ Return the rectangle translated by the point or size. """
         return FloatRect(self.origin + FloatPoint.make(point), self.size)
 
-    def inset(self, dx, dy=None):
+    def inset(self, dx: float, dy: typing.Optional[float] = None) -> FloatRect:
         """ Returns the rectangle inset by the specified amount. """
         dy = dy if dy is not None else dx
         origin = FloatPoint(y=self.top + dy, x=self.left + dx)
@@ -1048,13 +1098,13 @@ class FloatRect:
         right = max(self.right, rect.right)
         return FloatRect.from_tlbr(top, left, bottom, right)
 
-    def __add__(self, other) -> FloatRect:
+    def __add__(self, other: FloatPoint) -> FloatRect:
         if isinstance(other, FloatPoint):
             return FloatRect.from_center_and_size(self.center + other, self.size)
         else:
             raise NotImplementedError()
 
-    def __sub__(self, other) -> FloatRect:
+    def __sub__(self, other: FloatPoint) -> FloatRect:
         if isinstance(other, FloatPoint):
             return FloatRect.from_center_and_size(self.center - other, self.size)
         else:

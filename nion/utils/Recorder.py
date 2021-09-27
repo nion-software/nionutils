@@ -14,7 +14,7 @@ AccessorType = typing.Callable[[typing.Any], typing.Any]
 
 class Accessor(abc.ABC):
     @abc.abstractmethod
-    def get(self, x) -> typing.Any: ...
+    def get(self, o: Observable.Observable) -> typing.Any: ...
 
 
 class DirectAccessor(Accessor):
@@ -23,7 +23,7 @@ class DirectAccessor(Accessor):
 
 
 class KeyAccessor(Accessor):
-    def __init__(self, accessor: Accessor, key: str):
+    def __init__(self, accessor: Accessor, key: str) -> None:
         self.accessor = accessor
         self.key = key
 
@@ -32,7 +32,7 @@ class KeyAccessor(Accessor):
 
 
 class IndexAccessor(Accessor):
-    def __init__(self, accessor: Accessor, index: int):
+    def __init__(self, accessor: Accessor, index: int) -> None:
         self.accessor = accessor
         self.index = index
 
@@ -46,7 +46,7 @@ class RecorderEntry(abc.ABC):
 
 
 class KeyRecorderEntry(RecorderEntry):
-    def __init__(self, accessor: Accessor, key: str, item: typing.Any):
+    def __init__(self, accessor: Accessor, key: str, item: typing.Any) -> None:
         self.accessor = accessor
         self.key = key
         self.item = item
@@ -56,7 +56,7 @@ class KeyRecorderEntry(RecorderEntry):
 
 
 class InsertRecorderEntry(RecorderEntry):
-    def __init__(self, accessor: Accessor, key: str, index: int, item: typing.Any):
+    def __init__(self, accessor: Accessor, key: str, index: int, item: typing.Any) -> None:
         self.accessor = accessor
         self.key = key
         self.index = index
@@ -67,7 +67,7 @@ class InsertRecorderEntry(RecorderEntry):
 
 
 class RemoveRecorderEntry(RecorderEntry):
-    def __init__(self, accessor: Accessor, key: str, index: int):
+    def __init__(self, accessor: Accessor, key: str, index: int) -> None:
         self.accessor = accessor
         self.key = key
         self.index = index
@@ -77,7 +77,7 @@ class RemoveRecorderEntry(RecorderEntry):
 
 
 class RecorderLogger:
-    def __init__(self):
+    def __init__(self) -> None:
         self.__items: typing.List[RecorderEntry] = list()
 
     def append(self, recorder_entry: RecorderEntry) -> None:
@@ -99,7 +99,7 @@ class Recorder:
     # TODO: make changes resilient... what happens if underlying object changes and recorder can't be applied?
     # TODO: thread safety
 
-    def __init__(self, object: typing.Any, accessor: typing.Optional[Accessor] = None, logger: typing.Optional[RecorderLogger] = None):
+    def __init__(self, object: typing.Any, accessor: typing.Optional[Accessor] = None, logger: typing.Optional[RecorderLogger] = None) -> None:
         self.__accessor = accessor or DirectAccessor()
         self.__logger: RecorderLogger = logger if logger is not None else RecorderLogger()
         self.__property_changed_event_listener = object.property_changed_event.listen(weak_partial(Recorder.__property_changed, self, weakref.ref(object)))
@@ -107,7 +107,7 @@ class Recorder:
         self.__item_cleared_event_listener = object.item_cleared_event.listen(weak_partial(Recorder.__item_cleared, self))
         self.__item_inserted_event_listener = object.item_inserted_event.listen(weak_partial(Recorder.__item_inserted, self))
         self.__item_removed_event_listener = object.item_removed_event.listen(weak_partial(Recorder.__item_removed, self))
-        self.__item_recorders = dict()
+        self.__item_recorders: typing.Dict[str, Recorder] = dict()
         self.__relationship_recorders = collections.defaultdict(list)
         for key in object.item_names:
             item = getattr(object, key)
@@ -118,7 +118,7 @@ class Recorder:
             for index, item in enumerate(items):
                 self.__relationship_recorders[key].append(Recorder(item, IndexAccessor(KeyAccessor(self.__accessor, key), index), self.__logger))
 
-    def close(self):
+    def close(self) -> None:
         self.__property_changed_event_listener.close()
         self.__property_changed_event_listener = None
         self.__item_set_event_listener.close()
@@ -131,11 +131,11 @@ class Recorder:
         self.__item_removed_event_listener = None
         for key, item_recorder in self.__item_recorders.items():
             item_recorder.close()
-        self.__item_recorders = None
+        self.__item_recorders = typing.cast(typing.Any, None)
         for key, relationship_recorder_list in self.__relationship_recorders.items():
             for relationship_recorder in self.__relationship_recorders[key]:
                 relationship_recorder.close()
-        self.__relationship_recorders = None
+        self.__relationship_recorders = typing.cast(typing.Any, None)
 
     def apply(self, object: Observable.Observable) -> None:
         self.__logger.apply(object)
@@ -148,7 +148,8 @@ class Recorder:
     def _accessor(self, value: Accessor) -> None:
         self.__accessor = value
 
-    def __property_changed(self, o_ref: weakref.ReferenceType, key: str) -> None:
+    # Python 3.9+: o_ref: weakref.ReferenceType[typing.Any]
+    def __property_changed(self, o_ref: typing.Any, key: str) -> None:
         object = o_ref()
         if object:
             if not hasattr(object, "_is_persistent_property_recordable") or object._is_persistent_property_recordable(key):

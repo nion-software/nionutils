@@ -548,6 +548,14 @@ class IntRect:
         size = IntSize(height=height, width=width)
         return IntRect(origin, size)
 
+    @classmethod
+    def unit_rect(cls) -> IntRect:
+        return cls.from_tlhw(0, 0, 1, 1)
+
+    @classmethod
+    def empty_rect(cls) -> IntRect:
+        return cls.from_tlhw(0, 0, 0, 0)
+
     def __str__(self) -> str:
         return "(o={}, s={})".format(self.__origin, self.__size)
 
@@ -723,6 +731,9 @@ class FloatPoint:
     def __repr__(self) -> str:
         return "{2} (x={0}, y={1})".format(self.__x, self.__y, super(FloatPoint, self).__repr__())
 
+    def to_int_point(self) -> IntPoint:
+        return IntPoint(y=round(self.y), x=round(self.x))
+
     @property
     def x(self) -> float:
         return self.__x
@@ -849,6 +860,9 @@ class FloatSize:
     def __repr__(self) -> str:
         return "{2} (w={0}, h={1})".format(self.__width, self.__height, super(FloatSize, self).__repr__())
 
+    def to_int_size(self) -> IntSize:
+        return IntSize(height=round(self.height), width=round(self.width))
+
     @property
     def width(self) -> float:
         return self.__width
@@ -963,11 +977,18 @@ class FloatRect:
     def unit_rect(cls) -> FloatRect:
         return cls.from_tlhw(0, 0, 1, 1)
 
+    @classmethod
+    def empty_rect(cls) -> FloatRect:
+        return cls.from_tlhw(0, 0, 0, 0)
+
     def __str__(self) -> str:
         return "(o={}, s={})".format(self.__origin, self.__size)
 
     def __repr__(self) -> str:
         return "{2} (o={0}, s={1})".format(self.__origin, self.__size, super(FloatRect, self).__repr__())
+
+    def to_int_rect(self) -> IntRect:
+        return IntRect(origin=self.origin.to_int_point(), size=self.size.to_int_size())
 
     @property
     def origin(self) -> FloatPoint:

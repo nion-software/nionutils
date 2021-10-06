@@ -341,6 +341,9 @@ class IntPoint:
     def to_float_point(self) -> FloatPoint:
         return FloatPoint(y=self.y, x=self.x)
 
+    def as_tuple(self) -> PointIntTuple:
+        return self.y, self.x
+
     @property
     def x(self) -> int:
         return self.__x
@@ -413,6 +416,9 @@ class IntPoint:
         yield self.__y
         yield self.__x
 
+    def as_size(self) -> IntSize:
+        return IntSize(w=self.x, h=self.y)
+
 
 class IntSize:
 
@@ -447,6 +453,9 @@ class IntSize:
 
     def to_float_size(self) -> FloatSize:
         return FloatSize(h=self.height, w=self.width)
+
+    def as_tuple(self) -> PointIntTuple:
+        return self.height, self.width
 
     @property
     def width(self) -> int:
@@ -502,6 +511,9 @@ class IntSize:
     def __iter__(self) -> typing.Iterator[int]:
         yield self.__height
         yield self.__width
+
+    def as_point(self) -> IntPoint:
+        return IntPoint(x=self.width, y=self.height)
 
     @property
     def aspect_ratio(self) -> float:
@@ -564,6 +576,9 @@ class IntRect:
 
     def to_float_rect(self) -> FloatRect:
         return FloatRect.from_tlbr(self.top, self.left, self.bottom, self.right)
+
+    def as_tuple(self) -> RectIntTuple:
+        return self.origin.as_tuple(), self.size.as_tuple()
 
     @property
     def origin(self) -> IntPoint:
@@ -734,6 +749,9 @@ class FloatPoint:
     def to_int_point(self) -> IntPoint:
         return IntPoint(y=round(self.y), x=round(self.x))
 
+    def as_tuple(self) -> PointFloatTuple:
+        return self.y, self.x
+
     @property
     def x(self) -> float:
         return self.__x
@@ -818,6 +836,9 @@ class FloatPoint:
         yield self.__y
         yield self.__x
 
+    def as_size(self) -> FloatSize:
+        return FloatSize(w=self.x, h=self.y)
+
     def rotate(self, radians: float, origin: typing.Optional[FloatPoint] = None) -> FloatPoint:
         origin = origin or FloatPoint()
         dx = self.x - origin.x
@@ -862,6 +883,9 @@ class FloatSize:
 
     def to_int_size(self) -> IntSize:
         return IntSize(height=round(self.height), width=round(self.width))
+
+    def as_tuple(self) -> PointFloatTuple:
+        return self.height, self.width
 
     @property
     def width(self) -> float:
@@ -918,6 +942,9 @@ class FloatSize:
     def __iter__(self) -> typing.Iterator[float]:
         yield self.__height
         yield self.__width
+
+    def as_point(self) -> FloatPoint:
+        return FloatPoint(x=self.width, y=self.height)
 
     @property
     def aspect_ratio(self) -> float:
@@ -989,6 +1016,9 @@ class FloatRect:
 
     def to_int_rect(self) -> IntRect:
         return IntRect(origin=self.origin.to_int_point(), size=self.size.to_int_size())
+
+    def as_tuple(self) -> RectFloatTuple:
+        return self.origin.as_tuple(), self.size.as_tuple()
 
     @property
     def origin(self) -> FloatPoint:

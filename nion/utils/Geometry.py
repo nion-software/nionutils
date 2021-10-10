@@ -10,7 +10,6 @@ from __future__ import annotations
 
 # standard libraries
 import dataclasses
-import collections
 import math
 import typing
 
@@ -275,7 +274,7 @@ class LogTicker(Ticker):
         return self._base
 
 
-def fit_to_aspect_ratio(rect_: typing.Union[FloatRectTuple, IntRectTuple], aspect_ratio: float) -> "FloatRect":
+def fit_to_aspect_ratio(rect_: typing.Union[FloatRectTuple, IntRectTuple], aspect_ratio: float) -> FloatRect:
     """ Return rectangle fit to aspect ratio. Returned rectangle will have float coordinates. """
     rect = FloatRect.make(((rect_[0][0], rect_[0][1]), (rect_[1][0], rect_[1][1])))
     aspect_ratio = float(aspect_ratio)
@@ -290,7 +289,7 @@ def fit_to_aspect_ratio(rect_: typing.Union[FloatRectTuple, IntRectTuple], aspec
         return FloatRect(origin=new_origin, size=new_size)
 
 
-def fit_to_size(rect: typing.Union[FloatRectTuple, IntRectTuple], fit_size: typing.Union[FloatSizeTuple, IntSizeTuple]) -> "FloatRect":
+def fit_to_size(rect: typing.Union[FloatRectTuple, IntRectTuple], fit_size: typing.Union[FloatSizeTuple, IntSizeTuple]) -> FloatRect:
     """ Return rectangle fit to size (aspect ratio). """
     return fit_to_aspect_ratio(rect, float(fit_size[1]) / float(fit_size[0]))
 
@@ -797,7 +796,11 @@ class FloatPoint:
             raise NotImplementedError()
 
     @typing.overload
-    def __sub__(self, other: typing.Union[FloatPoint, FloatSize]) -> FloatPoint:
+    def __sub__(self, other: FloatPoint) -> FloatPoint:
+        ...
+
+    @typing.overload
+    def __sub__(self, other: FloatSize) -> FloatPoint:
         ...
 
     @typing.overload

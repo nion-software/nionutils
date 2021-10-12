@@ -60,16 +60,20 @@ class ListModel(Observable.Observable, typing.Generic[T]):
         self.insert_item(len(self.__items), value)
 
     @property
-    def items(self) -> typing.List[T]:
+    def items(self) -> typing.Sequence[T]:
         return self.__items
 
     @items.setter
-    def items(self, items: typing.List[T]) -> None:
+    def items(self, items: typing.Sequence[T]) -> None:
         self.clear_items()
         for item in items:
             self.insert_item(len(self.__items), item)
 
-    def __getattr__(self, item: str) -> typing.List[T]:
+    @property
+    def _items(self) -> typing.List[T]:
+        return self.__items
+
+    def __getattr__(self, item: str) -> typing.Sequence[T]:
         if self.__key and item == self.__key:
             return self.items
         raise AttributeError()
@@ -413,7 +417,7 @@ class FilteredListModel(Observable.Observable):
         raise AttributeError()
 
     # thread safe
-    def _get_master_items(self) -> typing.List[typing.Any]:
+    def _get_master_items(self) -> typing.Sequence[typing.Any]:
         with self._update_mutex:
             return copy.copy(self.__master_items)
 
@@ -535,7 +539,7 @@ class FilteredListModel(Observable.Observable):
                     self.__removed_master_item(index, item)
 
     # thread safe.
-    def __build_items(self) -> typing.List[typing.Any]:
+    def __build_items(self) -> typing.Sequence[typing.Any]:
         """Build the items from the master items list.
 
         This method is thread safe.
@@ -543,7 +547,7 @@ class FilteredListModel(Observable.Observable):
         Builds the items from the master list by sorting them and then
          filtering them.
         """
-        master_items = self._get_master_items()
+        master_items = list(self._get_master_items())
         assert len(set(master_items)) == len(master_items)
         # sort the master item list. this is optional since it may be sorted downstream.
         if self.sort_key:
@@ -1036,5 +1040,5 @@ class ListPropertyModel(Observable.Observable):
         self.notify_property_changed("value")
 
     @property
-    def value(self) -> typing.List[typing.Any]:
+    def value(self) -> typing.Sequence[typing.Any]:
         return list(self.__list_model.items)

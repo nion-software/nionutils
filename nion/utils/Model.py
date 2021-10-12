@@ -78,7 +78,7 @@ class FuncStreamValueModel(PropertyModel[T], typing.Generic[T]):
         self.__evaluating = [False]
 
         # Python 3.9: use ReferenceType[FuncStreamValueModel] for model_ref
-        async def update_value(event: asyncio.Event, evaluating: typing.List[bool], model_ref: typing.Any, value_fn_ref: typing.List[typing.Callable[[], typing.Any]]) -> None:
+        async def update_value(event: asyncio.Event, evaluating: typing.List[bool], model_ref: typing.Any, value_fn_ref: typing.Sequence[typing.Callable[[], typing.Any]]) -> None:
             while True:
                 await event.wait()
                 evaluating[0] = True

@@ -30,7 +30,7 @@ class ThreadPool:
         self.__queue = queue.Queue()  # type: ignore
         self.__threads: typing.List[threading.Thread] = list()
 
-        def finalize(q: _QueueParam, threads: typing.List[threading.Thread], cancel_event: threading.Event) -> None:
+        def finalize(q: _QueueParam, threads: typing.Sequence[threading.Thread], cancel_event: threading.Event) -> None:
             cancel_event.set()
             for _ in threads:
                 q.put(None)

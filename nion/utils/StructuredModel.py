@@ -314,13 +314,13 @@ class ArrayModel(ListModel.ListModel[typing.Any]):
     def from_dict_value(self, values: DictValue) -> None:
         # assert isinstance(values, list) or isinstance(values, tuple)
         values_list = typing.cast(typing.Sequence[typing.Any], values)
-        while len(values_list) > len(self.items):
+        while len(values_list) > len(self._items):
             assert isinstance(self.schema, dict)
             item_schema = self.schema["items"]
-            self.items.append(build_value(item_schema))
-        while len(values_list) < len(self.items):
-            del self.items[-1]
-        for value, item in zip(values_list, self.items):
+            self._items.append(build_value(item_schema))
+        while len(values_list) < len(self._items):
+            del self._items[-1]
+        for value, item in zip(values_list, self._items):
             item.from_dict_value(value)
 
     def to_dict_value(self) -> DictValue:

@@ -71,7 +71,7 @@ def make_pretty2(val: float, rounding: bool) -> float:
     return make_pretty(val, rounding)[0]
 
 
-def arange(start: float, stop: float, step: float) -> typing.List[float]:
+def arange(start: float, stop: float, step: float) -> typing.Sequence[float]:
     return [start + x * step for x in range(math.ceil((stop - start) / step))]
 
 
@@ -181,7 +181,7 @@ class Ticker:
         return self._precision
 
     @property
-    def minor_tick_indices(self) -> typing.List[int]:
+    def minor_tick_indices(self) -> typing.Sequence[int]:
         return self._minor_tick_indices
 
 
@@ -238,9 +238,9 @@ class LogTicker(Ticker):
         if self._factor_b != 1.0:
            subs = []
         elif num_subs >= (self.base - 2):
-            subs = arange(2, self.base, 1)
+            subs = list(arange(2, self.base, 1))
         elif num_subs >= (self.base - 2) * 0.5:
-            subs = arange(2, self.base, 2)
+            subs = list(arange(2, self.base, 2))
         elif num_subs >= (self.base - 2) * 0.25:
             subs = [round(self.base * 0.5)]
         else:

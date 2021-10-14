@@ -304,9 +304,9 @@ def distance(pt1: FloatPointTuple, pt2: FloatPointTuple) -> float:
     return math.sqrt(pow(pt2[0] - pt1[0], 2) + pow(pt2[1] - pt1[1], 2))
 
 
-def midpoint(pt1: FloatPointTuple, pt2: FloatPointTuple) -> PointFloatTuple:
+def midpoint(pt1: FloatPointTuple, pt2: FloatPointTuple) -> FloatPoint:
     """ Return midpoint between points. """
-    return (0.5 * (pt1[0] + pt2[0]), 0.5 * (pt1[1] + pt2[1]))
+    return FloatPoint(0.5 * (pt1[0] + pt2[0]), 0.5 * (pt1[1] + pt2[1]))
 
 
 @dataclasses.dataclass

@@ -75,6 +75,8 @@ class ModelLike(Observable.ObservableLike, typing.Protocol):
     def from_dict_value(self, value: DictValue) -> None: ...
     def to_dict_value(self) -> DictValue: ...
 
+    def copy_from(self, m: typing.Any) -> typing.Any: raise NotImplementedError()
+
 
 def build_model(schema: MDescription, *, default_value: typing.Optional[typing.Any] = None,
                 value: typing.Optional[typing.Any] = None) -> ModelLike:
@@ -121,6 +123,8 @@ class FieldPropertyModel(Model.PropertyModel[typing.Any]):
         if self.value is not None:
             return typing.cast(DictValue, self.value)
         return None
+
+    def copy_from(self, m: typing.Any) -> typing.Any: raise NotImplementedError()
 
     @property
     def field_value(self) -> typing.Optional[typing.Any]:

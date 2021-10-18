@@ -72,7 +72,7 @@ class FuncStreamValueModel(PropertyModel[T], typing.Generic[T]):
         super().__init__(value=value, cmp=cmp)
         self.__value_func_stream = value_func_stream
         self.__event_loop = event_loop
-        self.__pending_task = Stream.StreamTask()
+        self.__pending_task = Stream.StreamTask(None, event_loop)
         self.__value_fn_ref: typing.List[typing.Callable[[], typing.Any]] = [lambda: None]
         self.__event = asyncio.Event()
         self.__evaluating = [False]

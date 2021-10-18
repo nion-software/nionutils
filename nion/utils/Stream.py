@@ -63,9 +63,9 @@ class AbstractStream(typing.Generic[T]):
 
 class StreamTask:
 
-    def __init__(self, task: typing.Optional[typing.Any] = None, event_loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
+    def __init__(self, task: typing.Optional[typing.Any], event_loop: typing.Optional[asyncio.AbstractEventLoop]) -> None:
         self.__task: typing.Optional[asyncio.Task[None]] = None
-        self.__event_loop = event_loop or asyncio.get_event_loop()
+        self.__event_loop = event_loop or asyncio.get_running_loop()
         if task:
             self.create_task(task)
 
@@ -197,7 +197,7 @@ class DebounceValue(typing.Generic[T]):
 class DebounceStream(AbstractStream[T], typing.Generic[T]):
     """A stream that produces latest value after a specified interval has elapsed."""
 
-    def __init__(self, input_stream: AbstractStream[T], period: float, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
+    def __init__(self, input_stream: AbstractStream[T], period: float, event_loop: typing.Optional[asyncio.AbstractEventLoop]) -> None:
         super().__init__()
         self.value_stream = Event.Event()
         self.__input_stream = input_stream
@@ -209,7 +209,7 @@ class DebounceStream(AbstractStream[T], typing.Generic[T]):
             stream.__value_changed(value)
 
         self.__listener = input_stream.value_stream.listen(weak_partial(value_changed, self))
-        self.__debounce_task = StreamTask()
+        self.__debounce_task = StreamTask(None, event_loop)
         self.__value_changed(input_stream.value)
 
         def finalize(task: StreamTask, s: str) -> None:
@@ -246,7 +246,7 @@ class SampleValue(typing.Generic[T]):
 class SampleStream(AbstractStream[T], typing.Generic[T]):
     """A stream that produces new values at a specified interval."""
 
-    def __init__(self, input_stream: AbstractStream[T], period: float, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
+    def __init__(self, input_stream: AbstractStream[T], period: float, event_loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         super().__init__()
         self.value_stream = Event.Event()
         self.__input_stream = input_stream
@@ -267,7 +267,7 @@ class SampleStream(AbstractStream[T], typing.Generic[T]):
                     sample_value.is_dirty = False
                     value_stream.fire(sample_value.value)
 
-        self.__sample_task = StreamTask(sample_loop(period, self.value_stream, self.__sample_value))
+        self.__sample_task = StreamTask(sample_loop(period, self.value_stream, self.__sample_value), event_loop)
 
         def finalize(task: StreamTask, s: str) -> None:
             task.clear()
@@ -483,7 +483,7 @@ class ValueChangeStreamReactor(typing.Generic[T]):
 
     def run(self, cfn: typing.Callable[[ValueChangeStreamReactor[T]], typing.Coroutine[typing.Any, typing.Any, typing.Any]]) -> None:
         assert not self.__task
-        self.__task = asyncio.get_event_loop().create_task(cfn(self))
+        self.__task = asyncio.get_running_loop().create_task(cfn(self))
 
     async def begin(self) -> None:
         while True:

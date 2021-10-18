@@ -80,7 +80,7 @@ def sync_event_loop(event_loop: typing.Optional[asyncio.AbstractEventLoop] = Non
 
     Uses the current event loop if event_loop is None.
     """
-    event_loop = event_loop or asyncio.get_event_loop()
+    event_loop = event_loop or asyncio.get_running_loop()
     # give event loop one chance to finish up
     event_loop.stop()
     event_loop.run_forever()

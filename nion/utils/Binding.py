@@ -188,8 +188,8 @@ class PropertyBinding(Binding):
         self.__property_name = property_name
 
         # thread safe. careful not to have reference to self, otherwise binding can't be garbage collected.
-        def property_changed(binding: PropertyBinding, property_name_: str) -> None:
-            assert not binding._closed
+        def property_changed(binding: typing.Optional[PropertyBinding], property_name_: str) -> None:
+            assert binding and not binding._closed
             if property_name_ == binding.property_name:
                 assert callable(binding.source_getter)
                 value = binding.source_getter()
@@ -202,7 +202,8 @@ class PropertyBinding(Binding):
 
         def set_property_value(source: typing.Any, value: typing.Any) -> None:
             try:
-                setattr(source, property_name, value)
+                if source:
+                    setattr(source, property_name, value)
             except AttributeError as exc:
                 raise AttributeError(property_name) from None
 
@@ -245,8 +246,8 @@ class PropertyAttributeBinding(Binding):
         self.__attribute_name = attribute_name
 
         # thread safe
-        def property_changed(binding: PropertyAttributeBinding, property_name_: str) -> None:
-            if property_name_ == property_name:
+        def property_changed(binding: typing.Optional[PropertyAttributeBinding], property_name_: str) -> None:
+            if binding and property_name_ == property_name:
                 # perform on the main thread
                 value = getattr(source, property_name)
                 if value is not None and hasattr(value, attribute_name):
@@ -257,7 +258,7 @@ class PropertyAttributeBinding(Binding):
         self.__property_changed_listener = source.property_changed_event.listen(weak_partial(property_changed, self))
 
         def source_setter(source: typing.Any, value: typing.Any) -> None:
-            source_value = getattr(source, property_name)
+            source_value = getattr(source, property_name) if source else None
             if callable(update_attribute_fn):
                 source_value = update_attribute_fn(source_value, attribute_name, value)
             else:
@@ -265,7 +266,7 @@ class PropertyAttributeBinding(Binding):
             setattr(source, property_name, source_value)
 
         def source_getter(source: typing.Any) -> typing.Any:
-            source_value = getattr(source, property_name)
+            source_value = getattr(source, property_name) if source else None
             return getattr(source_value, attribute_name) if source_value is not None and hasattr(source_value, attribute_name) else None
 
         # configure setting/getter, being careful not to hold references to self

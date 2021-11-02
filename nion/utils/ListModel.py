@@ -76,7 +76,7 @@ class ListModel(Observable.Observable, typing.Generic[T]):
     def __getattr__(self, item: str) -> typing.Sequence[T]:
         if self.__key and item == self.__key:
             return self.items
-        raise AttributeError()
+        raise AttributeError(item)
 
 
 class Filter:

@@ -1,8 +1,14 @@
 Changelog (nionutils)
 =====================
 
-0.3.27 (UNRELEASED)
--------------------
+0.4.0 (2021-11-10)
+------------------
+- Eliminate need to call close methods on models, streams, listeners, etc.
+- Drop support for Python 3.7, add support for Python 3.10.
+- Enable strict typing.
+- Remove unused ConcatStream.
+- Make ReferenceCounted work with Python references, not explicit ref count.
+- Add useful Geometry functions: empty_rect, int_rect, as_tuple.
 - Remove unused/deprecated PersistentObject.
 - Add property changed property model for monitoring observables.
 - Change Recorder to allow customer logger.

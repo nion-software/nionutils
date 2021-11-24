@@ -51,7 +51,7 @@ class ComponentManager(metaclass=Singleton):
         return self.__components_by_type
 
     def get_components_by_type(self, component_type: str) -> typing.Set[_ComponentType]:
-        return self.__components_by_type.get(component_type, set())
+        return set(self.__components_by_type.get(component_type, set()))
 
     def register(self, component: _ComponentType, component_types: typing.Set[str]) -> None:
         for component_type in component_types:
@@ -103,11 +103,19 @@ def get_component(component_type: str) -> typing.Optional[typing.Any]:
 
 def register_component(component: _ComponentType, component_types: typing.Set[str]) -> None:
     """Register a component and associated it with the set of types. This will trigger a component_registered_event."""
+    # if component_types.intersection({"hardware_source_manager", "stem_controller", "hardware_source", "scan_hardware_source", "scan_device", "document_model"}):
+    #     print(f">> REGISTER {component} {component_types}")
+    # if component_types.intersection({"stem_controller"}):
+    #     print(f">> REGISTER {component} {component_types}")
+    #     import traceback
+    #     traceback.print_stack()
     ComponentManager().register(component, component_types)
 
 
 def unregister_component(component: _ComponentType, component_types: typing.Optional[typing.Set[str]] = None) -> None:
     """Unregister a component. This will trigger a component_unregistered_event. The component must have been previously registered."""
+    # if component_types.intersection({"hardware_source_manager", "stem_controller", "hardware_source", "scan_hardware_source", "scan_device", "document_model"}):
+    #     print(f">> UNREGISTER {component} {component_types}")
     ComponentManager().unregister(component, component_types)
 
 

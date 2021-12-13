@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.4.1 (2021-12-13)
+------------------
+- Minor typing and return type issues.
+
 0.4.0 (2021-11-10)
 ------------------
 - Eliminate need to call close methods on models, streams, listeners, etc.

@@ -45,7 +45,7 @@ class Binding:
     cases.
     """
 
-    def __init__(self, source: typing.Optional[Observable.Observable], *,
+    def __init__(self, source: typing.Optional[Observable.ObservableLike], *,
                  converter: typing.Optional[Converter.ConverterLike[typing.Any, typing.Any]] = None,
                  validator: typing.Optional[Validator.ValidatorLike[typing.Any]] = None,
                  fallback: typing.Optional[typing.Any] = None) -> None:
@@ -180,7 +180,7 @@ class PropertyBinding(Binding):
     # TODO: generalize to 'getter binding'
     # TODO: generalize to 'two way getter connection'
 
-    def __init__(self, source: Observable.Observable, property_name: str, *,
+    def __init__(self, source: Observable.ObservableLike, property_name: str, *,
                  converter: typing.Optional[Converter.ConverterLike[typing.Any, typing.Any]] = None,
                  validator: typing.Optional[Validator.ValidatorLike[typing.Any]] = None,
                  fallback: typing.Optional[typing.Any] = None) -> None:

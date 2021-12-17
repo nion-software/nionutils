@@ -90,7 +90,7 @@ def get_component(component_type: str) -> typing.Optional[typing.Any]:
 
     def attrgetter(attrname: str, default: typing.Optional[int] = None) -> typing.Callable[[typing.Any], int]:
         def inside(obj: typing.Any) -> int:
-            return int(getattr(obj, attrname, default))
+            return int(typing.cast(int, getattr(obj, attrname, default)))
 
         return inside
 

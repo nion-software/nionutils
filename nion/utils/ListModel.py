@@ -85,7 +85,7 @@ class Filter:
 
     def __deepcopy__(self, memo: typing.Dict[typing.Any, typing.Any]) -> Filter:
         cls = self.__class__
-        result = typing.cast(Filter, cls.__new__(cls))
+        result = cls.__new__(cls)
         memo[id(self)] = result
         result.__default = self.__default
         return result

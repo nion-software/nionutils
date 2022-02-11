@@ -97,7 +97,7 @@ def get_component(component_type: str) -> typing.Optional[typing.Any]:
     sorted_components = sorted(components, key=attrgetter("priority", 50), reverse=True)
 
     if len(sorted_components) > 0:
-        return tuple(components)[0]
+        return tuple(sorted_components)[0]
 
     return None
 

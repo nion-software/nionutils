@@ -1,6 +1,11 @@
 Changelog (nionutils)
 =====================
 
+0.4.2 (2022-02-18)
+------------------
+- Ensure component prioritization works.
+- Fix top level namespace.
+
 0.4.1 (2021-12-13)
 ------------------
 - Minor typing and return type issues.

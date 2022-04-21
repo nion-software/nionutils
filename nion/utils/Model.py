@@ -35,7 +35,7 @@ class PropertyModel(Observable.Observable, typing.Generic[T]):
     def __init__(self, value: typing.Optional[T] = None, cmp: typing.Optional[typing.Callable[[typing.Optional[T], typing.Optional[T]], bool]] = None):
         super().__init__()
         self.__value = value
-        self.__cmp = cmp if cmp else operator.eq
+        self.__cmp = cmp if cmp else typing.cast(typing.Callable[[typing.Optional[T], typing.Optional[T]], bool], operator.eq)
         self.on_value_changed : typing.Optional[typing.Callable[[typing.Optional[T]], None]] = None
 
     def close(self) -> None:
@@ -96,6 +96,7 @@ class FuncStreamValueModel(PropertyModel[T], typing.Generic[T]):
                 model = model_ref()
                 if model:
                     model.value = value
+                    model = None  # immediately release value for gc
                 evaluating[0] = event.is_set()
 
         self.__pending_task.create_task(update_value(self.__event, self.__evaluating, weakref.ref(self), self.__value_fn_ref))

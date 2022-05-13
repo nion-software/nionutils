@@ -43,7 +43,7 @@ class IntegerToStringConverter(ConverterLike[int, str]):
 
     def convert_back(self, formatted_value: typing.Optional[str]) -> typing.Optional[int]:
         """ Convert string to value using standard int conversion """
-        formatted_value = re.sub("[^0-9]", "", formatted_value) if self.__fuzzy and formatted_value else None
+        formatted_value = re.sub("[+-](?!\d)|(?<=\.)\w*|[^-+0-9]", "", formatted_value) if self.__fuzzy and formatted_value else None
         if formatted_value:
             return int(formatted_value)
         else:

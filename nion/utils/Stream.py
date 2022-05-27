@@ -63,7 +63,7 @@ class AbstractStream(typing.Generic[T]):
 
 class StreamTask:
 
-    def __init__(self, task: typing.Optional[typing.Any], event_loop: typing.Optional[asyncio.AbstractEventLoop]) -> None:
+    def __init__(self, task: typing.Optional[typing.Coroutine[typing.Any, typing.Any, typing.Any]], event_loop: typing.Optional[asyncio.AbstractEventLoop]) -> None:
         self.__task: typing.Optional[asyncio.Task[None]] = None
         self.__event_loop = event_loop or asyncio.get_running_loop()
         if task:
@@ -78,7 +78,7 @@ class StreamTask:
     def is_active(self) -> bool:
         return self.__task is not None
 
-    def create_task(self, task: typing.Awaitable[None]) -> asyncio.Task[None]:
+    def create_task(self, task: typing.Coroutine[typing.Any, typing.Any, typing.Any]) -> asyncio.Task[None]:
         assert self.__task is None
         self.__task = self.__event_loop.create_task(task)
 

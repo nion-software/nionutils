@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.4.3 (2022-05-28)
+------------------
+- Improve convert_back method of IntegerToStringConverter for fuzzy conversion.
+
 0.4.2 (2022-02-18)
 ------------------
 - Ensure component prioritization works.

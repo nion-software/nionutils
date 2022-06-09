@@ -62,13 +62,18 @@ class ThreadPool:
             self.__queue.put(fn)
 
     def run_all(self) -> None:
-        while not self.__queue.empty():
-            task = self.__queue.get()
-            if task and not self.__cancel_event.is_set():
-                task()
-            self.__queue.task_done()
-            if not task:
-                break
+        # note: the start/run method may be running simultaneously on another thread, so care
+        # must be taken to only use the threadsafe queue.get method to extract items from the queue.
+        try:
+            while True:
+                task = self.__queue.get(block=False)
+                if task and not self.__cancel_event.is_set():
+                    task()
+                self.__queue.task_done()
+                if not task:
+                    break
+        except queue.Empty:
+            pass
 
 
 @dataclasses.dataclass

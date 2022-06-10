@@ -424,6 +424,9 @@ class ValueChange(typing.Generic[T]):
         self.state = state
         self.value = value
 
+    def __repr__(self) -> str:
+        return f"{self.state}: {self.value}"
+
     @property
     def is_begin(self) -> bool:
         return self.state == ValueChangeType.BEGIN

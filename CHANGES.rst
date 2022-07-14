@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.4.4 (UNRELEASED)
+------------------
+- Fix issues with FloatToScaledIntegerConverter when min/max are invalid.
+
 0.4.3 (2022-05-28)
 ------------------
 - Improve convert_back method of IntegerToStringConverter for fuzzy conversion.

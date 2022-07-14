@@ -94,18 +94,30 @@ class FloatToStringConverter(ConverterLike[float, str]):
 class FloatToScaledIntegerConverter(ConverterLike[float, int]):
     """ Convert between float value and int (float * 100). """
 
-    def __init__(self, n: int, value_min: float = 0, value_max: float = 1.0) -> None:
+    def __init__(self, n: int, value_min: float = 0.0, value_max: float = 1.0) -> None:
         self.n = n
         self.value_min = value_min
         self.value_max = value_max
 
     def convert(self, value: typing.Optional[float]) -> typing.Optional[int]:
         """ Convert float between 0, 1 to percentage int """
-        return int(self.n * (value - self.value_min) / (self.value_max - self.value_min)) if value is not None else None
+        if value is not None:
+            if self.value_max - self.value_min > 0.0:
+                return int(self.n * (value - self.value_min) / (self.value_max - self.value_min))
+            else:
+                return 0
+        else:
+            return None
 
     def convert_back(self, value_int: typing.Optional[int]) -> typing.Optional[float]:
         """ Convert int percentage value to float """
-        return (value_int * (self.value_max - self.value_min) / self.n + self.value_min) if value_int is not None else None
+        if value_int is not None:
+            if self.n > 0 and self.value_max - self.value_min > 0.0:
+                return (value_int * (self.value_max - self.value_min) / self.n + self.value_min)
+            else:
+                return 0.0
+        else:
+            return None
 
 
 class FloatToPercentStringConverter(ConverterLike[float, str]):

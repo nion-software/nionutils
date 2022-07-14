@@ -22,6 +22,14 @@ class TestConverter(unittest.TestCase):
         self.assertAlmostEqual(converter.convert_back(converter.convert(0)) or 0.0, 0)
         self.assertAlmostEqual(converter.convert_back(converter.convert(-100)) or 0.0, -100)
         self.assertAlmostEqual(converter.convert_back(converter.convert(100)) or 0.0, 100)
+        # test case where min == max
+        converter = Converter.FloatToScaledIntegerConverter(1000, 0, 0)
+        self.assertAlmostEqual(converter.convert(0) or 0, 0)
+        self.assertAlmostEqual(converter.convert_back(0) or 0.0, 0)
+        # test case where min > max
+        converter = Converter.FloatToScaledIntegerConverter(1000, 1, 0)
+        self.assertAlmostEqual(converter.convert(0) or 0, 0)
+        self.assertAlmostEqual(converter.convert_back(0) or 0.0, 0)
 
     def test_integer_to_string_converter(self) -> None:
         converter = Converter.IntegerToStringConverter()

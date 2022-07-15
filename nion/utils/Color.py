@@ -16,6 +16,9 @@ class Color:
         else:
             self.color_str = None
 
+    def __repr__(self) -> str:
+        return self.color_str or "NONE"
+
     @property
     def is_valid(self) -> bool:
         return self.__hex_color(self.color_str) != None
@@ -53,6 +56,10 @@ class Color:
     def to_named_color_without_alpha(self) -> Color:
         hex_color_without_alpha = self.to_color_without_alpha().hex_color_str
         return Color(svg_color_reverse_map.get(hex_color_without_alpha, hex_color_without_alpha) if hex_color_without_alpha else None)
+
+    def to_color_with_alpha(self, alpha: float) -> Color:
+        hex7_color = self.__hex7_color()
+        return Color(f"#{min(255, max(0, int(round(256 * alpha)))):02x}" + hex7_color[1:])
 
     def __hex_color(self, color_str: typing.Optional[str]) -> typing.Optional[str]:
         if not color_str:

@@ -39,6 +39,15 @@ class TestColorClass(unittest.TestCase):
         self.assertEqual("#d8bfd8", Color.Color("rgba(216, 191, 216, 0.5)").to_color_without_alpha().color_str)
         self.assertEqual(None, Color.Color(None).to_color_without_alpha().color_str)
 
+    def test_color_with_alpha(self) -> None:
+        self.assertEqual("#40d8bfd8", Color.Color("thistle").to_color_with_alpha(0.25).color_str)
+        self.assertEqual("#ffd8bfd8", Color.Color("thistle").to_color_with_alpha(1.00).color_str)
+        self.assertEqual("#00d8bfd8", Color.Color("thistle").to_color_with_alpha(0.00).color_str)
+        self.assertEqual("#c0d8bfd8", Color.Color("#d8bfd8").to_color_with_alpha(0.75).color_str)
+        self.assertEqual("#80204060", Color.Color("#246").to_color_with_alpha(0.50).color_str)
+        self.assertEqual("#ff204060", Color.Color("#246").to_color_with_alpha(1.50).color_str)
+        self.assertEqual("#00204060", Color.Color("#246").to_color_with_alpha(-1.50).color_str)
+
     def test_matches_without_alpha(self) -> None:
         self.assertTrue(Color.Color("thistle"), Color.Color("#d8bfd9"))
         self.assertTrue(Color.Color("thistle"), Color.Color("rgb(216, 191, 216)"))

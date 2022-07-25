@@ -1,9 +1,11 @@
 Changelog (nionutils)
 =====================
 
-0.4.4 (UNRELEASED)
+0.4.4 (2022-07-25)
 ------------------
+- Add a Color utility class.
 - Fix issues with FloatToScaledIntegerConverter when min/max are invalid.
+- Fix possible race condition in thread pool.
 
 0.4.3 (2022-05-28)
 ------------------

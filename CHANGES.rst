@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.4.5 (UNRELEASED)
+------------------
+- Add DateTime utilities (utcnow for Windows, strictly increasing).
+
 0.4.4 (2022-07-25)
 ------------------
 - Add a Color utility class.

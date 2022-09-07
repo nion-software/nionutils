@@ -61,6 +61,26 @@ class Color:
         hex7_color = self.__hex7_color()
         return Color(f"#{min(255, max(0, int(round(256 * alpha)))):02x}" + hex7_color[1:])
 
+    def to_rgba_255(self) -> typing.Tuple[int, int, int, int]:
+        hex_color = self.hex_color_str
+        if hex_color and len(hex_color) == 4:
+            rgb = tuple(int(hex_color[i:i + 1], 16) * 17 for i in (1, 2, 3))
+            return rgb[0], rgb[1], rgb[2], 255
+        elif hex_color and len(hex_color) == 5:
+            rgba = tuple(int(hex_color[i:i + 1], 16) * 17 for i in (1, 2, 3, 4))
+            return rgba[0], rgba[1], rgba[2], rgba[3]
+        elif hex_color and len(hex_color) == 7:
+            rgb = tuple(int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
+            return rgb[0], rgb[1], rgb[2], 255
+        elif hex_color and len(hex_color) == 9:
+            rgba = tuple(int(hex_color[i:i + 2], 16) for i in (1, 3, 5, 7))
+            return rgba[0], rgba[1], rgba[2], rgba[3]
+        else:
+            return 255, 255, 255, 255
+
+    def to_rgb_255(self) -> typing.Tuple[int, int, int]:
+        return self.to_rgba_255()[:-1]
+
     def __hex_color(self, color_str: typing.Optional[str]) -> typing.Optional[str]:
         if not color_str:
             return None
@@ -71,7 +91,7 @@ class Color:
         if len(c) > 1:
             return f"#{int(c[1]):02x}{int(c[2]):02x}{int(c[3]):02x}"
         if color_str.startswith("#"):
-            if len(color_str) == 9 or len(color_str) == 7:
+            if len(color_str) in (9, 7, 5, 4):
                 return color_str.lower()
         return svg_color_map.get(color_str, color_str)
 

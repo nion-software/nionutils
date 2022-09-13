@@ -34,7 +34,7 @@ jobs:
         python -m build
     - name: Install Test Dependencies
       run: |
-        python -m pip install mypy==0.960
+        python -m pip install mypy
         # pip install -r test-requirements.txt
     - name: Test
       run: |

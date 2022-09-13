@@ -1,8 +1,9 @@
 Changelog (nionutils)
 =====================
 
-0.4.5 (UNRELEASED)
+0.4.5 (2022-09-13)
 ------------------
+- Add minor Color method to get RGB values.
 - Add DateTime utilities (utcnow for Windows, strictly increasing).
 
 0.4.4 (2022-07-25)

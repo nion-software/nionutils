@@ -62,7 +62,9 @@ class Binding:
 
     # not thread safe
     def close(self) -> None:
-        pass
+        self.source_getter = None
+        self.source_setter = None
+        self.target_setter = None
 
     @property
     def source(self) -> typing.Optional[typing.Any]:

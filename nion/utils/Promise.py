@@ -10,7 +10,6 @@ class Promise(typing.Generic[T]):
     Pass a callable to produce a value. Access the value using the value or opt_value properties.
     """
     def __init__(self, fn: typing.Callable[[], T]):
-        assert fn
         self.__lock = threading.RLock()
         self.__value : typing.Optional[T] = None
         self.__fn : typing.Optional[typing.Callable[[], T]] = fn

@@ -228,6 +228,9 @@ class RecordModel(Observable.Observable):
         else:
             super().__setattr__(name, value)
 
+    def has_field(self, name: str) -> bool:
+        return name in self.__field_models and isinstance(self.__field_models[name], FieldPropertyModel)
+
     @property
     def field_value(self) -> RecordModel:
         return self

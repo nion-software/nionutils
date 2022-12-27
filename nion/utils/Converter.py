@@ -186,15 +186,49 @@ class PathToStringConverter(ConverterLike[pathlib.Path, str]):
 
 
 class DatetimeToStringConverter(ConverterLike[datetime.datetime, str]):
+    """Convert between UTC datetime and str.
+
+    datetime value is always utc and is naive to timezone.
+
+    is_local can be used to _display_ the datetime in local time zone.
+
+    format can be used to specify the format but must be parseable if used to convert both forward and back.
+    """
+    def __init__(self, is_local: bool = False, timezone: typing.Optional[datetime.tzinfo] = None, format: typing.Optional[str] = None) -> None:
+        self.__is_local = is_local
+        self.__timezone = timezone
+        self.__format = format
+
     def convert(self, value: typing.Optional[datetime.datetime]) -> typing.Optional[str]:
+        if value:
+            if self.__is_local:
+                value = value.replace(tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
+            elif self.__timezone:
+                value = value.replace(tzinfo=datetime.timezone.utc).astimezone(self.__timezone).replace(tzinfo=None)
+        if value and self.__format:
+            return value.strftime(self.__format)
         return value.isoformat() if value is not None else None
 
     def convert_back(self, value: typing.Optional[str]) -> typing.Optional[datetime.datetime]:
         try:
-            if value and len(value) == 26:
-                return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+            if self.__format:
+                format_ = self.__format
+            elif value and len(value) == 26:
+                format_ = "%Y-%m-%dT%H:%M:%S.%f"
             elif value and len(value) == 19:
-                return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
+                format_ = "%Y-%m-%dT%H:%M:%S"
+            else:
+                format_ = str()
+
+            dt = datetime.datetime.strptime(value, format_) if value else None
+
+            if dt and self.__is_local:
+                return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+            elif dt and self.__timezone:
+                return dt.replace(tzinfo=self.__timezone).astimezone(datetime.timezone.utc).replace(tzinfo=None)
+            else:
+                return dt.replace(tzinfo=None) if dt else None
         except ValueError as e:
+            print(e)
             pass  # fall through
         return None

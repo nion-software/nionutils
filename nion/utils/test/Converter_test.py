@@ -1,4 +1,5 @@
 # standard libraries
+import datetime
 import logging
 import unittest
 
@@ -37,6 +38,24 @@ class TestConverter(unittest.TestCase):
         self.assertEqual(converter.convert_back("2.45653"), 2)
         self.assertEqual(converter.convert_back("-adcv-2.15sa56aas"), -2)
         self.assertEqual(converter.convert_back("xx4."), 4)
+
+    def test_date_to_string_converter(self) -> None:
+        dt = datetime.datetime.utcnow()
+        dt_str = dt.isoformat()
+        # default converter
+        converter = Converter.DatetimeToStringConverter()
+        self.assertEqual(dt, converter.convert_back(converter.convert(dt)))
+        self.assertEqual(dt_str, converter.convert(converter.convert_back(dt_str)))
+        # local converter
+        converter = Converter.DatetimeToStringConverter(is_local=True)
+        self.assertEqual(dt, converter.convert_back(converter.convert(dt)))
+        self.assertEqual(dt_str, converter.convert(converter.convert_back(dt_str)))
+        # local+format converter
+        format = "%Y-%m-%d %H:%M:%S"
+        converter = Converter.DatetimeToStringConverter(is_local=True, format=format)
+        print(converter.convert(dt))
+        self.assertEqual(dt.replace(microsecond=0), converter.convert_back(converter.convert(dt.replace(microsecond=0))))
+        self.assertEqual(dt.strftime(format), converter.convert(converter.convert_back(dt.strftime(format))))
 
 
 if __name__ == '__main__':

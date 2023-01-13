@@ -53,7 +53,6 @@ class TestConverter(unittest.TestCase):
         # local+format converter
         format = "%Y-%m-%d %H:%M:%S"
         converter = Converter.DatetimeToStringConverter(is_local=True, format=format)
-        print(converter.convert(dt))
         self.assertEqual(dt.replace(microsecond=0), converter.convert_back(converter.convert(dt.replace(microsecond=0))))
         self.assertEqual(dt.strftime(format), converter.convert(converter.convert_back(dt.strftime(format))))
 

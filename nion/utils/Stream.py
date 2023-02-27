@@ -468,25 +468,48 @@ class ValueChangeStream(ValueStream[ValueChange[T]], typing.Generic[T]):
         self.value = ValueChange(ValueChangeType.CHANGE, self.__value_stream.value)
 
 
+ValueChangeStreamReactorInterfaceT = typing.TypeVar("ValueChangeStreamReactorInterfaceT")
+
+
+class ValueChangeStreamReactorInterface(typing.Protocol[ValueChangeStreamReactorInterfaceT]):
+    async def begin(self) -> None: ...
+    async def next_value_change(self) -> ValueChange[ValueChangeStreamReactorInterfaceT]: ...
+
+
 class ValueChangeStreamReactor(typing.Generic[T]):
-    def __init__(self, value_change_stream: ValueChangeStream[T]) -> None:
+    def __init__(self, value_change_stream: ValueChangeStream[T], event_loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         self.__value_change_stream = value_change_stream
+        self.__event_loop = event_loop or asyncio.get_running_loop()
         self.__value_changed_listener = value_change_stream.value_stream.listen(weak_partial(ValueChangeStreamReactor.__value_changed, self))
         self.__event_queue: asyncio.Queue[ValueChange[T]] = asyncio.Queue()
         self.__task: typing.Optional[asyncio.Task[None]] = None
+
+    def __value_changed(self, value_change: ValueChange[T]) -> None:
+        self.__event_queue.put_nowait(value_change)
+
+    def run(self, cfn: typing.Callable[[ValueChangeStreamReactorInterface[T]], typing.Coroutine[typing.Any, typing.Any, typing.Any]]) -> None:
+        assert not self.__task
+
+        class AValueChangeStreamReactor(ValueChangeStreamReactorInterface[T]):
+            def __init__(self, event_queue: asyncio.Queue[ValueChange[T]]) -> None:
+                self.__event_queue = event_queue
+
+            async def begin(self) -> None:
+                while True:
+                    value_change = await self.__event_queue.get()
+                    if value_change.state == ValueChangeType.BEGIN:
+                        break
+
+            async def next_value_change(self) -> ValueChange[typing.Any]:
+                return await self.__event_queue.get()
+
+        self.__task = self.__event_loop.create_task(cfn(AValueChangeStreamReactor(self.__event_queue)))
 
         def finalize(task: typing.Optional[asyncio.Task[None]], s: str) -> None:
             if task:
                 task.cancel()
 
         weakref.finalize(self, finalize, self.__task, str(self))
-
-    def __value_changed(self, value_change: ValueChange[T]) -> None:
-        self.__event_queue.put_nowait(value_change)
-
-    def run(self, cfn: typing.Callable[[ValueChangeStreamReactor[T]], typing.Coroutine[typing.Any, typing.Any, typing.Any]]) -> None:
-        assert not self.__task
-        self.__task = asyncio.get_running_loop().create_task(cfn(self))
 
     async def begin(self) -> None:
         while True:

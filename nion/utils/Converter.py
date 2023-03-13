@@ -232,3 +232,16 @@ class DatetimeToStringConverter(ConverterLike[datetime.datetime, str]):
             print(e)
             pass  # fall through
         return None
+
+
+class ValuesToIndexConverter(ConverterLike[FT, int], typing.Generic[FT]):
+    """Convert between set of values of type FT and int index value."""
+
+    def __init__(self, values: typing.Sequence[FT]) -> None:
+        self.__values = list(values)
+
+    def convert(self, value: typing.Optional[FT]) -> typing.Optional[int]:
+        return self.__values.index(value) if value in self.__values else None
+
+    def convert_back(self, index: typing.Optional[int]) -> typing.Optional[FT]:
+        return self.__values[index] if index is not None and 0 <= index < len(self.__values) else None

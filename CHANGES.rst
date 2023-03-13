@@ -4,6 +4,7 @@ Changelog (nionutils)
 0.4.7 (UNRELEASED)
 ------------------
 - Add ability to display datetime in local time and with format in DateTime converter.
+- Add ValuesToIndexConverter.
 
 0.4.6 (2022-11-04)
 ------------------

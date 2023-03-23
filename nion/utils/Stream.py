@@ -21,8 +21,8 @@ from . import Event
 from . import Observable
 from .ReferenceCounting import weak_partial
 
-T = typing.TypeVar('T')
-OT = typing.TypeVar('OT')
+T = typing.TypeVar('T', covariant=True)
+OT = typing.TypeVar('OT', covariant=True)
 EqualityOperator = typing.Callable[[typing.Any, typing.Any], bool]
 
 
@@ -468,7 +468,7 @@ class ValueChangeStream(ValueStream[ValueChange[T]], typing.Generic[T]):
         self.value = ValueChange(ValueChangeType.CHANGE, self.__value_stream.value)
 
 
-ValueChangeStreamReactorInterfaceT = typing.TypeVar("ValueChangeStreamReactorInterfaceT")
+ValueChangeStreamReactorInterfaceT = typing.TypeVar("ValueChangeStreamReactorInterfaceT", covariant=True)
 
 
 class ValueChangeStreamReactorInterface(typing.Protocol[ValueChangeStreamReactorInterfaceT]):

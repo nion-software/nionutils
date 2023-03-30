@@ -3,6 +3,7 @@ Changelog (nionutils)
 
 0.4.7 (UNRELEASED)
 ------------------
+- Add ability to add/remove streams from CombineLatestStream.
 - Add ability to display datetime in local time and with format in DateTime converter.
 - Add ValuesToIndexConverter.
 

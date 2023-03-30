@@ -43,7 +43,7 @@ class AbstractStream(typing.Generic[T]):
     def add_ref(self) -> AbstractStream[T]:
         return self
 
-    def remove_ref(self, check:bool=True) -> None:
+    def remove_ref(self, check: bool = True) -> None:
         pass
 
     class RefContextManager:
@@ -160,23 +160,36 @@ class CombineLatestStream(AbstractStream[OT], typing.Generic[T, OT]):
         # outgoing messages
         self.value_stream = Event.Event()
         # references
-        self.__stream_list = list(stream_list)
+        self.__stream_list: typing.List[AbstractStream[T]] = list()
         self.__value_fn = value_fn or (lambda *x: typing.cast(OT, tuple(x)))
         # initialize values
-        self.__values: typing.List[typing.Optional[T]] = [None] * len(stream_list)
+        self.__values: typing.List[typing.Optional[T]] = list()
         self.__value: typing.Optional[OT] = None
         # listen for display changes
-        self.__listeners = dict()  # index
-        for index, stream in enumerate(self.__stream_list):
-            # define a stub and use weak_partial to avoid holding references to self.
-            def handle_stream_value(stream: CombineLatestStream[T, OT], index: int, value: typing.Any) -> None:
-                stream.__handle_stream_value(index, value)
-
-            self.__listeners[index] = stream.value_stream.listen(weak_partial(handle_stream_value, self, index))
-            self.__values[index] = stream.value
+        self.__listeners: typing.List[Event.EventListener] = list()
+        for stream in stream_list:
+            self.__stream_list.append(stream)
+            self.__listeners.append(stream.value_stream.listen(weak_partial(CombineLatestStream.__handle_stream_value, self, stream)))
+            self.__values.append(stream.value)
         self.__values_changed()
 
-    def __handle_stream_value(self, index: int, value: typing.Optional[T]) -> None:
+    def append_stream(self, stream: AbstractStream[T]) -> None:
+        self.insert_stream(len(self.__stream_list), stream)
+
+    def insert_stream(self, index: int, stream: AbstractStream[T]) -> None:
+        self.__stream_list.insert(index, stream)
+        self.__listeners.insert(index, stream.value_stream.listen(weak_partial(CombineLatestStream.__handle_stream_value, self, stream)))
+        self.__values.insert(index, stream.value)
+        self.__values_changed()
+
+    def remove_stream(self, index: int) -> None:
+        self.__stream_list.pop(index)
+        self.__listeners.pop(index)
+        self.__values.pop(index)
+        self.__values_changed()
+
+    def __handle_stream_value(self, stream: AbstractStream[T], value: typing.Optional[T]) -> None:
+        index = self.__stream_list.index(stream)
         self.__values[index] = value
         self.__values_changed()
 
@@ -195,7 +208,7 @@ class DebounceValue(typing.Generic[T]):
 
 
 class DebounceStream(AbstractStream[T], typing.Generic[T]):
-    """A stream that produces latest value after a specified interval has elapsed."""
+    """A stream that produces the latest value after a specified interval has elapsed."""
 
     def __init__(self, input_stream: AbstractStream[T], period: float, event_loop: typing.Optional[asyncio.AbstractEventLoop]) -> None:
         super().__init__()
@@ -212,10 +225,10 @@ class DebounceStream(AbstractStream[T], typing.Generic[T]):
         self.__debounce_task = StreamTask(None, event_loop)
         self.__value_changed(input_stream.value)
 
-        def finalize(task: StreamTask, s: str) -> None:
+        def finalize(task: StreamTask) -> None:
             task.clear()
 
-        weakref.finalize(self, finalize, self.__debounce_task, str(self))
+        weakref.finalize(self, finalize, self.__debounce_task)
 
     def __value_changed(self, value: typing.Optional[T]) -> None:
         self.__value_holder.value = value
@@ -269,10 +282,10 @@ class SampleStream(AbstractStream[T], typing.Generic[T]):
 
         self.__sample_task = StreamTask(sample_loop(period, self.value_stream, self.__sample_value), event_loop)
 
-        def finalize(task: StreamTask, s: str) -> None:
+        def finalize(task: StreamTask) -> None:
             task.clear()
 
-        weakref.finalize(self, finalize, self.__sample_task, str(self))
+        weakref.finalize(self, finalize, self.__sample_task)
 
     def __value_changed(self, value: typing.Optional[T]) -> None:
         self.__sample_value.set_pending_value(value)
@@ -505,11 +518,11 @@ class ValueChangeStreamReactor(typing.Generic[T]):
 
         self.__task = self.__event_loop.create_task(cfn(AValueChangeStreamReactor(self.__event_queue)))
 
-        def finalize(task: typing.Optional[asyncio.Task[None]], s: str) -> None:
+        def finalize(task: typing.Optional[asyncio.Task[None]]) -> None:
             if task:
                 task.cancel()
 
-        weakref.finalize(self, finalize, self.__task, str(self))
+        weakref.finalize(self, finalize, self.__task)
 
     async def begin(self) -> None:
         while True:

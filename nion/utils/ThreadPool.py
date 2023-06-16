@@ -15,7 +15,7 @@ import weakref
 # None
 
 # local libraries
-# None
+from nion.utils import Process
 
 
 _ThreadPoolTask = typing.Callable[[], None]
@@ -47,7 +47,8 @@ class ThreadPool:
             while True:
                 task = q.get()
                 if task and not cancel.is_set():
-                    task()
+                    with Process.audit(f"threadpool.{task}"):
+                        task()
                 q.task_done()
                 if not task:  # do not break for cancel; need to match the final put(None)
                     break
@@ -124,7 +125,8 @@ class SingleItemDispatcher:
                                 if dispatcher_info.dispatch_thread_cancel.wait(dispatcher_info.cached_value_time + minimum_time - current_time):
                                     return
                             dispatcher_info.is_dispatch_pending = False  # any pending calls up to this point will be realized in the recompute
-                            fn()
+                            with Process.audit(f"dispatch.{fn}"):
+                                fn()
                             dispatcher_info.cached_value_time = time.time()
                         finally:
                             with dispatcher_info.is_dispatching_lock:

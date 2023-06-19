@@ -10,15 +10,8 @@ Nion utility classes.
 .. list-table::
     :stub-columns: 1
 
-    * - tests
-      - | |linux|
     * - package
       - |version|
-
-
-.. |linux| image:: https://img.shields.io/travis/nion-software/nionutils/master.svg?label=Linux%20build
-   :target: https://travis-ci.org/nion-software/nionutils
-   :alt: Travis CI build status (Linux)
 
 .. |version| image:: https://img.shields.io/pypi/v/nionutils.svg
    :target: https://pypi.org/project/nionutils/
@@ -57,7 +50,7 @@ code is available under the Apache License, Version 2.0.
 Requirements
 ------------
 
-Requires Python 3.8 or later.
+Requires Python 3.9 or later.
 
 Getting Help and Contributing
 -----------------------------

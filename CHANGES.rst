@@ -1,8 +1,9 @@
 Changelog (nionutils)
 =====================
 
-0.4.7 (UNRELEASED)
+0.4.7 (2023-06-19)
 ------------------
+- Add explicit support for Python 3.11; drop support for Python 3.8.
 - Add an auditing capability for performance auditing.
 - Add ability to add/remove streams from CombineLatestStream.
 - Add ability to display datetime in local time and with format in DateTime converter.

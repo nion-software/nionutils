@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+UNRELEASED
+----------
+- Add support for custom ValueStream compare operator.
+
 0.4.7 (2023-06-19)
 ------------------
 - Add explicit support for Python 3.11; drop support for Python 3.8.

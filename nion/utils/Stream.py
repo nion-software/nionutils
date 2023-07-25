@@ -92,10 +92,11 @@ class StreamTask:
 class ValueStream(AbstractStream[T], typing.Generic[T]):
     """A stream that sends out value when value is set."""
 
-    def __init__(self, value: typing.Optional[T] = None) -> None:
+    def __init__(self, value: typing.Optional[T] = None, cmp: typing.Optional[EqualityOperator] = None) -> None:
         super().__init__()
         # internal values
         self.__value = value
+        self.__cmp = cmp if cmp else operator.eq
         # outgoing messages
         self.value_stream = Event.Event()
 
@@ -108,7 +109,7 @@ class ValueStream(AbstractStream[T], typing.Generic[T]):
 
     @value.setter
     def value(self, value: typing.Optional[T]) -> None:
-        if self.__value != value:
+        if not self.__cmp(value, self.__value):
             self.send_value(value)
 
     def send_value(self, value: typing.Optional[T]) -> None:

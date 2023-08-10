@@ -1,8 +1,8 @@
 Changelog (nionutils)
 =====================
 
-UNRELEASED
-----------
+0.4.8 (2023-08-10)
+------------------
 - Add support for custom ValueStream compare operator.
 
 0.4.7 (2023-06-19)

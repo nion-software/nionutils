@@ -41,7 +41,7 @@ jobs:
         python -m unittest discover -s nion/utils -p '*_test.py'
         mypy --namespace-packages --strict -p nion.utils
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
       with:
         name: distribution
@@ -50,7 +50,7 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
       with:
-        skip_existing: true
+        skip-existing: true
         user: __token__
         password: ${{ secrets.pypi_password }}
     - name: Set up Miniconda for conda-build

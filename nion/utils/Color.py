@@ -34,10 +34,10 @@ class Color:
         if not color_str:
             return Color()
         color_str = color_str.strip().replace(" ", "")
-        c = re.split("rgba\((\d+),(\d+),(\d+),([\d.]+)\)", color_str)
+        c = re.split(r"rgba\((\d+),(\d+),(\d+),([\d.]+)\)", color_str)
         if len(c) > 1:
             return Color(f"#{int(c[1]):02x}{int(c[2]):02x}{int(c[3]):02x}")
-        c = re.split("rgb\((\d+),(\d+),(\d+)\)", color_str)
+        c = re.split(r"rgb\((\d+),(\d+),(\d+)\)", color_str)
         if len(c) > 1:
             return Color(f"#{int(c[1]):02x}{int(c[2]):02x}{int(c[3]):02x}")
         if color_str.startswith("#"):
@@ -84,10 +84,10 @@ class Color:
     def __hex_color(self, color_str: typing.Optional[str]) -> typing.Optional[str]:
         if not color_str:
             return None
-        c = re.split("rgba\((\d+),(\d+),(\d+),([\d.]+)\)", color_str)
+        c = re.split(r"rgba\((\d+),(\d+),(\d+),([\d.]+)\)", color_str)
         if len(c) > 1:
             return f"#{int(255 * float(c[4])):02x}{int(c[1]):02x}{int(c[2]):02x}{int(c[3]):02x}"
-        c = re.split("rgb\((\d+),(\d+),(\d+)\)", color_str)
+        c = re.split(r"rgb\((\d+),(\d+),(\d+)\)", color_str)
         if len(c) > 1:
             return f"#{int(c[1]):02x}{int(c[2]):02x}{int(c[3]):02x}"
         if color_str.startswith("#"):
@@ -119,7 +119,7 @@ with open("colors.txt", "r") as f:
             break
         color_line = color_line.strip()
         rgb_line = f.readline().strip().replace(" ", "")
-        c = re.split("rgb\((\d+),(\d+),(\d+)\)", rgb_line)
+        c = re.split(r"rgb\((\d+),(\d+),(\d+)\)", rgb_line)
         print(f"\t\"{color_line}\": \"#{int(c[1]):02x}{int(c[2]):02x}{int(c[3]):02x}\",")
 """
 

@@ -41,7 +41,7 @@ class DateTimeUTC:
                     while current_time <= last_time:
                         current_time += 0.000001
                     last_time = current_time
-                timestamp = datetime.datetime.utcfromtimestamp(current_time)
+                timestamp = datetime.datetime.fromtimestamp(current_time, tz=datetime.timezone.utc)
             else:
                 timestamp = datetime.datetime.now(datetime.timezone.utc)
             self.__timestamp = timestamp

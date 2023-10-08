@@ -1,10 +1,10 @@
 # standard libraries
-import datetime
 import logging
 import unittest
 
 # local libraries
 from nion.utils import Converter
+from nion.utils import DateTime
 
 
 class TestConverter(unittest.TestCase):
@@ -40,7 +40,7 @@ class TestConverter(unittest.TestCase):
         self.assertEqual(converter.convert_back("xx4."), 4)
 
     def test_date_to_string_converter(self) -> None:
-        dt = datetime.datetime.utcnow()
+        dt = DateTime.utcnow()
         dt_str = dt.isoformat()
         # default converter
         converter = Converter.DatetimeToStringConverter()

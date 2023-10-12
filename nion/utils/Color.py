@@ -119,7 +119,7 @@ with open("colors.txt", "r") as f:
             break
         color_line = color_line.strip()
         rgb_line = f.readline().strip().replace(" ", "")
-        c = re.split(r"rgb\((\d+),(\d+),(\d+)\)", rgb_line)
+        c = re.split("rgb\\((\\d+),(\\d+),(\\d+)\\)", rgb_line)
         print(f"\t\"{color_line}\": \"#{int(c[1]):02x}{int(c[2]):02x}{int(c[3]):02x}\",")
 """
 

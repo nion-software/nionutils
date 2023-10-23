@@ -1,6 +1,11 @@
 Changelog (nionutils)
 =====================
 
+0.4.9 (2023-10-23)
+------------------
+- Minor updates for Python 3.12 compatibility.
+- Avoid using utcnow and utcfromtimestamp (both deprecated).
+
 0.4.8 (2023-08-10)
 ------------------
 - Add support for custom ValueStream compare operator.

@@ -194,6 +194,18 @@ _audit_enabled = False
 
 
 @contextlib.contextmanager
+def audit_report(threshold: float = 100e-6) -> typing.Iterator[typing.Any]:
+    global _audit_enabled
+    was_audit_enabled = _audit_enabled
+    _audit_enabled = True
+    try:
+        yield
+    finally:
+        _audit_enabled = was_audit_enabled
+        _audit.report(threshold)
+
+
+@contextlib.contextmanager
 def audit(audit_id: str) -> typing.Iterator[typing.Any]:
     if _audit_enabled:
         audit_index = _audit.enter(audit_id)

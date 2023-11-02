@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+0.4.10 (UNRELEASED)
+-------------------
+- OptionalStream now returns the proper value.
+
 0.4.9 (2023-10-23)
 ------------------
 - Minor updates for Python 3.12 compatibility.

@@ -362,7 +362,7 @@ class PropertyChangedEventStream(AbstractStream[T], typing.Generic[T]):
                 self.value_stream.fire(self.__value)
 
 
-class OptionalStream(AbstractStream[T], typing.Generic[T]):
+class OptionalStream(ValueStream[T], typing.Generic[T]):
     """Sends value from input stream or None."""
 
     def __init__(self, stream: AbstractStream[T], pred: typing.Callable[[typing.Optional[T]], bool]) -> None:
@@ -378,15 +378,11 @@ class OptionalStream(AbstractStream[T], typing.Generic[T]):
         self.value_stream = Event.Event()
         self.__value_changed(self.__stream.value)
 
-    @property
-    def value(self) -> typing.Optional[T]:
-        return None
-
     def __value_changed(self, value: typing.Optional[T]) -> None:
         if self.__pred(value):
-            self.value_stream.fire(value)
+            self.value = value
         else:
-            self.value_stream.fire(None)
+            self.value = None
 
 
 class PrintStream:

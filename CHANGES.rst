@@ -4,6 +4,7 @@ Changelog (nionutils)
 0.4.10 (UNRELEASED)
 -------------------
 - OptionalStream now returns the proper value.
+- Improvements to ValueChangeStreamReactor (still experimental).
 
 0.4.9 (2023-10-23)
 ------------------

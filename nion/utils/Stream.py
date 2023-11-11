@@ -450,12 +450,7 @@ class ValueChangeStream(ValueStream[ValueChange[T]], typing.Generic[T]):
     def __init__(self, value_stream: AbstractStream[T]) -> None:
         super().__init__()
         self.__value_stream = value_stream
-
-        # define a stub and use weak_partial to avoid holding references to self.
-        def value_changed(a: ValueChangeStream[T], value: typing.Optional[T]) -> None:
-            a.__value_changed(value)
-
-        self.__value_stream_listener = self.__value_stream.value_stream.listen(weak_partial(value_changed, self))
+        self.__value_stream_listener = self.__value_stream.value_stream.listen(weak_partial(ValueChangeStream.__value_changed, self))
         self.__is_active = False
 
     def add_ref(self) -> ValueChangeStream[T]:
@@ -482,50 +477,50 @@ ValueChangeStreamReactorInterfaceT = typing.TypeVar("ValueChangeStreamReactorInt
 
 
 class ValueChangeStreamReactorInterface(typing.Protocol[ValueChangeStreamReactorInterfaceT]):
-    async def begin(self) -> None: ...
     async def next_value_change(self) -> ValueChange[ValueChangeStreamReactorInterfaceT]: ...
 
 
 class ValueChangeStreamReactor(typing.Generic[T]):
-    def __init__(self, value_change_stream: ValueChangeStream[T], event_loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
+    def __init__(self, value_change_stream: ValueChangeStream[T], cfn: typing.Callable[[ValueChangeStreamReactorInterface[T]], typing.Coroutine[typing.Any, typing.Any, typing.Any]], event_loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         self.__value_change_stream = value_change_stream
+        self.__cfn = cfn
         self.__event_loop = event_loop or asyncio.get_running_loop()
         self.__value_changed_listener = value_change_stream.value_stream.listen(weak_partial(ValueChangeStreamReactor.__value_changed, self))
         self.__event_queue: asyncio.Queue[ValueChange[T]] = asyncio.Queue()
         self.__task: typing.Optional[asyncio.Task[None]] = None
+        self.__had_exception = False
 
     def __value_changed(self, value_change: ValueChange[T]) -> None:
-        self.__event_queue.put_nowait(value_change)
+        if value_change.state == ValueChangeType.BEGIN:
+            self.__had_exception = False
+            self.__event_queue.put_nowait(value_change)  # ensure loop gets the begin event
+            self.run()
+        elif not self.__had_exception:
+            self.__event_queue.put_nowait(value_change)
 
-    def run(self, cfn: typing.Callable[[ValueChangeStreamReactorInterface[T]], typing.Coroutine[typing.Any, typing.Any, typing.Any]]) -> None:
-        assert not self.__task
-
+    def run(self) -> None:
         class AValueChangeStreamReactor(ValueChangeStreamReactorInterface[T]):
             def __init__(self, event_queue: asyncio.Queue[ValueChange[T]]) -> None:
                 self.__event_queue = event_queue
 
-            async def begin(self) -> None:
-                while True:
-                    value_change = await self.__event_queue.get()
-                    if value_change.state == ValueChangeType.BEGIN:
-                        break
-
             async def next_value_change(self) -> ValueChange[typing.Any]:
-                return await self.__event_queue.get()
+                r = await self.__event_queue.get()
+                self.__event_queue.task_done()
+                return r
 
-        self.__task = self.__event_loop.create_task(cfn(AValueChangeStreamReactor(self.__event_queue)))
+        async def run_task(cfn: typing.Callable[[ValueChangeStreamReactorInterface[T]], typing.Coroutine[typing.Any, typing.Any, typing.Any]], event_queue: asyncio.Queue[ValueChange[T]]) -> None:
+            try:
+                await cfn(AValueChangeStreamReactor(event_queue))
+            except Exception:
+                self.__had_exception = True
+
+        self.__task = self.__event_loop.create_task(run_task(self.__cfn, self.__event_queue))
 
         def finalize(task: typing.Optional[asyncio.Task[None]]) -> None:
             if task:
                 task.cancel()
 
         weakref.finalize(self, finalize, self.__task)
-
-    async def begin(self) -> None:
-        while True:
-            value_change = await self.__event_queue.get()
-            if value_change.state == ValueChangeType.BEGIN:
-                break
 
     async def next_value_change(self) -> ValueChange[T]:
         return await self.__event_queue.get()

@@ -165,7 +165,7 @@ class Audit:
             audit_event.end = time.perf_counter_ns()
             audit_event.is_active = False
 
-    def report(self, threshold: float = 100e-6) -> None:
+    def report(self, threshold: float = 100e-6, *, target_audit_id: typing.Optional[str] = None, **kwargs: typing.Any) -> None:
         print(f"-------------- Audit report: {datetime.datetime.now()}")
         with self.__audit_context_mutex:
             audit_events = list(self.__audit_state.values())
@@ -185,8 +185,9 @@ class Audit:
         for audit_event in audit_events:
             if not audit_event.parent:
                 index += 1
-                print(f"{index}: thread {audit_event.thread}")
-                print_audit_event(audit_event, "..")
+                if not target_audit_id or audit_event.audit_id == target_audit_id:
+                    print(f"{index}: thread {audit_event.thread}")
+                    print_audit_event(audit_event, "..")
 
 
 _audit = Audit()
@@ -194,7 +195,7 @@ _audit_enabled = False
 
 
 @contextlib.contextmanager
-def audit_report(threshold: float = 100e-6) -> typing.Iterator[typing.Any]:
+def audit_report(threshold: float = 100e-6, *, target_audit_id: typing.Optional[str] = None, **kwargs: typing.Any) -> typing.Iterator[typing.Any]:
     global _audit_enabled
     was_audit_enabled = _audit_enabled
     _audit_enabled = True
@@ -202,7 +203,7 @@ def audit_report(threshold: float = 100e-6) -> typing.Iterator[typing.Any]:
         yield
     finally:
         _audit_enabled = was_audit_enabled
-        _audit.report(threshold)
+        _audit.report(threshold, target_audit_id=target_audit_id, **kwargs)
 
 
 @contextlib.contextmanager

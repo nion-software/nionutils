@@ -70,6 +70,10 @@ class ListModel(Observable.Observable, typing.Generic[T]):
             self.insert_item(len(self.__items), item)
 
     @property
+    def count(self) -> int:
+        return len(self.__items)
+
+    @property
     def _items(self) -> typing.List[T]:
         return self.__items
 

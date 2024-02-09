@@ -489,6 +489,83 @@ class TestListModelClass(unittest.TestCase):
         with contextlib.closing(f):
             pass
 
+    def test_selection_is_update_to_date_after_changes(self) -> None:
+        # this is a complicated test that checks how filtered list model and mapped list model
+        # handle changes to the container list model and how the selection is updated.
+
+        class Element(Observable.Observable):
+            # define an element to insert into the list model. the element stores a string but also
+            # provides an item_changed_event.
+
+            def __init__(self, s: str) -> None:
+                super().__init__()
+                self.__s = s
+                self.item_changed_event = Event.Event()
+
+            def __repr__(self) -> str:
+                return f"Element({self.s})"
+
+            @property
+            def s(self) -> str:
+                return self.__s
+
+            @s.setter
+            def s(self, value: str) -> None:
+                self.__s = value
+                self.item_changed_event.fire()
+
+        # create a list model, a master list, a filtered list, and mapped list.
+        # the master list is sorted in reverse order and the filtered list is filtered to only include
+        # elements with a length of 2. the mapped list maps the elements to the same type.
+
+        elements = ListModel.ListModel[typing.Any]()
+        master_list = ListModel.FilteredListModel(container=elements)
+        master_list.sort_reverse = True
+        master_list.filter = ListModel.PredicateFilter(lambda x: True)
+        master_list.sort_key = lambda x: x.s
+        filtered_list = ListModel.FilteredListModel(container=master_list)
+        elements.append_item(Element("1"))
+        element2 = Element("22")
+        elements.append_item(element2)
+        filtered_list.filter = ListModel.PredicateFilter(lambda x: len(x.s) == 2)
+        element3 = Element("3")
+        elements.append_item(element3)
+        selection = filtered_list.make_selection()
+        selection.expanded_changed_event = True
+        mapped_list = ListModel.MappedListModel(container=filtered_list)
+        element3.s = "33"
+        selection.set(0)
+
+        # at this point, the list model contains "1", "22", "33".
+        # the master list contains "33", "22", "1".
+        # the filtered list containes "33", "22", only length 2.
+        # the selection is on "33".
+
+        selected_element = None
+
+        # observe the selection changed and use it to set the selected_element.
+        # this helps test out the notifications from top to bottom and is an actual use case.
+
+        def selection_changed() -> None:
+            if len(selection.indexes) == 1:
+                index = list(selection.indexes)[0]
+                nonlocal selected_element
+                selected_element = mapped_list.items[index]
+
+        with selection.changed_event.listen(selection_changed):
+            # add another element to the list model. this should cause the master list to add it
+            # but not the filtered list.
+            x = Element("4")
+            elements.append_item(x)
+
+            # now change it so that it has a length of 2. this should cause the filtered list to add it.
+            # also the mapped list should get it.
+            x.s = "44"
+
+        # the selected element should be the same as before.
+
+        self.assertEqual(element3, selected_element)
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

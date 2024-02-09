@@ -29,6 +29,28 @@ class C:
         self.item_changed_event = Event.Event()
 
 
+class Element(Observable.Observable):
+    # define an element to insert into the list model. the element stores a string but also
+    # provides an item_changed_event.
+
+    def __init__(self, s: str) -> None:
+        super().__init__()
+        self.__s = s
+        self.item_changed_event = Event.Event()
+
+    def __repr__(self) -> str:
+        return f"Element({self.s})"
+
+    @property
+    def s(self) -> str:
+        return self.__s
+
+    @s.setter
+    def s(self, value: str) -> None:
+        self.__s = value
+        self.item_changed_event.fire()
+
+
 class TestListModelClass(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -493,27 +515,6 @@ class TestListModelClass(unittest.TestCase):
         # this is a complicated test that checks how filtered list model and mapped list model
         # handle changes to the container list model and how the selection is updated.
 
-        class Element(Observable.Observable):
-            # define an element to insert into the list model. the element stores a string but also
-            # provides an item_changed_event.
-
-            def __init__(self, s: str) -> None:
-                super().__init__()
-                self.__s = s
-                self.item_changed_event = Event.Event()
-
-            def __repr__(self) -> str:
-                return f"Element({self.s})"
-
-            @property
-            def s(self) -> str:
-                return self.__s
-
-            @s.setter
-            def s(self, value: str) -> None:
-                self.__s = value
-                self.item_changed_event.fire()
-
         # create a list model, a master list, a filtered list, and mapped list.
         # the master list is sorted in reverse order and the filtered list is filtered to only include
         # elements with a length of 2. the mapped list maps the elements to the same type.
@@ -565,6 +566,29 @@ class TestListModelClass(unittest.TestCase):
         # the selected element should be the same as before.
 
         self.assertEqual(element3, selected_element)
+
+    def test_selection_does_not_change_after_item_content_is_changed(self) -> None:
+        elements = ListModel.ListModel[typing.Any]()
+        list = ListModel.FilteredListModel(container=elements)
+        list.sort_key = lambda x: x.s
+        elements.append_item(Element("1"))
+        elements.append_item(Element("2"))
+        elements.append_item(Element("3"))
+        selection = list.make_selection()
+        selection.expanded_changed_event = True
+        selection.set(1)
+
+        did_selection_change = False
+
+        def selection_changed() -> None:
+            nonlocal did_selection_change
+            did_selection_change = True
+
+        with selection.changed_event.listen(selection_changed):
+            elements.items[1].s = "22"
+            self.assertFalse(did_selection_change)
+            elements.items[1].s = "4"
+            self.assertTrue(did_selection_change)
 
 
 if __name__ == '__main__':

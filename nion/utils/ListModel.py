@@ -295,6 +295,7 @@ class FilteredListModel(Observable.Observable):
         self.__item_changed_event_listeners: typing.List[Event.EventListener] = list()
         self.__item_inserted_event_listener: typing.Optional[Event.EventListener] = None
         self.__item_removed_event_listener: typing.Optional[Event.EventListener] = None
+        self.__item_content_changed_event_listener: typing.Optional[Event.EventListener] = None
         self.__reset_list_event_listener: typing.Optional[Event.EventListener] = None
         self.__begin_changes_event_listener: typing.Optional[Event.EventListener] = None
         self.__end_changes_event_listener: typing.Optional[Event.EventListener] = None
@@ -425,13 +426,21 @@ class FilteredListModel(Observable.Observable):
 
     # thread safe
     def __inserted_master_item(self, before_index: int, item: typing.Any) -> None:
-        """
-            Subclasses can call this to notify this object that a item in
-            the master item list has been inserted.
-        """
         with self._update_mutex:
             if self.filter.matches(item):
                 self.__insert_item(item, self.sort_key)
+
+    # thread safe
+    def __removed_master_item(self, index: int, item: typing.Any) -> None:
+        with self._update_mutex:
+            if item in self.__items:
+                self.__remove_item(item)
+
+    # thread safe
+    def __changed_master_item(self, index: int, item: typing.Any) -> None:
+        # item is in the list and the filter matches and index will not change.
+        # notify item content changed for listeners. don't update the selection.
+        self.notify_item_content_changed(self.__items_key, item, index)
 
     def __insert_item(self, item: typing.Any, sort_key: OptionalSortKeyCallable) -> None:
         items = self.__items
@@ -461,16 +470,6 @@ class FilteredListModel(Observable.Observable):
                 selection.remove_index(item_index)
 
     # thread safe
-    def __removed_master_item(self, index: int, item: typing.Any) -> None:
-        """
-            Subclasses can call this to notify this object that a item in
-            the master item list has been removed.
-        """
-        with self._update_mutex:
-            if item in self.__items:
-                self.__remove_item(item)
-
-    # thread safe
     def __updated_master_item(self, item: typing.Any) -> None:
         """
             Subclasses can call this to notify this object that a item in
@@ -484,7 +483,12 @@ class FilteredListModel(Observable.Observable):
                 if sort_key is not None:
                     # are items sorted?
                     sort_operator = operator.gt if self.sort_reverse else operator.lt
-                    before_index = self.__find_sorted_index_for_item(item, items, sort_key, sort_operator)
+                    if item in items:
+                        items_copy = list(items)
+                        items_copy.remove(item)
+                    else:
+                        items_copy = items  # no need to copy in this case
+                    before_index = self.__find_sorted_index_for_item(item, items_copy, sort_key, sort_operator)
                     if item in items:
                         # item already in list?
                         index = items.index(item)
@@ -495,8 +499,7 @@ class FilteredListModel(Observable.Observable):
                             self.__removed_master_item(index, item)
                             self.__inserted_master_item(before_index - 1, item)
                         else:
-                            self.__removed_master_item(index, item)
-                            self.__inserted_master_item(before_index, item)
+                            self.__changed_master_item(index, item)
                     else:
                         # item is not in list, just insert
                         self.__inserted_master_item(before_index, item)
@@ -602,6 +605,7 @@ class FilteredListModel(Observable.Observable):
             if self.__container:
                 self.__item_inserted_event_listener = None
                 self.__item_removed_event_listener = None
+                self.__item_content_changed_event_listener = None
                 self.__begin_changes_event_listener = None
                 self.__end_changes_event_listener = None
                 self.__reset_list_event_listener = None
@@ -613,6 +617,7 @@ class FilteredListModel(Observable.Observable):
             if self.__container:
                 self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(weak_partial(FilteredListModel.__container_item_inserted, self))
                 self.__item_removed_event_listener = self.__container.item_removed_event.listen(weak_partial(FilteredListModel.__container_item_removed, self))
+                self.__item_content_changed_event_listener = self.__container.item_content_changed_event.listen(weak_partial(FilteredListModel.__container_item_content_changed, self))
 
                 if hasattr(self.__container, "begin_changes_event") and hasattr(self.__container, "end_changes_event"):
 
@@ -665,6 +670,11 @@ class FilteredListModel(Observable.Observable):
             with self.changes():
                 self.__item_removed(key, item, index)
 
+    def __container_item_content_changed(self, key: str, item: typing.Any, index: int) -> None:
+        if key == self.__master_items_key:
+            with self.changes():
+                self.__item_content_changed(key, item, index)
+
     # thread safe.
     def __item_inserted(self, key: str, item: typing.Any, before_index: int) -> None:
         """ Insert the master item. Called from the container. """
@@ -691,6 +701,13 @@ class FilteredListModel(Observable.Observable):
                 del self.__master_items[index]
                 del self.__item_changed_event_listeners[index]
                 self.__removed_master_item(index, item)
+
+    # thread safe.
+    def __item_content_changed(self, key: str, item: typing.Any, index: int) -> None:
+        """ Update the master item. Called from the container. """
+        if key == self.__master_items_key:
+            with self._update_mutex:
+                self.__updated_master_item(item)
 
 
 class MappedListModel(Observable.Observable):

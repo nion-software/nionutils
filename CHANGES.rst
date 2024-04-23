@@ -4,6 +4,7 @@ Changelog (nionutils)
 0.4.11 (UNRELEASED)
 -------------------
 - Add ability to filter audit reports by top-level audit id.
+- Add replace_stream method and stream_list property to CombineLatestStream.
 
 0.4.10 (2023-12-17)
 -------------------

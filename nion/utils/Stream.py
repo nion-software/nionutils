@@ -189,6 +189,16 @@ class CombineLatestStream(AbstractStream[OT], typing.Generic[T, OT]):
         self.__values.pop(index)
         self.__values_changed()
 
+    def replace_stream(self, index: int, stream: AbstractStream[T]) -> None:
+        self.__stream_list[index] = stream
+        self.__listeners[index] = stream.value_stream.listen(weak_partial(CombineLatestStream.__handle_stream_value, self, stream))
+        self.__values[index] = stream.value
+        self.__values_changed()
+
+    @property
+    def stream_list(self) -> typing.Sequence[AbstractStream[T]]:
+        return self.__stream_list
+
     def __handle_stream_value(self, stream: AbstractStream[T], value: typing.Optional[T]) -> None:
         index = self.__stream_list.index(stream)
         self.__values[index] = value

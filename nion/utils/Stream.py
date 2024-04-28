@@ -395,6 +395,32 @@ class OptionalStream(ValueStream[T], typing.Generic[T]):
             self.value = None
 
 
+class FollowStream(ValueStream[T], typing.Generic[T]):
+    """Sends value from input stream. Input stream can be changed."""
+
+    def __init__(self, stream: typing.Optional[AbstractStream[T]] = None) -> None:
+        super().__init__()
+        self.__stream: AbstractStream[T]
+        self.__stream_action: ValueStreamAction[T]
+        self.stream = stream
+
+    @property
+    def stream(self) -> typing.Optional[AbstractStream[T]]:
+        return self.__stream
+
+    @stream.setter
+    def stream(self, stream: typing.Optional[AbstractStream[T]]) -> None:
+        stream = stream or ConstantStream[T](None)
+        self.__stream = stream
+        self.__stream_action = ValueStreamAction(self.__stream, weak_partial(FollowStream.__value_changed, self))
+        self.__value_changed(self.__stream.value)
+
+    # define a stub and use weak_partial to avoid holding references to self.
+    def __value_changed(self, value: typing.Optional[T]) -> None:
+        self.value = value
+
+
+
 class PrintStream:
     """Prints value from input stream."""
 

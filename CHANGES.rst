@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+4.12.0 (UNRELEASED)
+-------------------
+- Add BoolToStringConverter.
+
 4.11.0 (2024-06-12)
 -------------------
 - Add ability to filter audit reports by top-level audit id.

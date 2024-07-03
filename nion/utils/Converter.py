@@ -154,6 +154,14 @@ class PhysicalValueToStringConverter(ConverterLike[float, str]):
         return value / self.__multiplier if value is not None else None
 
 
+class BoolToStringConverter(ConverterLike[bool, str]):
+    def convert(self, value: typing.Optional[bool]) -> typing.Optional[str]:
+        return "true" if value else "false"
+
+    def convert_back(self, value: typing.Optional[str]) -> bool:
+        return value == "true"
+
+
 class CheckedToCheckStateConverter(ConverterLike[bool, str]):
     """ Convert between bool and checked/unchecked strings. """
 

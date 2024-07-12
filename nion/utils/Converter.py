@@ -159,7 +159,7 @@ class BoolToStringConverter(ConverterLike[bool, str]):
         return "true" if value else "false"
 
     def convert_back(self, value: typing.Optional[str]) -> bool:
-        return value == "true"
+        return value.lower().strip() == "true" if value else False
 
 
 class CheckedToCheckStateConverter(ConverterLike[bool, str]):

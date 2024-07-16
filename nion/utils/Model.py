@@ -176,7 +176,7 @@ class PropertyChangedPropertyModel(PropertyModel[T], typing.Generic[T]):
         super()._set_value(self._get_property_value())
 
     def _get_property_value(self) -> typing.Optional[T]:
-        return getattr(self._observable, self._property_name)
+        return typing.cast(typing.Optional[T], getattr(self._observable, self._property_name))
 
     def _set_property_value(self, value: typing.Optional[T]) -> None:
         setattr(self._observable, self._property_name, value)

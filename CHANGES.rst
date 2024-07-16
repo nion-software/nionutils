@@ -4,6 +4,7 @@ Changelog (nionutils)
 4.12.0 (UNRELEASED)
 -------------------
 - Add BoolToStringConverter.
+- Allow subclasses to override get/set property value in PropertyChangedPropertyModel for more flexibility.
 
 4.11.0 (2024-06-12)
 -------------------

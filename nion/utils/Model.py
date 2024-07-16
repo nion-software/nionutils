@@ -24,7 +24,21 @@ EqualityOperator = typing.Callable[[typing.Any, typing.Any], bool]
 T = typing.TypeVar('T')
 
 
-class PropertyModel(Observable.Observable, typing.Generic[T]):
+class ValueModel(Observable.Observable, typing.Generic[T]):
+
+    def close(self) -> None:
+        pass
+
+    @property
+    def value(self) -> typing.Optional[T]:
+        raise NotImplementedError()
+
+    @value.setter
+    def value(self, value: typing.Optional[T]) -> None:
+        raise NotImplementedError()
+
+
+class PropertyModel(ValueModel[T], typing.Generic[T]):
     """Holds a value which can be observed for changes.
 
     The value can be any type that supports equality test.
@@ -37,9 +51,6 @@ class PropertyModel(Observable.Observable, typing.Generic[T]):
         self.__value = value
         self.__cmp = cmp if cmp else typing.cast(typing.Callable[[typing.Optional[T], typing.Optional[T]], bool], operator.eq)
         self.on_value_changed : typing.Optional[typing.Callable[[typing.Optional[T]], None]] = None
-
-    def close(self) -> None:
-        pass
 
     @property
     def value(self) -> typing.Optional[T]:
@@ -149,22 +160,43 @@ class PropertyChangedPropertyModel(PropertyModel[T], typing.Generic[T]):
     When the observed property changes, update this value.
 
     When this value changes, update the observed property.
+
+    TODO: subclass ValueModel when updating to nionutils 5.0
     """
 
     def __init__(self, observable: Observable.Observable, property_name: str) -> None:
-        super().__init__(getattr(observable, property_name, None))
+        super().__init__()
         self.__observable = observable
         self.__property_name = property_name
+        self.__value = getattr(observable, property_name, None)
+        self.__listener = self.__observable.property_changed_event.listen(weak_partial(PropertyChangedPropertyModel.__property_changed, self, observable, property_name))
 
-        def property_changed(property_model: PropertyChangedPropertyModel[T], observable: Observable.Observable, property_name: str, property_name_: str) -> None:
-            # check if changed property matches property name for this object
-            if property_name_ == property_name:
-                property_model.value = getattr(observable, property_name)
+    @property
+    def _observable(self) -> Observable.Observable:
+        return self.__observable
 
-        self.__listener = self.__observable.property_changed_event.listen(weak_partial(property_changed, self, observable, property_name))
+    @property
+    def _property_name(self) -> str:
+        return self.__property_name
 
-    def _set_value(self, value: typing.Optional[T]) -> None:
-        super()._set_value(value)
-        # set the property on the observed object. this will trigger a property changed, but will be ignored since
-        # the value doesn't change.
+    @property
+    def value(self) -> typing.Optional[T]:
+        return self._get_property_value()
+
+    @value.setter
+    def value(self, value: typing.Optional[T]) -> None:
+        self._set_property_value(value)
+
+    def _get_property_value(self) -> typing.Optional[T]:
+        return getattr(self.__observable, self.__property_name, None)
+
+    def _set_property_value(self, value: typing.Optional[T]) -> None:
         setattr(self.__observable, self.__property_name, value)
+
+    def __property_changed(self, observable: Observable.Observable, property_name: str, property_name_: str) -> None:
+        # check if changed property matches property name for this object
+        # if so, notify that value changed.
+        # this should only be called when the property of the observable notifies its property value changed,
+        # so no need for additional change checking here.
+        if property_name_ == property_name:
+            self.notify_property_changed("value")

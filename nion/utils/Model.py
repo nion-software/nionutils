@@ -163,8 +163,20 @@ class PropertyChangedPropertyModel(PropertyModel[T], typing.Generic[T]):
 
         self.__listener = self.__observable.property_changed_event.listen(weak_partial(property_changed, self, observable, property_name))
 
+    @property
+    def _observable(self) -> Observable.Observable:
+        return self.__observable
+
+    @property
+    def _property_name(self) -> str:
+        return self.__property_name
+
     def _set_value(self, value: typing.Optional[T]) -> None:
-        super()._set_value(value)
-        # set the property on the observed object. this will trigger a property changed, but will be ignored since
-        # the value doesn't change.
-        setattr(self.__observable, self.__property_name, value)
+        self._set_property_value(value)
+        super()._set_value(self._get_property_value())
+
+    def _get_property_value(self) -> typing.Optional[T]:
+        return getattr(self._observable, self._property_name)
+
+    def _set_property_value(self, value: typing.Optional[T]) -> None:
+        setattr(self._observable, self._property_name, value)

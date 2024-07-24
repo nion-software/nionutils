@@ -74,6 +74,23 @@ class TestConverter(unittest.TestCase):
         self.assertEqual(converter.convert(test_class.tuple_property), 30)
         self.assertEqual(converter.convert_back(50), (10, 20, 50, 40))
 
+    def test_tuple_of_integers_to_string_value_converter(self) -> None:
+        class TupleTestClass:
+            __tuple = (10, 20, 30, 40)
+
+            @property
+            def tuple_property(self) -> tuple[typing.Any, ...]:
+                return self.__tuple
+
+            @tuple_property.setter
+            def tuple_property(self, value: tuple[typing.Any, ...]) -> None:
+                self.__tuple = value
+
+        test_class = TupleTestClass()
+        converter = Converter.TupleOfIntegersToStringValueConverter(test_class, "tuple_property", 2)
+        self.assertEqual(converter.convert(test_class.tuple_property), "30")
+        self.assertEqual(converter.convert_back("50"), (10, 20, 50, 40))
+
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     unittest.main()

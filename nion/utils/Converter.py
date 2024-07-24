@@ -275,3 +275,27 @@ class TupleToValueConverter(ConverterLike[tuple[TT, ...], TT]):
             tuple_as_list.append(None)
         tuple_as_list[self.__index] = formatted_value
         return tuple(tuple_as_list)
+
+
+class TupleOfIntegersToStringValueConverter(ConverterLike[tuple[int, ...], str]):
+    """Convert between a tuple and a string representation of the integer value at a specified index of the tuple"""
+
+    def __init__(self, source: typing.Any, property_name: str, index: int) -> None:
+        self.__source = source
+        self.__property_name = property_name
+
+        assert index >= 0
+        self.__index = index
+        self.__int_to_string_converter = IntegerToStringConverter()
+
+    def convert(self, value: typing.Optional[tuple[int, ...]]) -> typing.Optional[str]:
+        return self.__int_to_string_converter.convert(value[self.__index]) if value is not None and len(value) > self.__index else None
+
+    def convert_back(self, string_value: typing.Optional[str]) -> tuple[int, ...]:
+        formatted_value = self.__int_to_string_converter.convert_back(string_value)
+        source_tuple = getattr(self.__source, self.__property_name)
+        tuple_as_list = list(source_tuple) if source_tuple is not None else list()
+        while len(tuple_as_list) <= self.__index:
+            tuple_as_list.append(None)
+        tuple_as_list[self.__index] = formatted_value
+        return tuple(tuple_as_list)

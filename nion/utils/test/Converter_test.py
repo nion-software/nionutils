@@ -1,5 +1,6 @@
 # standard libraries
 import logging
+import typing
 import unittest
 
 # local libraries
@@ -56,6 +57,22 @@ class TestConverter(unittest.TestCase):
         self.assertEqual(dt.replace(microsecond=0), converter.convert_back(converter.convert(dt.replace(microsecond=0))))
         self.assertEqual(dt.strftime(format), converter.convert(converter.convert_back(dt.strftime(format))))
 
+    def test_tuple_to_value_converter(self) -> None:
+        class TupleTestClass:
+            __tuple = (10, 20, 30, 40)
+
+            @property
+            def tuple_property(self) -> tuple[typing.Any, ...]:
+                return self.__tuple
+
+            @tuple_property.setter
+            def tuple_property(self, value: tuple[typing.Any, ...]) -> None:
+                self.__tuple = value
+
+        test_class = TupleTestClass()
+        converter = Converter.TupleToValueConverter[int](test_class, "tuple_property", 2)
+        self.assertEqual(converter.convert(test_class.tuple_property), 30)
+        self.assertEqual(converter.convert_back(50), (10, 20, 50, 40))
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

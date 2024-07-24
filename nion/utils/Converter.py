@@ -253,3 +253,25 @@ class ValuesToIndexConverter(ConverterLike[FT, int], typing.Generic[FT]):
 
     def convert_back(self, index: typing.Optional[int]) -> typing.Optional[FT]:
         return self.__values[index] if index is not None and 0 <= index < len(self.__values) else None
+
+
+class TupleToValueConverter(ConverterLike[tuple[TT, ...], TT]):
+    """Convert between a tuple and a value at a specified index of the tuple"""
+
+    def __init__(self, source: typing.Any, property_name: str, index: int) -> None:
+        self.__source = source
+        self.__property_name = property_name
+
+        assert index >= 0
+        self.__index = index
+
+    def convert(self, value: typing.Optional[tuple[TT, ...]]) -> typing.Optional[TT]:
+        return value[self.__index] if value is not None and len(value) > self.__index else None
+
+    def convert_back(self, formatted_value: typing.Optional[TT]) -> tuple[TT, ...]:
+        source_tuple = getattr(self.__source, self.__property_name)
+        tuple_as_list = list(source_tuple) if source_tuple is not None else list()
+        while len(tuple_as_list) <= self.__index:
+            tuple_as_list.append(None)
+        tuple_as_list[self.__index] = formatted_value
+        return tuple(tuple_as_list)

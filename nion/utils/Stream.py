@@ -25,6 +25,7 @@ T = typing.TypeVar('T', covariant=True)
 OT = typing.TypeVar('OT', covariant=True)
 EqualityOperator = typing.Callable[[typing.Any, typing.Any], bool]
 
+RefT = typing.TypeVar('RefT', covariant=True)
 
 class AbstractStream(typing.Generic[T]):
     """A stream provides a value property and a value_stream event that fires when the value changes."""
@@ -46,11 +47,11 @@ class AbstractStream(typing.Generic[T]):
     def remove_ref(self, check: bool = True) -> None:
         pass
 
-    class RefContextManager:
-        def __init__(self, item: AbstractStream[T]) -> None:
+    class RefContextManager(typing.Generic[RefT]):
+        def __init__(self, item: AbstractStream[RefT]) -> None:
             self.__item = item
 
-        def __enter__(self) -> AbstractStream[T]:
+        def __enter__(self) -> AbstractStream[RefT]:
             return self.__item
 
         def __exit__(self, exception_type: typing.Optional[typing.Type[BaseException]],

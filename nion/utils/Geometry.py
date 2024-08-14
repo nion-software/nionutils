@@ -415,6 +415,9 @@ class IntPoint:
         yield self.__y
         yield self.__x
 
+    def __hash__(self) -> int:
+        return hash(tuple(self))
+
     def as_size(self) -> IntSize:
         return IntSize(w=self.x, h=self.y)
 
@@ -510,6 +513,9 @@ class IntSize:
     def __iter__(self) -> typing.Iterator[int]:
         yield self.__height
         yield self.__width
+
+    def __hash__(self) -> int:
+        return hash(tuple(self))
 
     def as_point(self) -> IntPoint:
         return IntPoint(x=self.width, y=self.height)
@@ -664,6 +670,9 @@ class IntRect:
     def __iter__(self) -> typing.Iterator[typing.Union[PointIntTuple, SizeIntTuple]]:
         yield self.__getitem__(0)
         yield self.__getitem__(1)
+
+    def __hash__(self) -> int:
+        return hash(tuple(self))
 
     @property
     def aspect_ratio(self) -> float:
@@ -839,6 +848,9 @@ class FloatPoint:
         yield self.__y
         yield self.__x
 
+    def __hash__(self) -> int:
+        return hash(tuple(self))
+
     def as_size(self) -> FloatSize:
         return FloatSize(w=self.x, h=self.y)
 
@@ -945,6 +957,9 @@ class FloatSize:
     def __iter__(self) -> typing.Iterator[float]:
         yield self.__height
         yield self.__width
+
+    def __hash__(self) -> int:
+        return hash(tuple(self))
 
     def as_point(self) -> FloatPoint:
         return FloatPoint(x=self.width, y=self.height)
@@ -1104,6 +1119,9 @@ class FloatRect:
     def __iter__(self) -> typing.Iterator[typing.Union[PointFloatTuple, SizeFloatTuple]]:
         yield self.__getitem__(0)
         yield self.__getitem__(1)
+
+    def __hash__(self) -> int:
+        return hash(tuple(self))
 
     @property
     def aspect_ratio(self) -> float:

@@ -4,9 +4,7 @@
 from __future__ import annotations
 
 # standard libraries
-import functools
 import typing
-import weakref
 
 # third party libraries
 # none
@@ -56,8 +54,7 @@ class Binding:
         self.source_getter: typing.Optional[typing.Callable[[], typing.Any]] = None
         self.source_setter: typing.Optional[typing.Callable[[typing.Any], None]] = None
         self.target_setter: typing.Optional[typing.Callable[[typing.Any], None]] = None
-        # Python 3.9+: should weakref.ReferenceType
-        self.__source_ref: typing.Optional[typing.Any] = weakref.ref(source) if source else None
+        self.__source = source
         self._closed = False
 
     # not thread safe
@@ -69,7 +66,7 @@ class Binding:
     @property
     def source(self) -> typing.Optional[typing.Any]:
         """Return the source of the binding. Thread safe."""
-        return self.__source_ref() if self.__source_ref else None
+        return self.__source
 
     @property
     def converter(self) -> typing.Optional[Converter.ConverterLike[typing.Any, typing.Any]]:

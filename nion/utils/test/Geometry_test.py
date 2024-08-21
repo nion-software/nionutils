@@ -61,24 +61,24 @@ class TestGeometryClass(unittest.TestCase):
             # print(ticker.labels)
 
     def test_linear_ticker_handles_edge_cases(self) -> None:
-        self.assertEqual(Geometry.LinearTicker(0, 0).labels, ['0'])
-        self.assertEqual(Geometry.LinearTicker(1, 1).labels, ['1'])
-        self.assertEqual(Geometry.LinearTicker(-1, -1).labels, ['-1'])
-        self.assertEqual(Geometry.LinearTicker(-math.inf, math.inf).labels, ['0'])
-        self.assertEqual(Geometry.LinearTicker(-math.nan, math.nan).labels, ['0'])
-        self.assertEqual(Geometry.LinearTicker(math.nan, 1).labels, ['0'])
-        self.assertEqual(Geometry.LinearTicker(-math.inf, 1).labels, ['0'])
-        self.assertEqual(Geometry.LinearTicker(0, math.inf).labels, ['0'])
+        self.assertEqual(Geometry.LinearTicker(0, 0).labels, ('0',))
+        self.assertEqual(Geometry.LinearTicker(1, 1).labels, ('1',))
+        self.assertEqual(Geometry.LinearTicker(-1, -1).labels, ('-1',))
+        self.assertEqual(Geometry.LinearTicker(-math.inf, math.inf).labels, ('0',))
+        self.assertEqual(Geometry.LinearTicker(-math.nan, math.nan).labels, ('0',))
+        self.assertEqual(Geometry.LinearTicker(math.nan, 1).labels, ('0',))
+        self.assertEqual(Geometry.LinearTicker(-math.inf, 1).labels, ('0',))
+        self.assertEqual(Geometry.LinearTicker(0, math.inf).labels, ('0',))
 
     def test_log_ticker_handles_edge_cases(self) -> None:
-        self.assertEqual(Geometry.LogTicker(0, 0, ticks=3).labels, ['1e+00', '1e+01'])
-        self.assertEqual(Geometry.LogTicker(1, 1, ticks=3).labels, ['1e+01', '1e+02'])
-        self.assertEqual(Geometry.LogTicker(-1, -1, ticks=3).labels, ['1e-01', '1e+00'])
-        self.assertEqual(Geometry.LogTicker(-math.inf, math.inf).labels, ['0e+00'])
-        self.assertEqual(Geometry.LogTicker(-math.nan, math.nan).labels, ['0e+00'])
-        self.assertEqual(Geometry.LogTicker(math.nan, 1).labels, ['0e+00'])
-        self.assertEqual(Geometry.LogTicker(-math.inf, 1).labels, ['0e+00'])
-        self.assertEqual(Geometry.LogTicker(0, math.inf).labels, ['0e+00'])
+        self.assertEqual(Geometry.LogTicker(0, 0, ticks=3).labels, ('1e+00', '1e+01'))
+        self.assertEqual(Geometry.LogTicker(1, 1, ticks=3).labels, ('1e+01', '1e+02'))
+        self.assertEqual(Geometry.LogTicker(-1, -1, ticks=3).labels, ('1e-01', '1e+00'))
+        self.assertEqual(Geometry.LogTicker(-math.inf, math.inf).labels, ('0e+00',))
+        self.assertEqual(Geometry.LogTicker(-math.nan, math.nan).labels, ('0e+00',))
+        self.assertEqual(Geometry.LogTicker(math.nan, 1).labels, ('0e+00',))
+        self.assertEqual(Geometry.LogTicker(-math.inf, 1).labels, ('0e+00',))
+        self.assertEqual(Geometry.LogTicker(0, math.inf).labels, ('0e+00',))
 
     def test_ticker_produces_expected_labels(self) -> None:
         self.assertListEqual(list(Geometry.LinearTicker(0, 1e8, ticks=3).labels), ['0e+00', '5e+07', '1.0e+08'])
@@ -94,6 +94,25 @@ class TestGeometryClass(unittest.TestCase):
         mn, mx = 18000000, 21000000
         ticker = Geometry.LinearTicker(mn, mx)
         self.assertIsNotNone(ticker.value_label(900000))
+
+    def test_linear_ticker_equal(self) -> None:
+        self.assertEqual(Geometry.LinearTicker(0, 1), Geometry.LinearTicker(0, 1))
+        self.assertNotEqual(Geometry.LinearTicker(0, 1), Geometry.LinearTicker(0, 2))
+        self.assertNotEqual(Geometry.LinearTicker(0, 1), Geometry.LogTicker(1, 1))
+
+    def test_log_ticker_equal(self) -> None:
+        self.assertEqual(Geometry.LogTicker(0, 1), Geometry.LogTicker(0, 1))
+        self.assertNotEqual(Geometry.LogTicker(0, 1), Geometry.LogTicker(0, 2))
+        self.assertNotEqual(Geometry.LogTicker(0, 1), Geometry.LinearTicker(1, 1))
+
+    def test_linear_ticker_hash(self) -> None:
+        d = {Geometry.LinearTicker(0, 1): Geometry.LinearTicker(0, 1)}
+        self.assertEqual(d[Geometry.LinearTicker(0, 1)], Geometry.LinearTicker(0, 1))
+
+    def test_log_ticker_hash(self) -> None:
+        d = {Geometry.LogTicker(0, 1): Geometry.LogTicker(0, 1)}
+        self.assertEqual(d[Geometry.LogTicker(0, 1)], Geometry.LogTicker(0, 1))
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

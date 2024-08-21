@@ -19,6 +19,14 @@ class Color:
     def __repr__(self) -> str:
         return self.color_str or "NONE"
 
+    def __eq__(self, other: typing.Any) -> bool:
+        if isinstance(other, Color):
+            return self.to_rgba_255() == other.to_rgba_255()
+        return False
+
+    def __hash__(self) -> int:
+        return hash(self.to_rgba_255())
+
     @property
     def is_valid(self) -> bool:
         return self.__hex_color(self.color_str) != None

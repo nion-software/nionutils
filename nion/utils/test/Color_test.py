@@ -49,11 +49,19 @@ class TestColorClass(unittest.TestCase):
         self.assertEqual("#00204060", Color.Color("#246").to_color_with_alpha(-1.50).color_str)
 
     def test_matches_without_alpha(self) -> None:
-        self.assertTrue(Color.Color("thistle"), Color.Color("#d8bfd9"))
-        self.assertTrue(Color.Color("thistle"), Color.Color("rgb(216, 191, 216)"))
-        self.assertTrue(Color.Color("thistle"), Color.Color("rgba(216, 191, 216, 0.5)"))
-        self.assertTrue(Color.Color("rgb(216, 191, 216)"), Color.Color("rgba(216, 191, 216, 0.5)"))
-        self.assertTrue(Color.Color("#123"), Color.Color("#102030"))
-        self.assertTrue(Color.Color("#123"), Color.Color("#80102030"))
-        self.assertTrue(Color.Color("#8123"), Color.Color("#80102030"))
-        self.assertTrue(Color.Color("#8123"), Color.Color("#102030"))
+        self.assertTrue(Color.Color("thistle").matches_without_alpha(Color.Color("#d8bfd8")))
+        self.assertTrue(Color.Color("thistle").matches_without_alpha(Color.Color("rgb(216, 191, 216)")))
+        self.assertTrue(Color.Color("thistle").matches_without_alpha(Color.Color("rgba(216, 191, 216, 0.5)")))
+        self.assertTrue(Color.Color("rgb(216, 191, 216)").matches_without_alpha(Color.Color("rgba(216, 191, 216, 0.5)")))
+        self.assertTrue(Color.Color("#123").matches_without_alpha(Color.Color("#102030")))
+        self.assertTrue(Color.Color("#123").matches_without_alpha(Color.Color("#80102030")))
+        self.assertTrue(Color.Color("#8123").matches_without_alpha(Color.Color("#80102030")))
+        self.assertTrue(Color.Color("#8123").matches_without_alpha(Color.Color("#102030")))
+
+    def test_color_equals(self) -> None:
+        self.assertEqual(Color.Color("thistle"), Color.Color("#d8bfd8"))
+        self.assertNotEqual(Color.Color("rgb(216, 191, 216)"), Color.Color("rgba(216, 191, 216, 0.5)"))
+
+    def test_color_hash(self) -> None:
+        d = {Color.Color("thistle"): Color.Color("#d8bfd8")}
+        self.assertEqual(d[Color.Color("thistle")], Color.Color("#d8bfd8"))

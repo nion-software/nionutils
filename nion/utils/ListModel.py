@@ -292,7 +292,7 @@ class FilteredListModel(Observable.Observable):
         self.reset_list_event = Event.Event()
         self.begin_changes_event = Event.Event()
         self.end_changes_event = Event.Event()
-        self.__item_changed_event_listeners: typing.List[Event.EventListener] = list()
+        self.__item_changed_event_listeners: typing.List[typing.Optional[Event.EventListener]] = list()
         self.__item_inserted_event_listener: typing.Optional[Event.EventListener] = None
         self.__item_removed_event_listener: typing.Optional[Event.EventListener] = None
         self.__item_content_changed_event_listener: typing.Optional[Event.EventListener] = None
@@ -690,7 +690,8 @@ class FilteredListModel(Observable.Observable):
                             assert item in list_model.__master_items
                             list_model.__updated_master_item(item)
 
-                self.__item_changed_event_listeners.insert(before_index, item.item_changed_event.listen(weak_partial(item_content_changed, self)) if hasattr(item, "item_changed_event") else None)
+                item_changed_event_listener = item.item_changed_event.listen(weak_partial(item_content_changed, self)) if hasattr(item, "item_changed_event") else None
+                self.__item_changed_event_listeners.insert(before_index, item_changed_event_listener)
                 self.__inserted_master_item(before_index, item)
 
     # thread safe.

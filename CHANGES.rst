@@ -5,6 +5,7 @@ Changelog (nionutils)
 -------------------
 - Add BoolToStringConverter.
 - Allow subclasses to override get/set property value in PropertyChangedPropertyModel for more flexibility.
+- Add ObservedListModel to create a list model from a collection on an observable.
 
 4.11.0 (2024-06-12)
 -------------------

@@ -1015,3 +1015,26 @@ class ListPropertyModel(Observable.Observable):
     @property
     def value(self) -> typing.Sequence[typing.Any]:
         return list(self.__list_model.items)
+
+
+class ObservedListModel(Observable.Observable, typing.Generic[T]):
+    """Provide a list model by observing a collection on another object."""
+
+    def __init__(self, item_source: Observable.Observable, items_key: str):
+        super().__init__()
+        self.__item_source = item_source
+        self.__items_key = items_key
+        self.__item_inserted_listener = item_source.item_inserted_event.listen(weak_partial(ObservedListModel.__item_inserted, self))
+        self.__item_removed_listener = item_source.item_removed_event.listen(weak_partial(ObservedListModel.__item_removed, self))
+
+    def __item_inserted(self, key: str, item: T, before_index: int) -> None:
+        if key == self.__items_key:
+            self.notify_insert_item("items", item, before_index)
+
+    def __item_removed(self, key: str, item: T, index: int) -> None:
+        if key == self.__items_key:
+            self.notify_remove_item("items", item, index)
+
+    @property
+    def items(self) -> typing.Sequence[T]:
+        return typing.cast(typing.Sequence[T], getattr(self.__item_source, self.__items_key))

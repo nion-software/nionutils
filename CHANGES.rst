@@ -1,11 +1,16 @@
 Changelog (nionutils)
 =====================
 
-4.12.0 (UNRELEASED)
+4.12.0 (2024-10-26)
 -------------------
 - Add BoolToStringConverter.
-- Allow subclasses to override get/set property value in PropertyChangedPropertyModel for more flexibility.
+- Allow override of get/set property value in PropertyChangedPropertyModel for more flexibility.
+- Change binding to hold reference to source.
+- Make point/size/rect classes hashable.
+- Add equality operator to color; make it hashable.
+- Clean up ticker class, make it immutable and hashable.
 - Add ObservedListModel to create a list model from a collection on an observable.
+- Drop Python 3.9, 3.10. Add Python 3.13.
 
 4.11.0 (2024-06-12)
 -------------------

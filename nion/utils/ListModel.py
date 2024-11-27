@@ -52,12 +52,16 @@ class ListModel(Observable.Observable, typing.Generic[T]):
         self.notify_insert_item(self.__key if self.__key else "items", value, index)
 
     def remove_item(self, index: int) -> None:
-        value = self.__items[index]
-        del self.__items[index]
-        self.notify_remove_item(self.__key if self.__key else "items", value, index)
+        self.pop_item(index)
 
     def append_item(self, value: T) -> None:
         self.insert_item(len(self.__items), value)
+
+    def pop_item(self, index: int) -> T:
+        value = self.__items[index]
+        del self.__items[index]
+        self.notify_remove_item(self.__key if self.__key else "items", value, index)
+        return value
 
     @property
     def items(self) -> typing.Sequence[T]:
@@ -396,6 +400,11 @@ class FilteredListModel(Observable.Observable):
         """ Return the items. """
         with self._update_mutex:
             return copy.copy(self.__items)
+
+    @property
+    def item_count(self) -> int:
+        """ Return the number of items. """
+        return len(self.__items)
 
     def __getattr__(self, item: str) -> typing.Any:
         if item == self.__items_key:

@@ -289,6 +289,7 @@ class FilteredListModel(Observable.Observable):
         self.__sort_key: OptionalSortKeyCallable = None
         self.__sort_reverse = False
         self.__change_level = 0
+        self.__needs_update_items = False
         self.reset_list_event = Event.Event()
         self.begin_changes_event = Event.Event()
         self.end_changes_event = Event.Event()
@@ -319,6 +320,9 @@ class FilteredListModel(Observable.Observable):
         with self._update_mutex:
             self.__change_level -= 1
             if self.__change_level == 0:
+                if self.__needs_update_items:
+                    self.__update_items()
+                    self.__needs_update_items = False
                 self.end_changes_event.fire(self.__items_key)
 
     class ChangeTracker:
@@ -355,7 +359,7 @@ class FilteredListModel(Observable.Observable):
             self.__items_sorted = False
             self.reset_list_event.fire(self.__items_key)
         with self.changes():
-            self.__update_items()
+            self.__needs_update_items = True
 
     @property
     def sort_reverse(self) -> bool:
@@ -370,7 +374,7 @@ class FilteredListModel(Observable.Observable):
             self.__items_sorted = False
             self.reset_list_event.fire(self.__items_key)
         with self.changes():
-            self.__update_items()
+            self.__needs_update_items = True
 
     # thread safe.
     @property
@@ -385,7 +389,7 @@ class FilteredListModel(Observable.Observable):
         self.__items_sorted = False
         self.reset_list_event.fire(self.__items_key)
         with self.changes():
-            self.__update_items()
+            self.__needs_update_items = True
 
     @property
     def items(self) -> typing.Sequence[typing.Any]:
@@ -449,6 +453,9 @@ class FilteredListModel(Observable.Observable):
             before_index = self.__find_sorted_index_for_item(item, items, sort_key, sort_operator)
         else:
             before_index = self.__find_unsorted_index_for_item(item, self._get_master_items(), self.filter)
+        self.__insert_item_at_index(item, before_index)
+
+    def __insert_item_at_index(self, item: typing.Any, before_index: int) -> None:
         self.__items.insert(before_index, item)
         self.notify_insert_item(self.__items_key, item, before_index)
         # only update the selection here if there is no end changes event listener.
@@ -458,8 +465,12 @@ class FilteredListModel(Observable.Observable):
             for selection in self.__selections:
                 selection.insert_index(before_index)
 
-    def __remove_item(self, item: typing.Any) -> None:
-        item_index = self.__items.index(item)
+    def __remove_item(self, item: typing.Union[typing.Any, int]) -> None:
+        if isinstance(item, int):
+            item_index = item
+            item = self.__items[item_index]
+        else:
+            item_index = self.__items.index(item)
         del self.__items[item_index]
         self.notify_remove_item(self.__items_key, item, item_index)
         # only update the selection here if there is no end changes event listener.
@@ -516,28 +527,19 @@ class FilteredListModel(Observable.Observable):
                     self.__removed_master_item(index, item)
 
     # thread safe.
-    def __build_items(self) -> typing.Sequence[typing.Any]:
+    def __build_items(self) -> typing.Iterable[typing.Any]:
         """Build the items from the master items list.
 
         This method is thread safe.
 
-        Builds the items from the master list by sorting them and then
-         filtering them.
+        Builds the items from the master list by filtering and then sorting them.
+        Assume _update_mutex is already held.
         """
-        master_items = list(self._get_master_items())
-        assert len(set(master_items)) == len(master_items)
-        # sort the master item list. this is optional since it may be sorted downstream.
+        filtered_master_items = filter(self.filter.matches, self.__master_items)
         if self.sort_key:
-            master_items.sort(key=self.sort_key, reverse=self.sort_reverse)
-        # construct the items list by expanding each master item to
-        # include its children
-        items: typing.List[typing.Any] = list()
-        for item in master_items:
-            # apply filter
-            if self.filter.matches(item):
-                # add item and its dependent items
-                items.append(item)
-        return items
+            return sorted(filtered_master_items, key=self.sort_key, reverse=self.sort_reverse)
+        else:
+            return filtered_master_items
 
     # thread safe.
     def __update_items(self) -> None:
@@ -552,8 +554,9 @@ class FilteredListModel(Observable.Observable):
             items = self.__build_items()
             # now generate the insert/remove instructions to make the official
             # list match the proposed list.
-            assert len(set(self._get_master_items())) == len(self._get_master_items())
-            assert len(set(items)) == len(items)
+            # disable asserts for performance
+            # assert len(set(self._get_master_items())) == len(self._get_master_items())
+            # assert len(set(items)) == len(items)
             # this is a time critical algorithm; leave the timing code in here for
             # easy testing.
             # import time
@@ -579,16 +582,11 @@ class FilteredListModel(Observable.Observable):
                 self.__sort_reverse = old_sort_reverse
             else:
                 # requires sorting and not already sorted or not sorted: fall back to full replacement
-                for item in old_items:
-                    # remove all items
-                    self.__remove_item(item)
-                indexes = {item: index for index, item in enumerate(items)}
-                sort_key = lambda x: indexes[x]
-                old_sort_reverse = self.__sort_reverse
-                self.__sort_reverse = False
-                for item in items:
-                    self.__insert_item(item, sort_key)
-                self.__sort_reverse = old_sort_reverse
+                for _ in range(len(old_items)):
+                    self.__remove_item(0)
+                # items are already sorted in __build_items
+                for index, item in enumerate(items):
+                    self.__insert_item_at_index(item, index)
             self.__items_sorted = True
             # t1 = time.perf_counter()
             # print(f"{int(1000000 * (t1 - t0))}us {len(self.__items)}")
@@ -601,56 +599,57 @@ class FilteredListModel(Observable.Observable):
     # thread safe.
     @container.setter
     def container(self, container: typing.Optional[Observable.Observable]) -> None:
-        with self.changes():
-            if self.__container:
-                self.__item_inserted_event_listener = None
-                self.__item_removed_event_listener = None
-                self.__item_content_changed_event_listener = None
-                self.__begin_changes_event_listener = None
-                self.__end_changes_event_listener = None
-                self.__reset_list_event_listener = None
-                for item in reversed(copy.copy(self._get_master_items())):
-                    self.__item_removed(self.__master_items_key, item, len(self._get_master_items()) - 1)
-            self.__container = container
-            self.__items_sorted = False
-            self.reset_list_event.fire(self.__items_key)
-            if self.__container:
-                self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(weak_partial(FilteredListModel.__container_item_inserted, self))
-                self.__item_removed_event_listener = self.__container.item_removed_event.listen(weak_partial(FilteredListModel.__container_item_removed, self))
-                self.__item_content_changed_event_listener = self.__container.item_content_changed_event.listen(weak_partial(FilteredListModel.__container_item_content_changed, self))
+        if container != self.__container:
+            with self.changes():
+                if self.__container:
+                    self.__item_inserted_event_listener = None
+                    self.__item_removed_event_listener = None
+                    self.__item_content_changed_event_listener = None
+                    self.__begin_changes_event_listener = None
+                    self.__end_changes_event_listener = None
+                    self.__reset_list_event_listener = None
+                    for item in reversed(copy.copy(self._get_master_items())):
+                        self.__item_removed(self.__master_items_key, item, len(self._get_master_items()) - 1)
+                self.__container = container
+                self.__items_sorted = False
+                self.reset_list_event.fire(self.__items_key)
+                if self.__container:
+                    self.__item_inserted_event_listener = self.__container.item_inserted_event.listen(weak_partial(FilteredListModel.__container_item_inserted, self))
+                    self.__item_removed_event_listener = self.__container.item_removed_event.listen(weak_partial(FilteredListModel.__container_item_removed, self))
+                    self.__item_content_changed_event_listener = self.__container.item_content_changed_event.listen(weak_partial(FilteredListModel.__container_item_content_changed, self))
 
-                if hasattr(self.__container, "begin_changes_event") and hasattr(self.__container, "end_changes_event"):
+                    if hasattr(self.__container, "begin_changes_event") and hasattr(self.__container, "end_changes_event"):
 
-                    def begin_changes(list_model: FilteredListModel, key: str) -> None:
-                        if key == list_model.__master_items_key:
-                            list_model.begin_changes_event.fire(list_model.__items_key)
+                        def begin_changes(list_model: FilteredListModel, key: str) -> None:
+                            if key == list_model.__master_items_key:
+                                list_model.begin_changes_event.fire(list_model.__items_key)
 
-                    def end_changes(list_model: FilteredListModel, key: str) -> None:
-                        if key == list_model.__master_items_key:
-                            list_model.end_changes_event.fire(list_model.__items_key)
-                        for selection in list_model.__selections:
-                            selection_copy = copy.copy(selection)
-                            for do_insert, index in list_model.__selection_changes:
-                                # adjust the selection copy for the new index, but don't add/remove the new index itself.
-                                # leaves the selected items the same.
-                                if do_insert:
-                                    selection_copy.insert_index(index)
-                                else:
-                                    selection_copy.remove_index(index)
-                            selection.set_multiple(selection_copy.indexes)
-                        list_model.__selection_changes = list()
+                        def end_changes(list_model: FilteredListModel, key: str) -> None:
+                            if key == list_model.__master_items_key:
+                                list_model.end_changes_event.fire(list_model.__items_key)
+                            for selection in list_model.__selections:
+                                selection_copy = copy.copy(selection)
+                                for do_insert, index in list_model.__selection_changes:
+                                    # adjust the selection copy for the new index, but don't add/remove the new index itself.
+                                    # leaves the selected items the same.
+                                    if do_insert:
+                                        selection_copy.insert_index(index)
+                                    else:
+                                        selection_copy.remove_index(index)
+                                selection.set_multiple(selection_copy.indexes)
+                            list_model.__selection_changes = list()
 
-                    self.__begin_changes_event_listener = self.__container.begin_changes_event.listen(weak_partial(begin_changes, self))
-                    self.__end_changes_event_listener = self.__container.end_changes_event.listen(weak_partial(end_changes, self))
-                if hasattr(self.__container, "reset_list_event"):
+                        self.__begin_changes_event_listener = self.__container.begin_changes_event.listen(weak_partial(begin_changes, self))
+                        self.__end_changes_event_listener = self.__container.end_changes_event.listen(weak_partial(end_changes, self))
+                    if hasattr(self.__container, "reset_list_event"):
 
-                    def reset_list(list_model: FilteredListModel, key: str) -> None:
-                        list_model.__items_sorted = False
-                        list_model.reset_list_event.fire(list_model.__items_key)
+                        def reset_list(list_model: FilteredListModel, key: str) -> None:
+                            list_model.__items_sorted = False
+                            list_model.reset_list_event.fire(list_model.__items_key)
 
-                    self.__reset_list_event_listener = self.__container.reset_list_event.listen(weak_partial(reset_list, self))
-                for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
-                    self.__item_inserted(self.__master_items_key, item, index)
+                        self.__reset_list_event_listener = self.__container.reset_list_event.listen(weak_partial(reset_list, self))
+                    for index, item in enumerate(getattr(self.__container, self.__master_items_key)):
+                        self.__item_inserted(self.__master_items_key, item, index)
 
     def make_selection(self) -> Selection.IndexedSelection:
         selection = Selection.IndexedSelection()

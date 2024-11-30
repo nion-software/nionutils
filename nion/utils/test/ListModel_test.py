@@ -126,7 +126,6 @@ class TestListModelClass(unittest.TestCase):
         l.append_item("2")
         l2 = ListModel.FilteredListModel(container=l, items_key="items")
         l2.sort_key = lambda x: x
-        l2.mark_changed()
         self.assertEqual(["1", "2", "3", "4"], l2.items)
         l.remove_item(1)
         l.remove_item(1)

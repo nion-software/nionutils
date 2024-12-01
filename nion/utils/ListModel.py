@@ -299,14 +299,12 @@ class FilteredListModel(Observable.Observable):
         self.__sort_reverse = False
         self.__change_level = 0
         self.__needs_update_items = False
-        self.reset_list_event = Event.Event()
         self.begin_changes_event = Event.Event()
         self.end_changes_event = Event.Event()
         self.__item_changed_event_listeners: typing.List[typing.Optional[Event.EventListener]] = list()
         self.__item_inserted_event_listener: typing.Optional[Event.EventListener] = None
         self.__item_removed_event_listener: typing.Optional[Event.EventListener] = None
         self.__item_content_changed_event_listener: typing.Optional[Event.EventListener] = None
-        self.__reset_list_event_listener: typing.Optional[Event.EventListener] = None
         self.__begin_changes_event_listener: typing.Optional[Event.EventListener] = None
         self.__end_changes_event_listener: typing.Optional[Event.EventListener] = None
         self.__selection_changes: typing.List[typing.Tuple[bool, int]] = list()
@@ -363,7 +361,6 @@ class FilteredListModel(Observable.Observable):
         with self._update_mutex:
             self.__sort_key = value
             self.__items_sorted = False
-            self.reset_list_event.fire(self.__items_key)
         with self.changes():
             self.__needs_update_items = True
 
@@ -378,7 +375,6 @@ class FilteredListModel(Observable.Observable):
         with self._update_mutex:
             self.__sort_reverse = value
             self.__items_sorted = False
-            self.reset_list_event.fire(self.__items_key)
         with self.changes():
             self.__needs_update_items = True
 
@@ -393,7 +389,6 @@ class FilteredListModel(Observable.Observable):
         """ Set the filter function. """
         self.__filter = value
         self.__items_sorted = False
-        self.reset_list_event.fire(self.__items_key)
         with self.changes():
             self.__needs_update_items = True
 
@@ -605,7 +600,6 @@ class FilteredListModel(Observable.Observable):
             self.__item_content_changed_event_listener = None
             self.__begin_changes_event_listener = None
             self.__end_changes_event_listener = None
-            self.__reset_list_event_listener = None
 
             # update the container by adding listeners where necessary or available
             self.__container = container
@@ -637,12 +631,6 @@ class FilteredListModel(Observable.Observable):
 
                     self.__begin_changes_event_listener = self.__container.begin_changes_event.listen(weak_partial(begin_changes, self))
                     self.__end_changes_event_listener = self.__container.end_changes_event.listen(weak_partial(end_changes, self))
-                if hasattr(self.__container, "reset_list_event"):
-                    def reset_list(list_model: FilteredListModel, key: str) -> None:
-                        list_model.__items_sorted = False
-                        list_model.reset_list_event.fire(list_model.__items_key)
-
-                    self.__reset_list_event_listener = self.__container.reset_list_event.listen(weak_partial(reset_list, self))
 
             # note: difflib.SequenceMatcher will not work here because it does not guarantee that an item does not
             # appear in the list at any intermediate step and duplicate items are not possible because downstream
@@ -654,10 +642,6 @@ class FilteredListModel(Observable.Observable):
                 self.__sort_reverse = sort_reverse
                 self.__items_sorted = False  # required for update items
                 self.__needs_update_items = True
-
-            # tell downstream about sort status
-            if not self.__items_sorted:
-                self.reset_list_event.fire(self.__items_key)
 
     def make_selection(self) -> Selection.IndexedSelection:
         selection = Selection.IndexedSelection()

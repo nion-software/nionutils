@@ -1,6 +1,11 @@
 Changelog (nionutils)
 =====================
 
+4.13.0 (2024-12-05)
+-------------------
+- Performance improvements to filtered list model.
+- Add pop_item to ListModel and item_count to FilteredListModel.
+
 4.12.0 (2024-10-26)
 -------------------
 - Add BoolToStringConverter.

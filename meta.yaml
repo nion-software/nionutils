@@ -1,9 +1,9 @@
 package:
   name: 'nionutils'
-  version: '4.12.0'
+  version: '4.13.0'
 
 source:
-  git_rev: 4.12.0
+  git_rev: 4.13.0
   git_url: https://github.com/nion-software/nionutils.git
 
 build:

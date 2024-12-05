@@ -1,0 +1,6 @@
+# This file allows installation of test requirements.
+#
+# Use it like this:
+#   pip install -r test-requirements.txt
+
+# no requirements

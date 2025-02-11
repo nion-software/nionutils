@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+4.14.0 (2025-02-11)
+-------------------
+- Add Platform utility classes.
+
 4.13.0 (2024-12-05)
 -------------------
 - Performance improvements to filtered list model.

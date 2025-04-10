@@ -1,6 +1,10 @@
 Changelog (nionutils)
 =====================
 
+4.14.1 (2025-04-09)
+-------------------
+- Maintenance release.
+
 4.14.0 (2025-02-11)
 -------------------
 - Add Platform utility classes.

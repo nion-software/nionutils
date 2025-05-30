@@ -286,7 +286,7 @@ class FilteredListModel(Observable.Observable):
                  master_items_key: typing.Optional[str] = None, items_key: typing.Optional[str] = None,
                  selection: typing.Optional[Selection.IndexedSelection] = None) -> None:
         super().__init__()
-        self.__container = None
+        self.__container: Observable.Observable | None = None
         self.__master_items_key = master_items_key or items_key or "items"
         self.__items_key = items_key or "items"
         self.__master_items = list[typing.Any]()  # a list of source items (to be filtered)
@@ -688,7 +688,7 @@ class MappedListModel(Observable.Observable):
                  unmap_fn: typing.Optional[MappedListModel._MapFunctionType] = None,
                  selection: typing.Optional[Selection.IndexedSelection] = None) -> None:
         super().__init__()
-        self.__container = None
+        self.__container: Observable.Observable | None = None
         self.__master_items_key = master_items_key or "items"
         self.__items_key = items_key or self.__master_items_key
         self.__map_fn = map_fn or (lambda x: x)
@@ -698,10 +698,10 @@ class MappedListModel(Observable.Observable):
         self.__change_level = 0
         self.begin_changes_event = Event.Event()
         self.end_changes_event = Event.Event()
-        self.__item_inserted_event_listener = None
-        self.__item_removed_event_listener = None
-        self.__begin_changes_event_listener = None
-        self.__end_changes_event_listener = None
+        self.__item_inserted_event_listener: Event.EventListener | None = None
+        self.__item_removed_event_listener: Event.EventListener | None = None
+        self.__begin_changes_event_listener: Event.EventListener | None = None
+        self.__end_changes_event_listener: Event.EventListener | None = None
         self.__selections = list()
         if selection:
             self.__selections.append(selection)
@@ -837,7 +837,7 @@ class FlattenedListModel(Observable.Observable):
                  child_items_key: typing.Optional[str] = None, items_key: typing.Optional[str] = None,
                  selection: typing.Optional[Selection.IndexedSelection] = None) -> None:
         super().__init__()
-        self.__container = None
+        self.__container: Observable.Observable | None = None
         self.__master_items_key = master_items_key
         self.__child_items_key = child_items_key or "items"
         self.__items_key = items_key or self.__child_items_key
@@ -845,8 +845,8 @@ class FlattenedListModel(Observable.Observable):
         self.__items : typing.List[typing.Any] = list()  # a list of flattened items
         self.__children: typing.Dict[typing.Any, typing.List[typing.Any]] = dict()  # map master item to children
         self._update_mutex = threading.RLock()
-        self.__item_inserted_event_listener = None
-        self.__item_removed_event_listener = None
+        self.__item_inserted_event_listener: Event.EventListener | None = None
+        self.__item_removed_event_listener: Event.EventListener | None = None
         self.__child_item_inserted_event_listener: typing.Dict[typing.Any, Event.EventListener] = dict()
         self.__child_item_removed_event_listener: typing.Dict[typing.Any, Event.EventListener] = dict()
         self.__selections = list()

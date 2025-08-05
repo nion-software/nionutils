@@ -561,3 +561,9 @@ class ValueChangeStreamReactor(typing.Generic[T]):
 
     async def next_value_change(self) -> ValueChange[T]:
         return await self.__event_queue.get()
+
+
+class StaleStreamException(Exception):
+    """Exception class raised when a stream has gone stale (disconnected)."""
+
+    pass

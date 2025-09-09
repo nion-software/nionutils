@@ -2,6 +2,31 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "nionutils"
+version = "4.14.1"
+authors = [
+    { name = "Nion Software", email = "swift@nion.com" }
+]
+description = "Nion utility classes."
+readme = "README.rst"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
+]
+urls = { "Homepage" = "https://github.com/nion-software/nionutils" }
+
+[tool.setuptools.packages.find]
+include = ["nion", "nion.utils", "nion.utils.test"]
+
+[tool.setuptools.package-data]
+"nion.utils" = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = [
     "nion/utils"

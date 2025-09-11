@@ -125,19 +125,20 @@ class ValueStream(AbstractStream[T], typing.Generic[T]):
 class MapStream(AbstractStream[OT], typing.Generic[T, OT]):
     """A stream that applies a function when input streams change."""
 
-    def __init__(self, stream: AbstractStream[T], value_fn: typing.Callable[[typing.Optional[T]], typing.Optional[OT]]) -> None:
+    def __init__(self, stream: AbstractStream[T], value_fn: typing.Callable[[typing.Optional[T]], typing.Optional[OT]], cmp: typing.Optional[EqualityOperator] = None) -> None:
         super().__init__()
         # outgoing messages
         self.value_stream = Event.Event()
         # references
         self.__stream = stream
+        cmp = cmp if cmp else operator.eq
         # initialize values
         self.__value: typing.Optional[OT] = None
 
         # listen for display changes
         def update_value(stream: MapStream[T, OT], value: typing.Optional[T]) -> None:
             new_value = value_fn(value)
-            if new_value != stream.value:
+            if not cmp(new_value, stream.value):
                 stream.send_value(new_value)
 
         # use weak_partial to avoid holding references to self.

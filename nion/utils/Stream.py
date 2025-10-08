@@ -63,6 +63,7 @@ class AbstractStream(typing.Generic[T]):
 
 
 class StreamTask:
+    """Manages the lifecycle of an asyncio task for stream operations."""
 
     def __init__(self, task: typing.Optional[typing.Coroutine[typing.Any, typing.Any, typing.Any]], event_loop: typing.Optional[asyncio.AbstractEventLoop]) -> None:
         self.__task: typing.Optional[asyncio.Task[None]] = None
@@ -216,6 +217,8 @@ class CombineLatestStream(AbstractStream[OT], typing.Generic[T, OT]):
 
 
 class DebounceValue(typing.Generic[T]):
+    """Holds the current value for a DebounceStream, used to manage debounced updates."""
+
     def __init__(self) -> None:
         self.value: typing.Optional[T] = None
 
@@ -259,6 +262,8 @@ class DebounceStream(AbstractStream[T], typing.Generic[T]):
 
 
 class SampleValue(typing.Generic[T]):
+    """Holds the current and pending values for a SampleStream, used to manage sampled updates."""
+
     def __init__(self) -> None:
         self.value: typing.Optional[T] = None
         self.pending_value: typing.Optional[T] = None
@@ -309,6 +314,7 @@ class SampleStream(AbstractStream[T], typing.Generic[T]):
 
 
 class ConstantStream(AbstractStream[T], typing.Generic[T]):
+    """A stream that always returns the same constant value and never changes."""
 
     def __init__(self, value: typing.Optional[T]) -> None:
         super().__init__()
@@ -468,6 +474,8 @@ class ValueChangeType(enum.IntEnum):
 
 
 class ValueChange(typing.Generic[T]):
+    """Represents a change in value, including the type of change and the value itself."""
+
     def __init__(self, state: int, value: typing.Optional[T]) -> None:
         self.state = state
         self.value = value
@@ -485,6 +493,8 @@ class ValueChange(typing.Generic[T]):
 
 
 class ValueChangeStream(ValueStream[ValueChange[T]], typing.Generic[T]):
+    """A stream that emits ValueChange events to track the beginning, change, and end of a value sequence."""
+
     def __init__(self, value_stream: AbstractStream[T]) -> None:
         super().__init__()
         self.__value_stream = value_stream
@@ -519,6 +529,8 @@ class ValueChangeStreamReactorInterface(typing.Protocol[ValueChangeStreamReactor
 
 
 class ValueChangeStreamReactor(typing.Generic[T]):
+    """Handles asynchronous reactions to ValueChangeStream events, providing a coroutine interface for processing changes."""
+
     def __init__(self, value_change_stream: ValueChangeStream[T], cfn: typing.Callable[[ValueChangeStreamReactorInterface[T]], typing.Coroutine[typing.Any, typing.Any, typing.Any]], event_loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         self.__value_change_stream = value_change_stream
         self.__cfn = cfn

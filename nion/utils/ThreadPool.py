@@ -116,7 +116,8 @@ class SingleItemDispatcher:
             if not self.__dispatcher_info.dispatch_future:
 
                 def dispatch_task(fn: _ThreadPoolTask, minimum_time: float, dispatcher_info: DispatcherInfo) -> None:
-                    while True:
+                    in_loop = True
+                    while in_loop:
                         try:
                             if dispatcher_info.dispatch_thread_cancel.wait(0.05):  # gather changes and helps tests run faster
                                 return
@@ -134,7 +135,7 @@ class SingleItemDispatcher:
                                 # recompute_future can only be set within lock.
                                 if not dispatcher_info.is_dispatch_pending:
                                     dispatcher_info.dispatch_future = None
-                                    break
+                                    in_loop = False
 
                 self.__dispatcher_info.dispatch_future = self.__executor.submit(dispatch_task, fn, self.__minimum_period, self.__dispatcher_info)
             return self.__dispatcher_info.dispatch_future

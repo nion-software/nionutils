@@ -50,7 +50,7 @@ code is available under the Apache License, Version 2.0.
 Requirements
 ------------
 
-Requires Python 3.11 or later.
+Requires Python 3.12 or later.
 
 Getting Help and Contributing
 -----------------------------

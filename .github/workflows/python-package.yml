@@ -9,7 +9,7 @@ jobs:
   build-python-package:
     uses: nion-software/github-workflows/.github/workflows/build-python-package.yml@main
     with:
-      python-versions:  "['3.11' ,'3.12' , '3.13', '3.13t']"
+      python-versions:  "['3.12' ,'3.13' , '3.14', '3.14t']"
     secrets:
       anaconda-token: ${{ secrets.ANACONDA_TOKEN }}
   pypi-publish:

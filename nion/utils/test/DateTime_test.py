@@ -3,8 +3,9 @@ import datetime
 import zoneinfo
 from nion.utils import DateTime
 
+
 class Test(unittest.TestCase):
-    def test_datetime_to_filetime(self):
+    def test_datetime_to_filetime(self) -> None:
         test_datetimes = [
             (datetime.datetime(2025, 1, 1), 133801632000000000),
             (datetime.datetime(2025, 1, 1, 12, 30, 45), 133802082450000000),
@@ -50,8 +51,7 @@ class Test(unittest.TestCase):
                 filetime_out = DateTime.get_filetime_from_datetime(datetime_out)
                 self.assertEqual(filetime_out, expected_filetime)
 
-
-    def test_invalid_times(self):
+    def test_invalid_times(self) -> None:
         test_filetimes = [
             (datetime.datetime.max, 2650467744999999990), # Above the max datetime
             (datetime.datetime.max, 9223372036854775807), # Int max,

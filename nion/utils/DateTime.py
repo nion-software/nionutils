@@ -20,6 +20,9 @@ import typing
 
 last_time: float = 0.0
 last_time_lock = threading.RLock()
+FILETIME_TICKS_PER_MICROSECOND = 10 # Hundreds of nanoseconds in a microsecond
+FILETIME_TICKS_PER_SECOND = 10000000  # Hundreds of nanoseconds (0.1 microseconds) in a second
+FILETIME_EPOCH = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc)
 
 
 class DateTimeUTC:
@@ -62,3 +65,33 @@ def utcnow() -> datetime.datetime:
 
 def now() -> datetime.datetime:
     return datetime.datetime.now()
+
+
+def get_datetime_from_windows_filetime(filetime: int) -> datetime.datetime:
+    """Converts a windows filetime to a datetime in UTC
+
+    Windows file time is: the time in hundreds of nanoseconds since January 1st 1601 UTC
+    Since datetime objects only have 1 microsecond precision the exact filetime is not fully preserved.
+    """
+    try:
+        total_microseconds, remainder = divmod(filetime, FILETIME_TICKS_PER_MICROSECOND)  # regular division would introduce floating point issues
+        total_microseconds += 0 if remainder < 5 else 1  # we can manually do rounding to avoid the floating point issues
+        return FILETIME_EPOCH + datetime.timedelta(microseconds=total_microseconds)
+    except OverflowError:
+        if filetime < 0:
+            return datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+        else:
+            return datetime.datetime.max.replace(tzinfo=datetime.timezone.utc)
+
+
+def get_windows_filetime_from_datetime(time_dt: datetime.datetime) -> int:
+    """Converts a datetime to a Windows file time.
+
+    If the datetime's timezone is None it is assumed to be UTC.
+    """
+    if time_dt.tzinfo is None:
+        time_dt = time_dt.replace(tzinfo=datetime.timezone.utc)
+
+    delta = time_dt.astimezone(datetime.timezone.utc) - FILETIME_EPOCH
+    file_time_ticks = (delta.days * 24 * 3600 + delta.seconds) * FILETIME_TICKS_PER_SECOND + delta.microseconds * FILETIME_TICKS_PER_MICROSECOND
+    return file_time_ticks

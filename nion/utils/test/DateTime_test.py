@@ -28,10 +28,10 @@ class Test(unittest.TestCase):
         ]
         for datetime_in, expected_filetime in test_datetimes:
             with self.subTest(f"Datetime to filetime {datetime_in.isoformat()} expects {expected_filetime}"):
-                filetime = DateTime.get_filetime_from_datetime(datetime_in)
+                filetime = DateTime.get_windows_filetime_from_datetime(datetime_in)
                 print(filetime)
                 self.assertEqual(filetime, expected_filetime)
-                datetime_out = DateTime.get_datetime_from_filetime(filetime)
+                datetime_out = DateTime.get_datetime_from_windows_filetime(filetime)
                 if datetime_in.tzinfo is None:
 
                     time_in_utc = datetime_in.replace(tzinfo=datetime.timezone.utc)
@@ -40,14 +40,14 @@ class Test(unittest.TestCase):
                 self.assertEqual(time_in_utc, datetime_out)
 
             with self.subTest(f"Filetime to datetime {datetime_in} expects {expected_filetime}"):
-                datetime_out = DateTime.get_datetime_from_filetime(expected_filetime)
+                datetime_out = DateTime.get_datetime_from_windows_filetime(expected_filetime)
                 if datetime_in.tzinfo is None:
 
                     time_in_utc = datetime_in.replace(tzinfo=datetime.timezone.utc)
                 else:
                     time_in_utc = datetime_in.astimezone(tz=datetime.timezone.utc)
                 self.assertEqual(time_in_utc, datetime_out)
-                filetime_out = DateTime.get_filetime_from_datetime(datetime_out)
+                filetime_out = DateTime.get_windows_filetime_from_datetime(datetime_out)
                 self.assertEqual(filetime_out, expected_filetime)
 
     def test_invalid_times(self) -> None:
@@ -58,7 +58,7 @@ class Test(unittest.TestCase):
         ]
         for i, (expected_datetime, filetime_in) in enumerate(test_filetimes):
             with self.subTest(f"Invalid filetime test: {expected_datetime} expects {filetime_in}"):
-                datetime_out = DateTime.get_datetime_from_filetime(filetime_in)
+                datetime_out = DateTime.get_datetime_from_windows_filetime(filetime_in)
                 if expected_datetime.tzinfo is None:
 
                     time_in_utc = expected_datetime.replace(tzinfo=datetime.timezone.utc)

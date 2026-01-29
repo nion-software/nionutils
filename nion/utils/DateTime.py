@@ -72,7 +72,8 @@ def get_datetime_from_filetime(filetime: int) -> datetime.datetime:
     Since datetime objects only have 1 microsecond precision the exact filetime is not fully preserved.
     """
     try:
-        total_microseconds = filetime // FILETIME_TICKS_PER_MICROSECOND # Integer division is required to prevent floating point errors
+        total_microseconds, remainder = divmod(filetime, FILETIME_TICKS_PER_MICROSECOND)  # regular division would introduce floating point issues
+        total_microseconds += 0 if remainder < 5 else 1  # we can manually do rounding to avoid the floating point issues
         return FILETIME_EPOCH + datetime.timedelta(microseconds=total_microseconds)
     except OverflowError:
         if filetime < 0:

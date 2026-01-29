@@ -3,4 +3,4 @@
 # Use it like this:
 #   pip install -r test-requirements.txt
 
-tzdata
+# no requirements

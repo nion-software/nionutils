@@ -67,12 +67,12 @@ def now() -> datetime.datetime:
     return datetime.datetime.now()
 
 def get_datetime_from_filetime(filetime: int) -> datetime.datetime:
-    """
-    Converts a windows filetime to a datetime in UTC
+    """Converts a windows filetime to a datetime in UTC
     Windows file time is: the time in hundreds of nanoseconds since January 1st 1601 UTC
+    Since datetime objects only have 1 microsecond precision the exact filetime is not fully preserved.
     """
     try:
-        total_microseconds = filetime // FILETIME_TICKS_PER_MICROSECOND
+        total_microseconds = filetime // FILETIME_TICKS_PER_MICROSECOND # Integer division is required to prevent floating point errors
         return FILETIME_EPOCH + datetime.timedelta(microseconds=total_microseconds)
     except OverflowError:
         if filetime < 0:
@@ -82,8 +82,8 @@ def get_datetime_from_filetime(filetime: int) -> datetime.datetime:
 
 
 def get_filetime_from_datetime(time_dt: datetime.datetime) -> int:
-    """
-    Converts a datetime to a Windows file time. If the datetime's timezone is None it is assumed to be UTC.
+    """ Converts a datetime to a Windows file time.
+    If the datetime's timezone is None it is assumed to be UTC.
     """
     if time_dt.tzinfo is None:
         time_dt = time_dt.replace(tzinfo=datetime.timezone.utc)

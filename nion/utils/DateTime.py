@@ -68,6 +68,7 @@ def now() -> datetime.datetime:
 
 def get_datetime_from_windows_filetime(filetime: int) -> datetime.datetime:
     """Converts a windows filetime to a datetime in UTC
+
     Windows file time is: the time in hundreds of nanoseconds since January 1st 1601 UTC
     Since datetime objects only have 1 microsecond precision the exact filetime is not fully preserved.
     """
@@ -83,7 +84,8 @@ def get_datetime_from_windows_filetime(filetime: int) -> datetime.datetime:
 
 
 def get_windows_filetime_from_datetime(time_dt: datetime.datetime) -> int:
-    """ Converts a datetime to a Windows file time.
+    """Converts a datetime to a Windows file time.
+
     If the datetime's timezone is None it is assumed to be UTC.
     """
     if time_dt.tzinfo is None:

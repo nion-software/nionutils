@@ -1,6 +1,12 @@
 Changelog (nionutils)
 =====================
 
+4.14.2 (2026-03-19)
+-------------------
+- Python 3.14 compatibility updates.
+- Add datetime to windows filetime conversion functions.
+- Add compare parameter to MapStream.
+
 4.14.1 (2025-04-09)
 -------------------
 - Maintenance release.

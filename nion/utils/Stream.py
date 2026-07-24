@@ -403,30 +403,63 @@ class OptionalStream(ValueStream[T], typing.Generic[T]):
             self.value = None
 
 
-class FollowStream(ValueStream[T], typing.Generic[T]):
+class RelayStream(ValueStream[T], typing.Generic[T]):
     """Sends value from input stream. Input stream can be changed."""
 
-    def __init__(self, stream: typing.Optional[AbstractStream[T]] = None) -> None:
+    def __init__(self, stream: AbstractStream[T] | None = None) -> None:
         super().__init__()
         self.__stream: AbstractStream[T]
         self.__stream_action: ValueStreamAction[T]
         self.stream = stream
 
     @property
-    def stream(self) -> typing.Optional[AbstractStream[T]]:
+    def stream(self) -> AbstractStream[T] | None:
         return self.__stream
 
     @stream.setter
-    def stream(self, stream: typing.Optional[AbstractStream[T]]) -> None:
+    def stream(self, stream: AbstractStream[T] | None) -> None:
         stream = stream or ConstantStream[T](None)
         self.__stream = stream
-        self.__stream_action = ValueStreamAction(self.__stream, weak_partial(FollowStream.__value_changed, self))
-        self.__value_changed(self.__stream.value)
+        self.__stream_action = ValueStreamAction(self.__stream, weak_partial(self.__class__._source_value_changed, self))
+        self._dispatch_value(self.__stream.value, True)
 
-    # define a stub and use weak_partial to avoid holding references to self.
-    def __value_changed(self, value: typing.Optional[T]) -> None:
+    def _source_value_changed(self, value: T | None) -> None:
+        self._dispatch_value(value, False)
+
+    def _dispatch_value(self, value: T | None, is_initial: bool) -> None:
+        # Override to customize where/when values are delivered.
+        # `is_initial` is True for the immediate value sync when `stream` is initialized.
+        self._value_changed(value)
+
+    def _value_changed(self, value: T | None) -> None:
+        # Override to customize how this relay stores/emits a delivered value.
+        # The default writes directly to this stream's `value` property.
         self.value = value
 
+
+# Deprecated alias, kept for backward compatibility.
+FollowStream = RelayStream
+
+
+class AsyncRelayStream(RelayStream[T], typing.Generic[T]):
+    """A stream that relays values from an input stream but sends values via an event loop.
+
+    This can be used to transfer stream values received from another thread to the main thread. Useful for UI.
+    """
+
+    def __init__(self, event_loop: asyncio.AbstractEventLoop, stream: AbstractStream[T] | None = None) -> None:
+        self.__event_loop = event_loop
+        super().__init__(stream)
+
+    def _dispatch_value(self, value: T | None, is_initial: bool) -> None:
+        if is_initial:
+            self.value = value
+            return
+
+        def send_value(stream: AsyncRelayStream[T], value: T | None) -> None:
+            stream.value = value
+
+        self.__event_loop.call_soon_threadsafe(weak_partial(send_value, self, value))
 
 
 class PrintStream:

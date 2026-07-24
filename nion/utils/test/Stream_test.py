@@ -2,6 +2,7 @@
 import asyncio
 import contextlib
 import logging
+import threading
 import typing
 import unittest
 import weakref
@@ -74,6 +75,32 @@ class TestStreamClass(unittest.TestCase):
             stream_ref7 = weakref.ref(stream7)
             del stream7
             self.assertIsNone(stream_ref7())
+
+    def test_async_relay_stream_from_other_thread(self) -> None:
+        event_loop = asyncio.new_event_loop()
+        input_stream = Stream.ValueStream[int](0)
+        relay_stream = Stream.AsyncRelayStream[int](event_loop, input_stream)
+        def update_relay_stream() -> None:
+            input_stream.value = 42
+        thread = threading.Thread(target=update_relay_stream)
+        thread.start()
+        thread.join()
+        self.assertEqual(0, relay_stream.value)
+        event_loop.stop()
+        event_loop.run_forever()
+        event_loop.close()
+        self.assertEqual(42, relay_stream.value)
+
+    def test_async_relay_stream_single_thread(self) -> None:
+        event_loop = asyncio.new_event_loop()
+        input_stream = Stream.ValueStream[int](0)
+        relay_stream = Stream.AsyncRelayStream[int](event_loop, input_stream)
+        input_stream.value = 42
+        self.assertEqual(0, relay_stream.value)
+        event_loop.stop()
+        event_loop.run_forever()
+        event_loop.close()
+        self.assertEqual(42, relay_stream.value)
 
 
 if __name__ == '__main__':

@@ -75,14 +75,14 @@ class Color:
             rgb = tuple(int(hex_color[i:i + 1], 16) * 17 for i in (1, 2, 3))
             return rgb[0], rgb[1], rgb[2], 255
         elif hex_color and len(hex_color) == 5:
-            rgba = tuple(int(hex_color[i:i + 1], 16) * 17 for i in (1, 2, 3, 4))
-            return rgba[0], rgba[1], rgba[2], rgba[3]
+            argb = tuple(int(hex_color[i:i + 1], 16) * 17 for i in (1, 2, 3, 4))
+            return argb[1], argb[2], argb[3], argb[0]
         elif hex_color and len(hex_color) == 7:
             rgb = tuple(int(hex_color[i:i + 2], 16) for i in (1, 3, 5))
             return rgb[0], rgb[1], rgb[2], 255
         elif hex_color and len(hex_color) == 9:
-            rgba = tuple(int(hex_color[i:i + 2], 16) for i in (1, 3, 5, 7))
-            return rgba[0], rgba[1], rgba[2], rgba[3]
+            argb = tuple(int(hex_color[i:i + 2], 16) for i in (1, 3, 5, 7))
+            return argb[1], argb[2], argb[3], argb[0]
         else:
             return 255, 255, 255, 255
 

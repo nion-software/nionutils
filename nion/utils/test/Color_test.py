@@ -65,3 +65,7 @@ class TestColorClass(unittest.TestCase):
     def test_color_hash(self) -> None:
         d = {Color.Color("thistle"): Color.Color("#d8bfd8")}
         self.assertEqual(d[Color.Color("thistle")], Color.Color("#d8bfd8"))
+
+    def test_rgba_255_uses_red_green_blue_alpha_order(self) -> None:
+        self.assertEqual((255, 0, 0, 127), Color.Color("rgba(255, 0, 0, 0.5)").to_rgba_255())
+        self.assertEqual((0x12, 0x34, 0x56, 0x80), Color.Color("#80123456").to_rgba_255())

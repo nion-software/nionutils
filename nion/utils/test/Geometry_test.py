@@ -39,6 +39,26 @@ class TestGeometryClass(unittest.TestCase):
         p2 = Geometry.IntPoint(x=0, y=2)
         self.assertNotEqual(p1, p2)
 
+    def test_geometry_values_compare_safely_to_unrelated_values(self) -> None:
+        geometry_values = (
+            Geometry.IntPoint(y=1, x=2),
+            Geometry.IntSize(height=1, width=2),
+            Geometry.IntRect.from_tlhw(1, 2, 3, 4),
+            Geometry.FloatPoint(y=1, x=2),
+            Geometry.FloatSize(height=1, width=2),
+            Geometry.FloatRect.from_tlhw(1, 2, 3, 4),
+        )
+
+        for value in geometry_values:
+            with self.subTest(value=value):
+                self.assertFalse(value == object())
+                self.assertTrue(value != object())
+                self.assertFalse(value == None)  # noqa: E711
+                self.assertTrue(value != None)  # noqa: E711
+
+        self.assertFalse(Geometry.IntPoint(y=1, x=2) == Geometry.IntSize(height=1, width=2))
+        self.assertFalse(Geometry.FloatPoint(y=1, x=2) == Geometry.FloatSize(height=1, width=2))
+
     def test_rect_intersects(self) -> None:
         r1 = Geometry.IntRect.from_tlbr(10,10,20,30)
         r2 = Geometry.IntRect.from_tlbr(0, 15, 30, 25)

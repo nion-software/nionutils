@@ -367,6 +367,11 @@ class Margins:
     right: int
 
 
+def _is_compatible_geometry_type(value: typing.Any, geometry_type: typing.Type[typing.Any]) -> bool:
+    geometry_types = (IntPoint, IntSize, IntRect, FloatPoint, FloatSize, FloatRect)
+    return not isinstance(value, geometry_types) or isinstance(value, geometry_type)
+
+
 class IntPoint:
     """A class representing an integer point (x, y)."""
 
@@ -401,16 +406,16 @@ class IntPoint:
         return self.__y
 
     def __eq__(self, other: typing.Any) -> bool:
-        if other is not None:
+        if other is None or not _is_compatible_geometry_type(other, IntPoint):
+            return False
+        try:
             other = IntPoint.make(other)
-            return bool((self.__x == other.x) and (self.__y == other.y))
-        return False
+        except (TypeError, ValueError, IndexError):
+            return False
+        return bool((self.__x == other.x) and (self.__y == other.y))
 
     def __ne__(self, other: typing.Any) -> bool:
-        if other is not None:
-            other = IntPoint.make(other)
-            return bool((self.__x != other.x) or (self.__y != other.y))
-        return True
+        return not self == other
 
     def __neg__(self) -> IntPoint:
         return IntPoint(y=-self.__y, x=-self.__x)
@@ -517,16 +522,16 @@ class IntSize:
         return self.__height
 
     def __eq__(self, other: typing.Any) -> bool:
-        if other is not None:
+        if other is None or not _is_compatible_geometry_type(other, IntSize):
+            return False
+        try:
             other = IntSize.make(other)
-            return bool((self.__width == other.width) and (self.__height == other.height))
-        return False
+        except (TypeError, ValueError, IndexError):
+            return False
+        return bool((self.__width == other.width) and (self.__height == other.height))
 
     def __ne__(self, other: typing.Any) -> bool:
-        if other is not None:
-            other = IntSize.make(other)
-            return bool((self.__width != other.width) or (self.__height != other.height))
-        return True
+        return not self == other
 
     def __neg__(self) -> IntSize:
         return IntSize(-self.__height, -self.__width)
@@ -691,16 +696,16 @@ class IntRect:
         return slice(self.top, self.bottom), slice(self.left, self.right)
 
     def __eq__(self, other: typing.Any) -> bool:
-        if other is not None:
+        if other is None or not _is_compatible_geometry_type(other, IntRect):
+            return False
+        try:
             other = IntRect.make(other)
-            return bool((self.__origin == other.origin) and (self.__size == other.size))
-        return False
+        except (TypeError, ValueError, IndexError):
+            return False
+        return bool((self.__origin == other.origin) and (self.__size == other.size))
 
     def __ne__(self, other: typing.Any) -> bool:
-        if other is not None:
-            other = IntRect.make(other)
-            return bool((self.__origin != other.origin) or (self.__size != other.size))
-        return True
+        return not self == other
 
     @typing.overload
     def __getitem__(self, index: typing.Literal[0]) -> PointIntTuple: ...
@@ -818,16 +823,16 @@ class FloatPoint:
         return self.__y
 
     def __eq__(self, other: typing.Any) -> bool:
-        if other is not None:
+        if other is None or not _is_compatible_geometry_type(other, FloatPoint):
+            return False
+        try:
             other = FloatPoint.make(other)
-            return bool((self.__x == other.x) and (self.__y == other.y))
-        return False
+        except (TypeError, ValueError, IndexError):
+            return False
+        return bool((self.__x == other.x) and (self.__y == other.y))
 
     def __ne__(self, other: typing.Any) -> bool:
-        if other is not None:
-            other = FloatPoint.make(other)
-            return bool((self.__x != other.x) or (self.__y != other.y))
-        return True
+        return not self == other
 
     def __neg__(self) -> FloatPoint:
         return FloatPoint(y=-self.__y, x=-self.__x)
@@ -960,16 +965,16 @@ class FloatSize:
         return self.__height
 
     def __eq__(self, other: typing.Any) -> bool:
-        if other is not None:
+        if other is None or not _is_compatible_geometry_type(other, FloatSize):
+            return False
+        try:
             other = FloatSize.make(other)
-            return bool((self.__width == other.width) and (self.__height == other.height))
-        return False
+        except (TypeError, ValueError, IndexError):
+            return False
+        return bool((self.__width == other.width) and (self.__height == other.height))
 
     def __ne__(self, other: typing.Any) -> bool:
-        if other is not None:
-            other = FloatSize.make(other)
-            return bool((self.__width != other.width) or (self.__height != other.height))
-        return True
+        return not self == other
 
     def __neg__(self) -> FloatSize:
         return FloatSize(-self.__height, -self.__width)
@@ -1140,16 +1145,16 @@ class FloatRect:
         return FloatPoint(y=(self.top + self.bottom) / 2, x=(self.left + self.right) / 2)
 
     def __eq__(self, other: typing.Any) -> bool:
-        if other is not None:
+        if other is None or not _is_compatible_geometry_type(other, FloatRect):
+            return False
+        try:
             other = FloatRect.make(other)
-            return bool((self.__origin == other.origin) and (self.__size == other.size))
-        return False
+        except (TypeError, ValueError, IndexError):
+            return False
+        return bool((self.__origin == other.origin) and (self.__size == other.size))
 
     def __ne__(self, other: typing.Any) -> bool:
-        if other is not None:
-            other = FloatRect.make(other)
-            return bool((self.__origin != other.origin) or (self.__size != other.size))
-        return True
+        return not self == other
 
     @typing.overload
     def __getitem__(self, index: typing.Literal[0]) -> PointFloatTuple: ...

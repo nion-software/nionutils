@@ -135,12 +135,13 @@ class FloatToPercentStringConverter(ConverterLike[float, str]):
 class PhysicalValueToStringConverter(ConverterLike[float, str]):
     """ Convert between physical value represented by a float and a formatted string. """
 
-    def __init__(self, units: str, multiplier: float=1.0, format:typing.Optional[str]=None, pass_none:bool=False, fuzzy:bool=True) -> None:
+    def __init__(self, units: str, multiplier: float = 1.0, format: typing.Optional[str] = None, pass_none: bool = False, fuzzy: bool = True) -> None:
         self.__units = units
         self.__multiplier = multiplier
         self.__format = format + " {:s}" if format else "{:g} {:s}"
         self.__pass_none = pass_none
         self.__fuzzy = fuzzy
+        self.__float_to_string_converter = FloatToStringConverter(pass_none=self.__pass_none, fuzzy=self.__fuzzy)
 
     def convert(self, value: typing.Optional[float]) -> typing.Optional[str]:
         """ Convert value to string using format string """
@@ -150,7 +151,7 @@ class PhysicalValueToStringConverter(ConverterLike[float, str]):
 
     def convert_back(self, formatted_value: typing.Optional[str]) -> typing.Optional[float]:
         """ Convert string to value using standard float conversion """
-        value = FloatToStringConverter().convert_back(formatted_value)
+        value = self.__float_to_string_converter.convert_back(formatted_value)
         return value / self.__multiplier if value is not None else None
 
 

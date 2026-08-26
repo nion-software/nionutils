@@ -56,6 +56,26 @@ class TestConverter(unittest.TestCase):
         self.assertEqual(dt.replace(microsecond=0), converter.convert_back(converter.convert(dt.replace(microsecond=0))))
         self.assertEqual(dt.strftime(format), converter.convert(converter.convert_back(dt.strftime(format))))
 
+    def test_physical_value_to_str_converter_convert(self) -> None:
+        converter = Converter.PhysicalValueToStringConverter(units="m")
+        value = converter.convert(1.23)
+        self.assertEqual(value, "1.23 m")
+
+    def test_physical_value_to_str_converter_convert_back(self) -> None:
+        converter = Converter.PhysicalValueToStringConverter(units="m")
+        value = converter.convert_back("2.71 m")
+        self.assertEqual(value, 2.71)
+
+    def test_physical_value_to_str_converter_convert_back_with_none(self) -> None:
+        converter = Converter.PhysicalValueToStringConverter(units="m")
+        value = converter.convert_back(None)
+        self.assertEqual(value, 0.0)
+
+    def test_physical_value_to_str_converter_convert_back_pass_none(self) -> None:
+        converter = Converter.PhysicalValueToStringConverter(units="m", pass_none=True)
+        value = converter.convert_back(None)
+        self.assertEqual(value, None)
+
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)

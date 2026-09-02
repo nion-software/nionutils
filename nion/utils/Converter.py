@@ -253,3 +253,11 @@ class ValuesToIndexConverter(ConverterLike[FT, int], typing.Generic[FT]):
 
     def convert_back(self, index: typing.Optional[int]) -> typing.Optional[FT]:
         return self.__values[index] if index is not None and 0 <= index < len(self.__values) else None
+
+
+class LogicalNotConverter(ConverterLike[bool, bool]):
+    def convert(self, value: bool | None) -> bool | None:
+        return not value
+
+    def convert_back(self, formatted_value: bool | None) -> bool | None:
+        return not formatted_value

@@ -5,6 +5,7 @@ on:
     tags: '*'
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 jobs:
   build-python-package:
     uses: nion-software/github-workflows/.github/workflows/build-python-package.yml@main

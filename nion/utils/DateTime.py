@@ -7,8 +7,6 @@ from __future__ import annotations
 # standard libraries
 import datetime
 import threading
-import sys
-import time
 import typing
 
 # third party libraries
@@ -18,8 +16,13 @@ import typing
 # None
 
 
-last_time: float = 0.0
-last_time_lock = threading.RLock()
+# the last timestamp which DateTimeUTC created for the current time. the lock protects it.
+_last_timestamp = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+_last_timestamp_lock = threading.Lock()
+
+# a clock which reads this far before the last timestamp has been set back.
+_CLOCK_SET_BACK_THRESHOLD = datetime.timedelta(milliseconds=1)
+
 FILETIME_TICKS_PER_MICROSECOND = 10 # Hundreds of nanoseconds in a microsecond
 FILETIME_TICKS_PER_SECOND = 10000000  # Hundreds of nanoseconds (0.1 microseconds) in a second
 FILETIME_EPOCH = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc)
@@ -35,18 +38,17 @@ class DateTimeUTC:
             else:
                 self.__timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
         else:
-            global last_time
-            # windows utcnow has a resolution of 1ms, need to handle specially.
-            if sys.platform == "win32":
-                # see https://www.python.org/dev/peps/pep-0564/#annex-clocks-resolution-in-python
-                with last_time_lock:
-                    current_time = int(time.time_ns() / 1E3) / 1E6  # truncate to microseconds, convert to seconds
-                    while current_time <= last_time:
-                        current_time += 0.000001
-                    last_time = current_time
-                timestamp = datetime.datetime.fromtimestamp(current_time, tz=datetime.timezone.utc)
-            else:
+            global _last_timestamp
+            # a timestamp for the current time is later than every earlier one. it waits for the clock to pass the last
+            # timestamp, so that it does not run ahead of the clock. after the clock is set back, waiting would last as
+            # long as the clock went back, so the timestamp continues from the last one instead.
+            with _last_timestamp_lock:
                 timestamp = datetime.datetime.now(datetime.timezone.utc)
+                if _last_timestamp - timestamp >= _CLOCK_SET_BACK_THRESHOLD:
+                    timestamp = _last_timestamp + datetime.timedelta(microseconds=1)
+                while timestamp <= _last_timestamp:
+                    timestamp = datetime.datetime.now(datetime.timezone.utc)
+                _last_timestamp = timestamp
             self.__timestamp = timestamp
         assert self.__timestamp.tzinfo == datetime.timezone.utc
 

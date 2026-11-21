@@ -1,5 +1,6 @@
 import unittest
 import datetime
+import threading
 from nion.utils import DateTime
 
 
@@ -66,6 +67,28 @@ class DateTimeTest(unittest.TestCase):
                 else:
                     time_in_utc = expected_datetime.astimezone(tz=datetime.timezone.utc)
                 self.assertEqual(datetime_out, time_in_utc)
+
+    def test_utcnow_returns_strictly_increasing_timestamps_across_threads(self) -> None:
+        timestamp_lists: list[list[datetime.datetime]] = [list() for _ in range(4)]
+
+        def take_timestamps(timestamps: list[datetime.datetime]) -> None:
+            for _ in range(10000):
+                timestamps.append(DateTime.utcnow())
+
+        threads = [threading.Thread(target=take_timestamps, args=(timestamps,)) for timestamps in timestamp_lists]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        for timestamps in timestamp_lists:
+            self.assertTrue(all(earlier < later for earlier, later in zip(timestamps, timestamps[1:])))
+        all_timestamps = [timestamp for timestamps in timestamp_lists for timestamp in timestamps]
+        self.assertEqual(len(all_timestamps), len(set(all_timestamps)))
+
+    def test_utcnow_does_not_run_ahead_of_the_clock_during_a_burst(self) -> None:
+        for _ in range(100000):
+            timestamp = DateTime.utcnow()
+        self.assertLessEqual(timestamp, datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
 
 
 if __name__ == '__main__':
